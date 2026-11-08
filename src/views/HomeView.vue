@@ -10,6 +10,7 @@ import {
   Swords,
   X,
   Menu,
+  Heart,
 } from 'lucide-vue-next'
 import { useRoomStore } from '../stores/room-store'
 import LobbyModeSelector from '../components/lobby/LobbyModeSelector.vue'
@@ -271,12 +272,14 @@ const openPracticeFromDrawer = () => {
     </main>
 
     <!-- Footer -->
-    <footer class="w-full border-t border-neutral-300/80 bg-white/70 py-2 sm:py-3 px-3 sm:px-4 text-center flex flex-col items-center gap-0.5 sm:gap-1 z-10 shrink-0">
-      <span class="font-heading font-black text-[10px] sm:text-[11px] uppercase tracking-wider text-neutral-600">
-        Bentengan 3D &bull; Pelestarian Budaya Permainan Tradisional Indonesia
-      </span>
+    <footer class="w-full border-t border-neutral-300/80 bg-white/70 py-2 sm:py-2.5 px-3 sm:px-4 text-center flex flex-col items-center gap-0.5 sm:gap-1 z-10 shrink-0">
+      <div class="flex items-center justify-center gap-1.5 font-heading font-black text-[10px] sm:text-[11px] uppercase tracking-wider text-neutral-600">
+        <span>Dibuat dengan</span>
+        <Heart class="w-3 h-3 text-rose-500 fill-rose-500 shrink-0" />
+        <span>untuk Melestarikan Permainan Tradisional Indonesia</span>
+      </div>
       <span class="font-sans text-[9px] sm:text-[10px] text-neutral-400 font-medium">
-        Lestarikan keseruan permainan tradisional Indonesia dalam dunia 3D modern!
+        &copy; 2026 Bentengan 3D &bull; Main Gratis Langsung di Browser
       </span>
     </footer>
 
