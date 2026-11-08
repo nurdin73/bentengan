@@ -70,10 +70,10 @@ const openPracticeFromDrawer = () => {
 <template>
   <div
     data-testid="home-view"
-    class="min-h-dvh sm:h-screen w-full bg-[#f8f6f0] text-neutral-900 flex flex-col justify-between font-sans selection:bg-amber-200 overflow-y-auto sm:overflow-hidden relative"
+    class="min-h-screen min-h-dvh w-full bg-[#f8f6f0] text-neutral-900 flex flex-col justify-between font-sans selection:bg-amber-200 overflow-y-auto relative"
   >
-    <!-- Navbar -->
-    <header class="w-full border-b border-neutral-300/80 bg-white/80 backdrop-blur-md px-3.5 sm:px-8 py-2.5 sm:py-3.5 flex items-center justify-between z-30 shrink-0">
+    <!-- Navbar (Sticky Top) -->
+    <header class="sticky top-0 w-full border-b border-neutral-300/80 bg-white/85 backdrop-blur-md px-3.5 sm:px-8 py-2.5 sm:py-3.5 flex items-center justify-between z-30 shrink-0 transition-all">
       <div class="flex items-center gap-2 sm:gap-3">
         <div class="w-9 h-9 sm:w-10 sm:h-10 rounded-2xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center shrink-0">
           <Castle class="w-5 h-5 sm:w-6 sm:h-6 text-amber-600" />
@@ -242,7 +242,7 @@ const openPracticeFromDrawer = () => {
     </transition>
 
     <!-- Hero Section (Center of Viewport) -->
-    <main class="flex-1 flex flex-col items-center justify-center px-3.5 sm:px-4 py-3 sm:py-4 gap-4 sm:gap-6 max-w-4xl mx-auto w-full">
+    <main class="flex-1 flex flex-col items-center justify-center px-3.5 sm:px-4 py-4 sm:py-6 gap-4 sm:gap-6 max-w-4xl mx-auto w-full">
       <!-- Title & Headline -->
       <div class="text-center flex flex-col items-center gap-1.5 sm:gap-2">
         <div class="inline-flex items-center gap-2 px-3 py-0.5 bg-amber-100 border border-amber-300 rounded-full text-[10px] sm:text-[11px] font-heading font-black text-amber-900 uppercase tracking-widest shadow-2xs">
