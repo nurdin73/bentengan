@@ -7,6 +7,7 @@ import {
   LogIn,
   AlertCircle,
   Users,
+  Check,
 } from 'lucide-vue-next'
 import type { TeamId } from '../../types/game.types'
 
@@ -75,45 +76,90 @@ const onJoinRoom = () => {
       />
     </div>
 
-    <!-- Pilihan Format Pertandingan (4v4 vs 6v6) -->
+    <!-- Pilihan Format Pertandingan (4v4 vs 6v6) sebagai Tombol Timbul -->
     <div class="flex flex-col gap-1.5">
-      <div class="flex items-center justify-between">
-        <label class="font-heading font-black text-xs uppercase tracking-wider text-neutral-800 flex items-center gap-1.5">
-          <Users class="w-3.5 h-3.5 text-neutral-600" />
-          <span>Format Pertandingan</span>
-        </label>
-        <span class="text-[11px] font-sans font-bold text-neutral-500">
-          {{ selectedCapacity === 8 ? 'Maksimal 8 Pemain' : 'Maksimal 12 Pemain' }}
-        </span>
-      </div>
-      <div class="grid grid-cols-2 gap-2 p-1 bg-neutral-100/90 rounded-2xl border border-neutral-300">
+      <label class="font-heading font-black text-xs uppercase tracking-wider text-neutral-800 flex items-center gap-1.5">
+        <Users class="w-3.5 h-3.5 text-neutral-600" />
+        <span>Format Pertandingan</span>
+      </label>
+
+      <div class="grid grid-cols-2 gap-2.5 sm:gap-3">
+        <!-- Tombol 4 vs 4 -->
         <button
           type="button"
           data-testid="capacity-4v4-btn"
           :class="[
-            'py-2 px-3 rounded-xl font-heading font-black text-xs uppercase tracking-wider transition-all cursor-pointer flex items-center justify-center gap-1.5',
+            'timbul-btn flex flex-col items-center justify-center py-2 sm:py-2.5 px-3 rounded-2xl border-2 transition-all cursor-pointer relative',
             selectedCapacity === 8
-              ? 'bg-white text-neutral-900 shadow-sm border border-neutral-200'
-              : 'text-neutral-500 hover:text-neutral-700',
+              ? 'bg-amber-50/90 border-amber-400 border-b-[5px] border-b-amber-600 shadow-xs'
+              : 'bg-neutral-100 hover:bg-neutral-200 border-neutral-300 border-b-[4px] border-b-neutral-400 text-neutral-600 opacity-80 hover:opacity-100',
           ]"
           @click="selectedCapacity = 8"
         >
-          <Swords class="w-3.5 h-3.5 text-amber-600" />
-          <span>4 vs 4</span>
+          <div class="flex items-center gap-1.5">
+            <Swords
+              :class="['w-4 h-4', selectedCapacity === 8 ? 'text-amber-700' : 'text-neutral-500']"
+            />
+            <span
+              :class="[
+                'font-heading font-black text-xs sm:text-sm tracking-wider uppercase',
+                selectedCapacity === 8 ? 'text-neutral-950' : 'text-neutral-700',
+              ]"
+            >
+              4 vs 4
+            </span>
+            <Check
+              v-if="selectedCapacity === 8"
+              class="w-3.5 h-3.5 text-amber-700 stroke-[3]"
+            />
+          </div>
+          <span
+            :class="[
+              'font-sans text-[10px] sm:text-[11px] font-bold mt-0.5',
+              selectedCapacity === 8 ? 'text-amber-800' : 'text-neutral-400',
+            ]"
+          >
+            Maks. 8 Pemain
+          </span>
         </button>
+
+        <!-- Tombol 6 vs 6 -->
         <button
           type="button"
           data-testid="capacity-6v6-btn"
           :class="[
-            'py-2 px-3 rounded-xl font-heading font-black text-xs uppercase tracking-wider transition-all cursor-pointer flex items-center justify-center gap-1.5',
+            'timbul-btn flex flex-col items-center justify-center py-2 sm:py-2.5 px-3 rounded-2xl border-2 transition-all cursor-pointer relative',
             selectedCapacity === 12
-              ? 'bg-white text-neutral-900 shadow-sm border border-neutral-200'
-              : 'text-neutral-500 hover:text-neutral-700',
+              ? 'bg-blue-50/90 border-blue-400 border-b-[5px] border-b-blue-600 shadow-xs'
+              : 'bg-neutral-100 hover:bg-neutral-200 border-neutral-300 border-b-[4px] border-b-neutral-400 text-neutral-600 opacity-80 hover:opacity-100',
           ]"
           @click="selectedCapacity = 12"
         >
-          <Shield class="w-3.5 h-3.5 text-blue-600" />
-          <span>6 vs 6</span>
+          <div class="flex items-center gap-1.5">
+            <Shield
+              :class="['w-4 h-4', selectedCapacity === 12 ? 'text-blue-700' : 'text-neutral-500']"
+            />
+            <span
+              :class="[
+                'font-heading font-black text-xs sm:text-sm tracking-wider uppercase',
+                selectedCapacity === 12 ? 'text-neutral-950' : 'text-neutral-700',
+              ]"
+            >
+              6 vs 6
+            </span>
+            <Check
+              v-if="selectedCapacity === 12"
+              class="w-3.5 h-3.5 text-blue-700 stroke-[3]"
+            />
+          </div>
+          <span
+            :class="[
+              'font-sans text-[10px] sm:text-[11px] font-bold mt-0.5',
+              selectedCapacity === 12 ? 'text-blue-800' : 'text-neutral-400',
+            ]"
+          >
+            Maks. 12 Pemain
+          </span>
         </button>
       </div>
     </div>
