@@ -511,6 +511,14 @@ export class GameEngine {
     }
   }
 
+  public removeRemotePlayer(playerId: string): void {
+    const remote = this.remotePlayers.get(playerId)
+    if (remote) {
+      remote.dispose(this.scene)
+      this.remotePlayers.delete(playerId)
+    }
+  }
+
   private evaluateGameplayRules(
     input: { interact: boolean },
     now: number,

@@ -53,6 +53,9 @@ onMounted(async () => {
   peerNetworkManager.events.onGameEvent = (event) => {
     engine?.onGameEvent(event)
   }
+  peerNetworkManager.events.onPlayerLeft = (playerId) => {
+    engine?.removeRemotePlayer(playerId)
+  }
 
   await engine.init({
     localPlayerId: roomStore.myPlayerId,
@@ -71,6 +74,7 @@ onUnmounted(() => {
   peerNetworkManager.events.onPlayerUpdate = undefined
   peerNetworkManager.events.onWorldSnapshot = undefined
   peerNetworkManager.events.onGameEvent = undefined
+  peerNetworkManager.events.onPlayerLeft = undefined
 
   if (engine) {
     engine.dispose()

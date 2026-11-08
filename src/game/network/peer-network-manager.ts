@@ -32,6 +32,7 @@ export interface PeerNetworkEvents {
   onPlayerUpdate: (update: PlayerUpdateMessage) => void
   onWorldSnapshot: (snapshot: WorldSnapshotMessage) => void
   onGameEvent: (event: GameEventMessage) => void
+  onPlayerLeft: (playerId: string) => void
 }
 
 export class PeerNetworkManager {
@@ -472,9 +473,14 @@ export class PeerNetworkManager {
     })
 
     conn.on('close', () => {
-      this.clientConnections.delete(conn.peer)
+      const leavingPeerId = conn.peer
+      this.clientConnections.delete(leavingPeerId)
       if (this.currentRoom) {
-        this.currentRoom.players = this.currentRoom.players.filter((p) => p.peerId !== conn.peer)
+        const leftPlayer = this.currentRoom.players.find((p) => p.peerId === leavingPeerId)
+        if (leftPlayer) {
+          this.events.onPlayerLeft?.(leftPlayer.id)
+        }
+        this.currentRoom.players = this.currentRoom.players.filter((p) => p.peerId !== leavingPeerId)
         this.broadcastRoomState()
       }
     })

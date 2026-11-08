@@ -63,6 +63,19 @@ const onLeave = () => {
             <span class="text-xs text-neutral-500">{{ copied ? '✓ Disalin' : '📋' }}</span>
           </button>
         </div>
+
+        <!-- Mode & Capacity Badge -->
+        <div class="hidden sm:flex flex-col">
+          <span class="font-heading font-black text-[11px] uppercase tracking-wider text-neutral-500">
+            FORMAT GAME
+          </span>
+          <span
+            data-testid="waiting-room-capacity-badge"
+            class="px-3 py-1.5 bg-neutral-100 border border-neutral-300 rounded-xl font-heading font-black text-xs text-neutral-800"
+          >
+            {{ roomStore.maxPlayers === 12 ? '🛡️ 6 vs 6 (Maks. 12)' : '⚔️ 4 vs 4 (Maks. 8)' }}
+          </span>
+        </div>
       </div>
 
       <!-- Latency & Connected Info -->

@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import type { Room, RoomPlayer, RoomStatus, TeamId } from '../types/game.types'
 import { isMatchStartable } from '../game/network/network-protocol'
 import { peerNetworkManager } from '../game/network/peer-network-manager'
+import { useGameStore } from './game-store'
 
 function generatePlayerId(): string {
   return `p-${Math.random().toString(36).substring(2, 7)}`
@@ -16,6 +17,7 @@ export const useRoomStore = defineStore('room', {
     myUsername: 'Pemain ' + Math.floor(10 + Math.random() * 90),
     myTeam: 'blue' as TeamId,
     players: [] as RoomPlayer[],
+    maxPlayers: 8 as 8 | 12,
 
     // Multiplayer & Rules Briefing Gate
     hasAcknowledgedRules: false,
@@ -47,6 +49,7 @@ export const useRoomStore = defineStore('room', {
           this.roomCode = room.roomCode
           this.status = room.status
           this.players = [...room.players]
+          this.maxPlayers = room.maxPlayers
           this.isConnecting = false
           this.connectionError = null
 
@@ -65,7 +68,15 @@ export const useRoomStore = defineStore('room', {
         },
         onDisconnected: () => {
           if (this.status === 'playing') {
-            this.connectionError = 'Koneksi terputus dari room.'
+            const gameStore = useGameStore()
+            gameStore.finishMatch({
+              matchId: `match-${Date.now()}`,
+              winner: null,
+              reason: 'host_disconnect',
+              duration: 0,
+              players: [],
+            })
+            this.connectionError = 'Tuan rumah (Host) telah keluar. Permainan selesai.'
             this.status = 'finished'
           } else {
             this.leaveRoom()
@@ -101,22 +112,27 @@ export const useRoomStore = defineStore('room', {
       ]
     },
 
-    async createHostRoom(roomCode: string, team: TeamId = 'blue') {
+    async createHostRoom(roomCode: string, team: TeamId = 'blue', maxPlayers: 8 | 12 = 8) {
       this.initNetworkListeners()
       this.isConnecting = true
       this.connectionError = null
       this.roomCode = roomCode.toUpperCase()
       this.isHost = true
       this.myTeam = team
+      this.maxPlayers = maxPlayers
       this.hasAcknowledgedRules = true // Host creates room and already knows rules
 
       try {
-        await peerNetworkManager.initHost(this.roomCode, {
-          id: this.myPlayerId,
-          username: this.myUsername,
-          teamId: team,
-          isReady: true,
-        })
+        await peerNetworkManager.initHost(
+          this.roomCode,
+          {
+            id: this.myPlayerId,
+            username: this.myUsername,
+            teamId: team,
+            isReady: true,
+          },
+          maxPlayers,
+        )
       } catch (err) {
         this.isConnecting = false
         this.connectionError = err instanceof Error ? err.message : 'Gagal membuat room.'

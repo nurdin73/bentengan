@@ -10,11 +10,12 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits<{
-  (e: 'create-host', payload: { username: string; team: TeamId; roomCode: string }): void
+  (e: 'create-host', payload: { username: string; team: TeamId; roomCode: string; maxPlayers: 8 | 12 }): void
   (e: 'join-room', payload: { username: string; team: TeamId; roomCode: string }): void
 }>()
 
 const username = ref(props.initialUsername)
+const selectedCapacity = ref<8 | 12>(8)
 const targetRoomCode = ref('')
 const hostRoomCode = ref(
   Math.random().toString(36).substring(2, 6).toUpperCase() +
@@ -27,6 +28,7 @@ const onCreateHost = () => {
     username: username.value.trim() || 'Host',
     team: 'blue',
     roomCode: code,
+    maxPlayers: selectedCapacity.value,
   })
 }
 
@@ -63,6 +65,46 @@ const onJoinRoom = () => {
         placeholder="Ketik nama panggilanmu..."
         class="w-full bg-neutral-100/90 border border-neutral-300 focus:border-amber-400 focus:bg-white rounded-2xl px-4 py-3 font-sans font-bold text-neutral-800 text-sm outline-none transition-all"
       />
+    </div>
+
+    <!-- Pilihan Format Pertandingan (4v4 vs 6v6) -->
+    <div class="flex flex-col gap-1.5">
+      <div class="flex items-center justify-between">
+        <label class="font-heading font-black text-xs uppercase tracking-wider text-neutral-800">
+          Format Pertandingan
+        </label>
+        <span class="text-[11px] font-sans font-bold text-neutral-500">
+          {{ selectedCapacity === 8 ? 'Maksimal 8 Pemain' : 'Maksimal 12 Pemain' }}
+        </span>
+      </div>
+      <div class="grid grid-cols-2 gap-2 p-1 bg-neutral-100/90 rounded-2xl border border-neutral-300">
+        <button
+          type="button"
+          data-testid="capacity-4v4-btn"
+          :class="[
+            'py-2 px-3 rounded-xl font-heading font-black text-xs uppercase tracking-wider transition-all cursor-pointer',
+            selectedCapacity === 8
+              ? 'bg-white text-neutral-900 shadow-sm border border-neutral-200'
+              : 'text-neutral-500 hover:text-neutral-700',
+          ]"
+          @click="selectedCapacity = 8"
+        >
+          ⚔️ 4 vs 4
+        </button>
+        <button
+          type="button"
+          data-testid="capacity-6v6-btn"
+          :class="[
+            'py-2 px-3 rounded-xl font-heading font-black text-xs uppercase tracking-wider transition-all cursor-pointer',
+            selectedCapacity === 12
+              ? 'bg-white text-neutral-900 shadow-sm border border-neutral-200'
+              : 'text-neutral-500 hover:text-neutral-700',
+          ]"
+          @click="selectedCapacity = 12"
+        >
+          🛡️ 6 vs 6
+        </button>
+      </div>
     </div>
 
     <!-- 2-Column Action Grid -->

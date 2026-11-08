@@ -15,9 +15,14 @@ const showRulesModal = ref(false)
 const showControlsModal = ref(false)
 const showPracticePicker = ref(false)
 
-const handleCreateHost = async (payload: { username: string; team: TeamId; roomCode: string }) => {
+const handleCreateHost = async (payload: {
+  username: string
+  team: TeamId
+  roomCode: string
+  maxPlayers?: 8 | 12
+}) => {
   roomStore.myUsername = payload.username
-  await roomStore.createHostRoom(payload.roomCode, payload.team)
+  await roomStore.createHostRoom(payload.roomCode, payload.team, payload.maxPlayers ?? 8)
   if (!roomStore.connectionError) {
     router.push(`/rooms/${payload.roomCode}`)
   }
