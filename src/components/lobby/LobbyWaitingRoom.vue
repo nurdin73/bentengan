@@ -1,6 +1,22 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
+import {
+  Copy,
+  Check,
+  Swords,
+  Shield,
+  Crown,
+  User,
+  CheckCircle2,
+  Clock,
+  Wifi,
+  RefreshCw,
+  Play,
+  ArrowLeft,
+  AlertCircle,
+  X,
+} from 'lucide-vue-next'
 import { useRoomStore } from '../../stores/room-store'
 import TactileButton from '../ui/TactileButton.vue'
 import type { TeamId } from '../../types/game.types'
@@ -8,6 +24,7 @@ import type { TeamId } from '../../types/game.types'
 const router = useRouter()
 const roomStore = useRoomStore()
 const copied = ref(false)
+const activeMobileTab = ref<TeamId>(roomStore.myTeam || 'blue')
 
 const emit = defineEmits<{
   (e: 'leave'): void
@@ -27,6 +44,7 @@ const copyRoomCode = async () => {
 
 const onSelectTeam = (team: TeamId) => {
   roomStore.setTeam(team)
+  activeMobileTab.value = team
 }
 
 const onToggleReady = () => {
@@ -45,58 +63,63 @@ const onLeave = () => {
 </script>
 
 <template>
-  <div data-testid="lobby-waiting-room" class="flex flex-col gap-6 w-full">
+  <div data-testid="lobby-waiting-room" class="flex flex-col gap-4 sm:gap-6 w-full">
     <!-- Header: Room Code, Status & Ping -->
-    <div class="flex items-center justify-between border-b border-neutral-200 pb-3">
-      <div class="flex items-center gap-3">
+    <div class="flex items-center justify-between border-b border-neutral-200 pb-3 gap-2">
+      <div class="flex items-center gap-2 sm:gap-3 flex-wrap">
         <div class="flex flex-col">
-          <span class="font-heading font-black text-[11px] uppercase tracking-wider text-neutral-500">
+          <span class="font-heading font-black text-[10px] sm:text-[11px] uppercase tracking-wider text-neutral-500">
             KODE RUANGAN
           </span>
           <button
             type="button"
             data-testid="copy-room-code-btn"
-            class="flex items-center gap-2 px-3 py-1.5 bg-neutral-100 hover:bg-neutral-200 active:scale-95 transition-all border border-neutral-300 rounded-xl font-mono font-black text-base text-neutral-900 cursor-pointer shadow-2xs"
+            class="flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 bg-neutral-100 hover:bg-neutral-200 active:scale-95 transition-all border border-neutral-300 rounded-xl font-mono font-black text-sm sm:text-base text-neutral-900 cursor-pointer shadow-2xs"
             @click="copyRoomCode"
           >
             <span>{{ roomStore.roomCode }}</span>
-            <span class="text-xs text-neutral-500">{{ copied ? '✓ Disalin' : '📋' }}</span>
+            <span class="text-neutral-500 flex items-center gap-1 text-xs">
+              <Check v-if="copied" class="w-3.5 h-3.5 text-emerald-600" />
+              <Copy v-else class="w-3.5 h-3.5" />
+              <span class="text-[10px] font-sans font-bold hidden sm:inline">{{ copied ? 'Disalin' : 'Salin' }}</span>
+            </span>
           </button>
         </div>
 
-        <!-- Mode & Capacity Badge -->
-        <div class="hidden sm:flex flex-col">
-          <span class="font-heading font-black text-[11px] uppercase tracking-wider text-neutral-500">
+        <!-- Mode & Capacity Badge (Visible on Mobile & Desktop) -->
+        <div class="flex flex-col">
+          <span class="font-heading font-black text-[10px] sm:text-[11px] uppercase tracking-wider text-neutral-500">
             FORMAT GAME
           </span>
           <span
             data-testid="waiting-room-capacity-badge"
-            class="px-3 py-1.5 bg-neutral-100 border border-neutral-300 rounded-xl font-heading font-black text-xs text-neutral-800"
+            class="px-2.5 sm:px-3 py-1.5 bg-neutral-100 border border-neutral-300 rounded-xl font-heading font-black text-[11px] sm:text-xs text-neutral-800 flex items-center gap-1.5"
           >
-            {{ roomStore.maxPlayers === 12 ? '🛡️ 6 vs 6 (Maks. 12)' : '⚔️ 4 vs 4 (Maks. 8)' }}
+            <Shield v-if="roomStore.maxPlayers === 12" class="w-3.5 h-3.5 text-blue-600" />
+            <Swords v-else class="w-3.5 h-3.5 text-amber-600" />
+            <span>{{ roomStore.maxPlayers === 12 ? '6 vs 6 (Maks. 12)' : '4 vs 4 (Maks. 8)' }}</span>
           </span>
         </div>
       </div>
 
       <!-- Latency & Connected Info -->
-      <div class="flex items-center gap-3">
+      <div class="flex items-center gap-2">
         <div
           v-if="roomStore.isReconnecting"
           data-testid="waiting-reconnecting-badge"
-          class="flex items-center gap-1.5 px-3 py-1.5 bg-amber-100 border border-amber-300 rounded-xl font-mono text-xs font-bold text-amber-800 animate-pulse"
+          class="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 bg-amber-100 border border-amber-300 rounded-xl font-mono text-xs font-bold text-amber-800 animate-pulse"
         >
-          <span class="w-2.5 h-2.5 rounded-full bg-amber-500" />
-          <span>Menyambung Ulang...</span>
+          <span class="w-2 h-2 rounded-full bg-amber-500" />
+          <span class="hidden sm:inline">Menyambung Ulang...</span>
+          <span class="sm:hidden">Menyambung...</span>
         </div>
         <div
           v-else
-          class="flex items-center gap-1.5 px-3 py-1.5 bg-neutral-100 border border-neutral-200 rounded-xl font-mono text-xs font-bold text-neutral-600"
+          class="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 bg-neutral-100 border border-neutral-200 rounded-xl font-mono text-xs font-bold text-neutral-600"
         >
-          <span
-            class="w-2.5 h-2.5 rounded-full"
-            :class="roomStore.latencyMs < 100 ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'"
-          />
-          <span>{{ roomStore.latencyMs < 100 ? 'Sinyal Lancar' : 'Sinyal Sedang' }} ({{ roomStore.latencyMs }} ms)</span>
+          <Wifi class="w-3.5 h-3.5" :class="roomStore.latencyMs < 100 ? 'text-emerald-500' : 'text-amber-500'" />
+          <span class="hidden sm:inline">{{ roomStore.latencyMs < 100 ? 'Sinyal Lancar' : 'Sinyal Sedang' }} ({{ roomStore.latencyMs }} ms)</span>
+          <span class="sm:hidden">{{ roomStore.latencyMs }} ms</span>
         </div>
       </div>
     </div>
@@ -108,7 +131,7 @@ const onLeave = () => {
       class="p-3 rounded-2xl bg-amber-50 border-2 border-amber-300 text-amber-900 text-xs font-bold flex items-center justify-between gap-3 shadow-xs"
     >
       <div class="flex items-center gap-2">
-        <span class="text-base animate-spin">🔄</span>
+        <RefreshCw class="w-4 h-4 animate-spin text-amber-700 shrink-0" />
         <span>{{ roomStore.reconnectMessage || 'Koneksi terputus. Mencoba menyambung kembali...' }}</span>
       </div>
       <button
@@ -125,24 +148,65 @@ const onLeave = () => {
     <div
       v-if="roomStore.connectionError"
       data-testid="waiting-connection-error"
-      class="p-3 rounded-2xl bg-rose-50 border-2 border-rose-300 text-rose-700 text-xs font-bold text-center"
+      class="p-3 rounded-2xl bg-rose-50 border-2 border-rose-300 text-rose-700 text-xs font-bold text-center flex items-center justify-center gap-2"
     >
-      ⚠️ {{ roomStore.connectionError }}
+      <AlertCircle class="w-4 h-4 text-rose-600 shrink-0" />
+      <span>{{ roomStore.connectionError }}</span>
     </div>
 
-    <!-- 2 Separated Fortress Columns: Blue & Red -->
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+    <!-- Mobile-Only Team Tabs (< md) -->
+    <div
+      data-testid="mobile-team-tab-selector"
+      class="grid grid-cols-2 gap-1.5 p-1 bg-neutral-100 rounded-2xl border border-neutral-200 md:hidden"
+    >
+      <button
+        type="button"
+        data-testid="mobile-tab-blue"
+        :class="[
+          'py-2 px-3 rounded-xl font-heading font-black text-xs uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all cursor-pointer',
+          activeMobileTab === 'blue'
+            ? 'bg-blue-600 text-white shadow-xs'
+            : 'text-neutral-600 hover:text-neutral-900',
+        ]"
+        @click="activeMobileTab = 'blue'"
+      >
+        <Shield class="w-3.5 h-3.5" />
+        <span>Benteng Biru ({{ roomStore.bluePlayers.length }})</span>
+      </button>
+
+      <button
+        type="button"
+        data-testid="mobile-tab-red"
+        :class="[
+          'py-2 px-3 rounded-xl font-heading font-black text-xs uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all cursor-pointer',
+          activeMobileTab === 'red'
+            ? 'bg-red-600 text-white shadow-xs'
+            : 'text-neutral-600 hover:text-neutral-900',
+        ]"
+        @click="activeMobileTab = 'red'"
+      >
+        <Swords class="w-3.5 h-3.5" />
+        <span>Benteng Merah ({{ roomStore.redPlayers.length }})</span>
+      </button>
+    </div>
+
+    <!-- 2 Fortress Columns (Desktop: Side-by-side; Mobile: Tab-filtered) -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5">
       <!-- Kolom Kiri: Benteng Biru -->
       <div
         data-testid="roster-blue"
-        class="flex flex-col justify-between gap-4 p-5 rounded-3xl bg-blue-50/70 border-2 border-blue-300 border-b-[6px] border-b-blue-400 shadow-sm"
+        :class="[
+          'flex-col justify-between gap-3.5 p-4 sm:p-5 rounded-3xl bg-blue-50/70 border-2 border-blue-300 border-b-[6px] border-b-blue-400 shadow-sm',
+          activeMobileTab === 'blue' ? 'flex' : 'hidden md:flex',
+        ]"
       >
         <!-- Header Benteng Biru -->
         <div class="flex items-center justify-between border-b border-blue-200 pb-2.5">
           <div class="flex items-center gap-2">
-            <span class="w-4 h-4 rounded-full bg-blue-500 shadow-xs" />
-            <span class="font-heading font-black text-sm uppercase text-blue-900 tracking-wider">
-              Benteng Biru
+            <span class="w-3.5 h-3.5 rounded-full bg-blue-500 shadow-xs" />
+            <span class="font-heading font-black text-xs sm:text-sm uppercase text-blue-900 tracking-wider flex items-center gap-1.5">
+              <Shield class="w-4 h-4 text-blue-600" />
+              <span>Benteng Biru</span>
             </span>
           </div>
           <span class="px-2.5 py-0.5 rounded-full bg-blue-200/80 text-blue-800 font-heading font-black text-xs">
@@ -151,7 +215,7 @@ const onLeave = () => {
         </div>
 
         <!-- Daftar Pemain Tim Biru -->
-        <div class="flex flex-col gap-2 min-h-[140px] max-h-[220px] overflow-y-auto pr-1">
+        <div class="flex flex-col gap-2 min-h-[120px] max-h-[200px] sm:max-h-[220px] overflow-y-auto pr-1">
           <div
             v-for="p in roomStore.bluePlayers"
             :key="p.id"
@@ -159,24 +223,27 @@ const onLeave = () => {
             class="flex items-center justify-between p-2.5 rounded-2xl bg-white border border-blue-100 shadow-2xs"
           >
             <div class="flex items-center gap-2 truncate">
-              <span class="text-sm">{{ p.isHost ? '👑' : '👤' }}</span>
+              <Crown v-if="p.isHost" class="w-4 h-4 text-amber-500 shrink-0" />
+              <User v-else class="w-4 h-4 text-neutral-400 shrink-0" />
               <span class="font-sans font-bold text-xs text-neutral-800 truncate">
                 {{ p.username }} {{ p.id === roomStore.myPlayerId ? '(Anda)' : '' }}
               </span>
             </div>
             <span
               :class="[
-                'text-[10px] font-heading font-black uppercase px-2.5 py-1 rounded-lg tracking-wider',
+                'text-[10px] font-heading font-black uppercase px-2.5 py-1 rounded-lg tracking-wider flex items-center gap-1 shrink-0',
                 p.isReady ? 'bg-emerald-100 text-emerald-800 border border-emerald-300' : 'bg-neutral-100 text-neutral-500 border border-neutral-200',
               ]"
             >
-              {{ p.isReady ? '✓ Ready' : 'Belum' }}
+              <CheckCircle2 v-if="p.isReady" class="w-3 h-3 text-emerald-700" />
+              <Clock v-else class="w-3 h-3 text-neutral-400" />
+              <span>{{ p.isReady ? 'Siap' : 'Belum' }}</span>
             </span>
           </div>
 
           <div
             v-if="roomStore.bluePlayers.length === 0"
-            class="text-center py-8 font-sans text-xs text-neutral-400 italic"
+            class="text-center py-6 sm:py-8 font-sans text-xs text-neutral-400 italic"
           >
             Belum ada pemain di Benteng Biru
           </div>
@@ -188,16 +255,18 @@ const onLeave = () => {
             v-if="roomStore.myTeam !== 'blue'"
             type="button"
             data-testid="waiting-select-blue-btn"
-            class="timbul-btn timbul-btn-blue w-full py-3 text-xs font-black rounded-2xl cursor-pointer"
+            class="timbul-btn timbul-btn-blue w-full py-3 text-xs font-black rounded-2xl cursor-pointer flex items-center justify-center gap-1.5"
             @click="onSelectTeam('blue')"
           >
-            🛡️ Masuk Tim Biru
+            <Shield class="w-3.5 h-3.5" />
+            <span>Masuk Tim Biru</span>
           </button>
           <div
             v-else
-            class="w-full py-2.5 px-3 rounded-2xl bg-blue-600 text-white font-heading font-black text-xs text-center uppercase tracking-wider shadow-inner"
+            class="w-full py-2.5 px-3 rounded-2xl bg-blue-600 text-white font-heading font-black text-xs text-center uppercase tracking-wider shadow-inner flex items-center justify-center gap-1.5"
           >
-            ✓ Anda Bergabung di Tim Biru
+            <Check class="w-3.5 h-3.5" />
+            <span>Anda Bergabung di Tim Biru</span>
           </div>
         </div>
       </div>
@@ -205,14 +274,18 @@ const onLeave = () => {
       <!-- Kolom Kanan: Benteng Merah -->
       <div
         data-testid="roster-red"
-        class="flex flex-col justify-between gap-4 p-5 rounded-3xl bg-red-50/70 border-2 border-red-300 border-b-[6px] border-b-red-400 shadow-sm"
+        :class="[
+          'flex-col justify-between gap-3.5 p-4 sm:p-5 rounded-3xl bg-red-50/70 border-2 border-red-300 border-b-[6px] border-b-red-400 shadow-sm',
+          activeMobileTab === 'red' ? 'flex' : 'hidden md:flex',
+        ]"
       >
         <!-- Header Benteng Merah -->
         <div class="flex items-center justify-between border-b border-red-200 pb-2.5">
           <div class="flex items-center gap-2">
-            <span class="w-4 h-4 rounded-full bg-red-500 shadow-xs" />
-            <span class="font-heading font-black text-sm uppercase text-red-900 tracking-wider">
-              Benteng Merah
+            <span class="w-3.5 h-3.5 rounded-full bg-red-500 shadow-xs" />
+            <span class="font-heading font-black text-xs sm:text-sm uppercase text-red-900 tracking-wider flex items-center gap-1.5">
+              <Swords class="w-4 h-4 text-red-600" />
+              <span>Benteng Merah</span>
             </span>
           </div>
           <span class="px-2.5 py-0.5 rounded-full bg-red-200/80 text-red-800 font-heading font-black text-xs">
@@ -221,7 +294,7 @@ const onLeave = () => {
         </div>
 
         <!-- Daftar Pemain Tim Merah -->
-        <div class="flex flex-col gap-2 min-h-[140px] max-h-[220px] overflow-y-auto pr-1">
+        <div class="flex flex-col gap-2 min-h-[120px] max-h-[200px] sm:max-h-[220px] overflow-y-auto pr-1">
           <div
             v-for="p in roomStore.redPlayers"
             :key="p.id"
@@ -229,24 +302,27 @@ const onLeave = () => {
             class="flex items-center justify-between p-2.5 rounded-2xl bg-white border border-red-100 shadow-2xs"
           >
             <div class="flex items-center gap-2 truncate">
-              <span class="text-sm">{{ p.isHost ? '👑' : '👤' }}</span>
+              <Crown v-if="p.isHost" class="w-4 h-4 text-amber-500 shrink-0" />
+              <User v-else class="w-4 h-4 text-neutral-400 shrink-0" />
               <span class="font-sans font-bold text-xs text-neutral-800 truncate">
                 {{ p.username }} {{ p.id === roomStore.myPlayerId ? '(Anda)' : '' }}
               </span>
             </div>
             <span
               :class="[
-                'text-[10px] font-heading font-black uppercase px-2.5 py-1 rounded-lg tracking-wider',
+                'text-[10px] font-heading font-black uppercase px-2.5 py-1 rounded-lg tracking-wider flex items-center gap-1 shrink-0',
                 p.isReady ? 'bg-emerald-100 text-emerald-800 border border-emerald-300' : 'bg-neutral-100 text-neutral-500 border border-neutral-200',
               ]"
             >
-              {{ p.isReady ? '✓ Ready' : 'Belum' }}
+              <CheckCircle2 v-if="p.isReady" class="w-3 h-3 text-emerald-700" />
+              <Clock v-else class="w-3 h-3 text-neutral-400" />
+              <span>{{ p.isReady ? 'Siap' : 'Belum' }}</span>
             </span>
           </div>
 
           <div
             v-if="roomStore.redPlayers.length === 0"
-            class="text-center py-8 font-sans text-xs text-neutral-400 italic"
+            class="text-center py-6 sm:py-8 font-sans text-xs text-neutral-400 italic"
           >
             Belum ada pemain di Benteng Merah
           </div>
@@ -258,16 +334,18 @@ const onLeave = () => {
             v-if="roomStore.myTeam !== 'red'"
             type="button"
             data-testid="waiting-select-red-btn"
-            class="timbul-btn timbul-btn-red w-full py-3 text-xs font-black rounded-2xl cursor-pointer"
+            class="timbul-btn timbul-btn-red w-full py-3 text-xs font-black rounded-2xl cursor-pointer flex items-center justify-center gap-1.5"
             @click="onSelectTeam('red')"
           >
-            ⚔️ Masuk Tim Merah
+            <Swords class="w-3.5 h-3.5" />
+            <span>Masuk Tim Merah</span>
           </button>
           <div
             v-else
-            class="w-full py-2.5 px-3 rounded-2xl bg-red-600 text-white font-heading font-black text-xs text-center uppercase tracking-wider shadow-inner"
+            class="w-full py-2.5 px-3 rounded-2xl bg-red-600 text-white font-heading font-black text-xs text-center uppercase tracking-wider shadow-inner flex items-center justify-center gap-1.5"
           >
-            ✓ Anda Bergabung di Tim Merah
+            <Check class="w-3.5 h-3.5" />
+            <span>Anda Bergabung di Tim Merah</span>
           </div>
         </div>
       </div>
@@ -277,22 +355,28 @@ const onLeave = () => {
     <div
       v-if="roomStore.connectionError"
       data-testid="waiting-room-error"
-      class="p-2.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-semibold text-center"
+      class="p-2.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-semibold text-center flex items-center justify-center gap-2"
     >
-      ⚠️ {{ roomStore.connectionError }}
+      <AlertCircle class="w-4 h-4 text-rose-600 shrink-0" />
+      <span>{{ roomStore.connectionError }}</span>
     </div>
 
-    <!-- Bottom Actions Section -->
-    <div class="flex flex-col gap-3 pt-2">
-      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+    <!-- Sticky Bottom Actions Section -->
+    <div
+      data-testid="waiting-sticky-actions"
+      class="sticky bottom-0 bg-white/95 backdrop-blur-md pt-3 pb-1 border-t border-neutral-200/80 flex flex-col gap-2.5 z-20 mt-auto rounded-b-2xl"
+    >
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
         <!-- Ready Toggle Button for Everyone -->
         <TactileButton
           :variant="roomStore.isReady ? 'emerald' : 'blue'"
           data-testid="waiting-toggle-ready-btn"
-          class="w-full text-sm py-3"
+          class="w-full text-xs sm:text-sm py-3 flex items-center justify-center gap-2"
           @click="onToggleReady"
         >
-          {{ roomStore.isReady ? '✅ Siap! (Klik jika batal)' : '⏳ Saya Siap Main!' }}
+          <CheckCircle2 v-if="roomStore.isReady" class="w-4 h-4 shrink-0" />
+          <Clock v-else class="w-4 h-4 shrink-0" />
+          <span>{{ roomStore.isReady ? 'Siap! (Klik jika batal)' : 'Saya Siap Main!' }}</span>
         </TactileButton>
 
         <!-- Host-only Start Match Button -->
@@ -301,10 +385,11 @@ const onLeave = () => {
             variant="amber"
             data-testid="waiting-start-match-btn"
             :disabled="!roomStore.canStartMatch"
-            class="w-full text-sm py-3"
+            class="w-full text-xs sm:text-sm py-3 flex items-center justify-center gap-2"
             @click="onStartMatch"
           >
-            🚀 Mulai Permainan!
+            <Play class="w-4 h-4 fill-amber-950 shrink-0" />
+            <span>Mulai Permainan!</span>
           </TactileButton>
         </div>
       </div>
@@ -313,26 +398,28 @@ const onLeave = () => {
       <p
         v-if="roomStore.isHost && !roomStore.startableStatus.startable"
         data-testid="startable-reason-hint"
-        class="text-center font-sans text-xs text-amber-600 font-bold"
+        class="text-center font-sans text-xs text-amber-600 font-bold flex items-center justify-center gap-1.5"
       >
-        ℹ️ {{ roomStore.startableStatus.reason }}
+        <AlertCircle class="w-3.5 h-3.5 shrink-0" />
+        <span>{{ roomStore.startableStatus.reason }}</span>
       </p>
 
       <!-- Leave Room -->
       <button
         type="button"
         data-testid="waiting-leave-btn"
-        class="text-xs font-heading font-bold uppercase tracking-wider text-neutral-400 hover:text-neutral-600 transition-colors py-1 cursor-pointer self-center"
+        class="text-xs font-heading font-bold uppercase tracking-wider text-neutral-400 hover:text-neutral-600 transition-colors py-1 cursor-pointer self-center flex items-center gap-1.5"
         @click="onLeave"
       >
-        ← Keluar dari Ruangan
+        <ArrowLeft class="w-3.5 h-3.5" />
+        <span>Keluar dari Ruangan</span>
       </button>
     </div>
 
     <!-- Floating Toast Notifications for Lobby -->
     <div
       data-testid="lobby-toast-stack"
-      class="fixed bottom-6 right-6 flex flex-col gap-2 z-50 max-w-sm pointer-events-auto"
+      class="fixed bottom-4 left-4 right-4 sm:left-auto sm:right-6 flex flex-col gap-2 z-50 sm:max-w-sm pointer-events-auto"
     >
       <transition-group
         enter-active-class="transition duration-200 ease-out"
@@ -357,10 +444,10 @@ const onLeave = () => {
         >
           <span>{{ toast.message }}</span>
           <button
-            class="text-xs opacity-75 hover:opacity-100 ml-2 cursor-pointer"
+            class="text-xs opacity-75 hover:opacity-100 ml-2 cursor-pointer p-0.5"
             @click="roomStore.removeToast(toast.id)"
           >
-            ✕
+            <X class="w-3.5 h-3.5" />
           </button>
         </div>
       </transition-group>

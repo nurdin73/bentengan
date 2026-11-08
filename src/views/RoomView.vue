@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter, onBeforeRouteLeave } from 'vue-router'
+import { AlertCircle, ArrowLeft } from 'lucide-vue-next'
 import { useRoomStore } from '../stores/room-store'
 import { useGameStore } from '../stores/game-store'
 import LobbyWaitingRoom from '../components/lobby/LobbyWaitingRoom.vue'
@@ -126,21 +127,22 @@ const handleLeaveToHome = () => {
     <div
       v-if="roomStore.status === 'waiting'"
       data-testid="room-waiting-stage"
-      class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm"
+      class="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-sm"
     >
       <!-- Onboarding Gate for Direct URL Visitors (Enter Name & Acknowledge Rules) -->
       <div
         v-if="!roomStore.isHost && !roomStore.hasAcknowledgedRules"
         data-testid="guest-onboarding-modal"
-        class="timbul-card w-full max-w-xl p-6 sm:p-8 flex flex-col gap-5 max-h-[92vh] overflow-y-auto"
+        class="timbul-card w-full max-w-xl p-4 sm:p-8 flex flex-col gap-4 sm:gap-5 max-h-[92dvh] overflow-y-auto"
       >
         <!-- Error Notice if Join Failed -->
         <div
           v-if="roomStore.connectionError"
           data-testid="join-connection-error"
-          class="p-3 rounded-2xl bg-rose-50 border-2 border-rose-300 text-rose-700 text-xs font-bold text-center"
+          class="p-3 rounded-2xl bg-rose-50 border-2 border-rose-300 text-rose-700 text-xs font-bold text-center flex items-center justify-center gap-2"
         >
-          ⚠️ {{ roomStore.connectionError }}
+          <AlertCircle class="w-4 h-4 shrink-0 text-rose-600" />
+          <span>{{ roomStore.connectionError }}</span>
         </div>
 
         <div class="flex flex-col gap-1.5 pb-2 border-b border-neutral-200">
@@ -153,7 +155,7 @@ const handleLeaveToHome = () => {
             type="text"
             maxlength="16"
             placeholder="Masukkan nama Anda..."
-            class="w-full bg-neutral-100 border-2 border-neutral-300 focus:border-amber-400 rounded-2xl px-4 py-2.5 font-sans font-bold text-neutral-800 text-sm outline-none"
+            class="w-full bg-neutral-100 border-2 border-neutral-300 focus:border-amber-400 rounded-2xl px-4 py-2.5 font-sans font-bold text-neutral-800 text-base sm:text-sm outline-none"
           />
         </div>
 
@@ -165,18 +167,19 @@ const handleLeaveToHome = () => {
 
         <button
           type="button"
-          class="text-xs font-heading font-bold text-neutral-400 hover:text-neutral-600 text-center uppercase cursor-pointer"
+          class="text-xs font-heading font-bold text-neutral-400 hover:text-neutral-600 text-center uppercase cursor-pointer flex items-center justify-center gap-1.5 py-1"
           @click="handleLeaveToHome"
         >
-          ← Batalkan & Kembali ke Beranda
+          <ArrowLeft class="w-3.5 h-3.5" />
+          <span>Batalkan & Kembali ke Beranda</span>
         </button>
       </div>
 
-      <!-- Active Enlarged 2-Column Waiting Room -->
+      <!-- Active Enlarged Waiting Room -->
       <div
         v-else
         data-testid="room-waiting-modal"
-        class="timbul-card w-full max-w-4xl p-6 sm:p-8 flex flex-col gap-6 max-h-[92vh] overflow-y-auto shadow-2xl"
+        class="timbul-card w-full max-w-4xl p-3.5 sm:p-8 flex flex-col gap-4 sm:gap-6 max-h-[92dvh] overflow-y-auto shadow-2xl relative"
       >
         <LobbyWaitingRoom @leave="handleLeaveToHome" />
       </div>

@@ -1,11 +1,22 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
+import {
+  Castle,
+  ScrollText,
+  Gamepad2,
+  Play,
+  Shield,
+  Swords,
+  X,
+  Menu,
+} from 'lucide-vue-next'
 import { useRoomStore } from '../stores/room-store'
 import LobbyModeSelector from '../components/lobby/LobbyModeSelector.vue'
 import GameRulesModal from '../components/guide/GameRulesModal.vue'
 import GameControlsModal from '../components/guide/GameControlsModal.vue'
 import TactileButton from '../components/ui/TactileButton.vue'
+import IndonesiaFlag from '../components/ui/IndonesiaFlag.vue'
 import type { TeamId } from '../types/game.types'
 
 const router = useRouter()
@@ -14,6 +25,7 @@ const roomStore = useRoomStore()
 const showRulesModal = ref(false)
 const showControlsModal = ref(false)
 const showPracticePicker = ref(false)
+const isMobileMenuOpen = ref(false)
 
 const handleCreateHost = async (payload: {
   username: string
@@ -37,72 +49,216 @@ const handleStartPractice = (team: TeamId) => {
   showPracticePicker.value = false
   router.push(`/practice?team=${team}`)
 }
+
+const openRulesFromDrawer = () => {
+  isMobileMenuOpen.value = false
+  showRulesModal.value = true
+}
+
+const openControlsFromDrawer = () => {
+  isMobileMenuOpen.value = false
+  showControlsModal.value = true
+}
+
+const openPracticeFromDrawer = () => {
+  isMobileMenuOpen.value = false
+  showPracticePicker.value = true
+}
 </script>
 
 <template>
-  <div data-testid="home-view" class="h-screen w-full bg-[#f8f6f0] text-neutral-900 flex flex-col justify-between font-sans selection:bg-amber-200 overflow-hidden relative">
+  <div
+    data-testid="home-view"
+    class="min-h-dvh sm:h-screen w-full bg-[#f8f6f0] text-neutral-900 flex flex-col justify-between font-sans selection:bg-amber-200 overflow-y-auto sm:overflow-hidden relative"
+  >
     <!-- Navbar -->
-    <header class="w-full border-b border-neutral-300/80 bg-white/80 backdrop-blur-md px-4 sm:px-8 py-3.5 flex items-center justify-between z-30">
-      <div class="flex items-center gap-3">
-        <span class="text-2xl">🏰</span>
+    <header class="w-full border-b border-neutral-300/80 bg-white/80 backdrop-blur-md px-3.5 sm:px-8 py-2.5 sm:py-3.5 flex items-center justify-between z-30 shrink-0">
+      <div class="flex items-center gap-2 sm:gap-3">
+        <div class="w-9 h-9 sm:w-10 sm:h-10 rounded-2xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center shrink-0">
+          <Castle class="w-5 h-5 sm:w-6 sm:h-6 text-amber-600" />
+        </div>
         <div class="flex flex-col">
-          <span class="font-heading font-black text-xl text-neutral-900 tracking-wider uppercase leading-none">
+          <span class="font-heading font-black text-lg sm:text-xl text-neutral-900 tracking-wider uppercase leading-none">
             Bentengan <span class="text-amber-500">3D</span>
           </span>
-          <span class="font-sans text-[10px] text-neutral-500 font-bold uppercase tracking-wider">
+          <span class="font-sans text-[9px] sm:text-[10px] text-neutral-500 font-bold uppercase tracking-wider hidden xs:inline">
             Game Tradisional Online
           </span>
         </div>
       </div>
 
-      <nav class="flex items-center gap-2 sm:gap-3 text-xs font-heading font-bold uppercase tracking-wider text-neutral-600">
+      <!-- Desktop Nav Buttons (sm and up) -->
+      <nav class="hidden sm:flex items-center gap-2 sm:gap-3 text-xs font-heading font-bold uppercase tracking-wider text-neutral-600">
         <button
           type="button"
           data-testid="navbar-rules-btn"
-          class="px-3 py-1.5 rounded-xl hover:bg-neutral-100 text-neutral-700 transition-colors cursor-pointer"
+          class="px-3 py-1.5 rounded-xl hover:bg-neutral-100 text-neutral-700 transition-colors cursor-pointer flex items-center gap-1.5"
           @click="showRulesModal = true"
         >
-          📜 Aturan
+          <ScrollText class="w-3.5 h-3.5 text-neutral-600" />
+          <span>Aturan</span>
         </button>
         <button
           type="button"
           data-testid="navbar-controls-btn"
-          class="px-3 py-1.5 rounded-xl hover:bg-neutral-100 text-neutral-700 transition-colors cursor-pointer"
+          class="px-3 py-1.5 rounded-xl hover:bg-neutral-100 text-neutral-700 transition-colors cursor-pointer flex items-center gap-1.5"
           @click="showControlsModal = true"
         >
-          🎮 Kontrol
+          <Gamepad2 class="w-3.5 h-3.5 text-neutral-600" />
+          <span>Kontrol</span>
         </button>
-        <!-- Satu-satunya Tombol Latihan Solo di Seluruh Tampilan -->
+        <!-- Tombol Latihan Solo -->
         <button
           type="button"
           data-testid="navbar-practice-btn"
-          class="px-3.5 py-1.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-amber-950 font-black transition-all cursor-pointer shadow-xs border border-amber-500"
+          class="px-3.5 py-1.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-amber-950 font-black transition-all cursor-pointer shadow-xs border border-amber-500 flex items-center gap-1.5"
           @click="showPracticePicker = true"
         >
-          🎮 Latihan Sendiri
+          <Play class="w-3.5 h-3.5 text-amber-950 fill-amber-950" />
+          <span>Latihan Sendiri</span>
         </button>
       </nav>
+
+      <!-- Mobile Hamburger Button (< sm) -->
+      <button
+        type="button"
+        data-testid="navbar-mobile-menu-btn"
+        class="sm:hidden w-9 h-9 rounded-xl bg-neutral-100 hover:bg-neutral-200 active:scale-95 border border-neutral-300 text-neutral-800 flex items-center justify-center transition-all cursor-pointer"
+        aria-label="Menu Navigasi"
+        @click="isMobileMenuOpen = !isMobileMenuOpen"
+      >
+        <X v-if="isMobileMenuOpen" class="w-5 h-5 text-neutral-800" />
+        <Menu v-else class="w-5 h-5 text-neutral-800" />
+      </button>
     </header>
 
-    <!-- Hero Section (Center of Viewport) -->
-    <main class="flex-1 flex flex-col items-center justify-center px-4 py-4 gap-6 max-w-4xl mx-auto w-full">
-      <!-- Title & Headline -->
-      <div class="text-center flex flex-col items-center gap-2">
-        <div class="inline-flex items-center gap-2 px-3 py-0.5 bg-amber-100 border border-amber-300 rounded-full text-[11px] font-heading font-black text-amber-900 uppercase tracking-widest shadow-2xs">
-          <span>🇮🇩</span>
-          <span>Permainan Tradisional Indonesia dalam 3D</span>
+    <!-- Mobile Drawer Overlay Sheet -->
+    <transition
+      enter-active-class="transition-opacity duration-200 ease-out"
+      enter-from-class="opacity-0"
+      enter-to-class="opacity-100"
+      leave-active-class="transition-opacity duration-150 ease-in"
+      leave-from-class="opacity-100"
+      leave-to-class="opacity-0"
+    >
+      <div
+        v-if="isMobileMenuOpen"
+        data-testid="navbar-mobile-drawer-backdrop"
+        class="fixed inset-0 z-40 bg-black/60 backdrop-blur-xs sm:hidden"
+        @click="isMobileMenuOpen = false"
+      />
+    </transition>
+
+    <transition
+      enter-active-class="transition duration-250 ease-out transform"
+      enter-from-class="-translate-y-full opacity-0"
+      enter-to-class="translate-y-0 opacity-100"
+      leave-active-class="transition duration-200 ease-in transform"
+      leave-from-class="translate-y-0 opacity-100"
+      leave-to-class="-translate-y-full opacity-0"
+    >
+      <div
+        v-if="isMobileMenuOpen"
+        data-testid="navbar-mobile-drawer"
+        class="fixed top-0 left-0 right-0 z-50 bg-[#fdfbf7] border-b-4 border-neutral-300 shadow-2xl p-4 sm:hidden flex flex-col gap-4 rounded-b-3xl"
+      >
+        <!-- Drawer Header -->
+        <div class="flex items-center justify-between border-b border-neutral-200 pb-3">
+          <div class="flex items-center gap-2.5">
+            <div class="w-9 h-9 rounded-2xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center">
+              <Castle class="w-5 h-5 text-amber-600" />
+            </div>
+            <div class="flex flex-col">
+              <span class="font-heading font-black text-lg text-neutral-900 uppercase leading-none">
+                Bentengan <span class="text-amber-500">3D</span>
+              </span>
+              <span class="font-sans text-[10px] text-neutral-500 font-bold uppercase tracking-wider">
+                Menu Utama
+              </span>
+            </div>
+          </div>
+          <button
+            type="button"
+            data-testid="mobile-drawer-close-btn"
+            class="w-8 h-8 rounded-full bg-neutral-100 hover:bg-neutral-200 active:scale-95 text-neutral-600 flex items-center justify-center border border-neutral-300 cursor-pointer"
+            @click="isMobileMenuOpen = false"
+          >
+            <X class="w-4 h-4" />
+          </button>
         </div>
 
-        <h1 class="font-heading font-black text-3xl sm:text-5xl text-neutral-950 tracking-tight uppercase leading-[1.1]">
+        <!-- Drawer Navigation Items -->
+        <div class="flex flex-col gap-2.5">
+          <!-- Item 1: Aturan Permainan -->
+          <button
+            type="button"
+            data-testid="mobile-drawer-rules-btn"
+            class="w-full p-3 rounded-2xl bg-white border border-neutral-200 hover:bg-neutral-50 flex items-center gap-3 text-left transition-all shadow-2xs active:scale-[0.99] cursor-pointer"
+            @click="openRulesFromDrawer"
+          >
+            <div class="w-9 h-9 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center shrink-0">
+              <ScrollText class="w-5 h-5" />
+            </div>
+            <div class="flex flex-col flex-1">
+              <span class="font-heading font-black text-sm text-neutral-900 uppercase">Aturan Permainan</span>
+              <span class="font-sans text-[11px] text-neutral-500 font-medium">Pelajari aturan benteng & tangkap musuh</span>
+            </div>
+          </button>
+
+          <!-- Item 2: Panduan Kontrol -->
+          <button
+            type="button"
+            data-testid="mobile-drawer-controls-btn"
+            class="w-full p-3 rounded-2xl bg-white border border-neutral-200 hover:bg-neutral-50 flex items-center gap-3 text-left transition-all shadow-2xs active:scale-[0.99] cursor-pointer"
+            @click="openControlsFromDrawer"
+          >
+            <div class="w-9 h-9 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
+              <Gamepad2 class="w-5 h-5" />
+            </div>
+            <div class="flex flex-col flex-1">
+              <span class="font-heading font-black text-sm text-neutral-900 uppercase">Panduan Kontrol 3D</span>
+              <span class="font-sans text-[11px] text-neutral-500 font-medium">Kontrol sentuh HP & keyboard</span>
+            </div>
+          </button>
+
+          <!-- Item 3: Latihan Sendiri Solo -->
+          <button
+            type="button"
+            data-testid="mobile-drawer-practice-btn"
+            class="w-full p-3.5 rounded-2xl bg-amber-400 hover:bg-amber-300 text-amber-950 border border-amber-500 border-b-[4px] border-b-amber-600 flex items-center gap-3 text-left transition-all shadow-xs active:translate-y-[2px] active:border-b-[2px] cursor-pointer"
+            @click="openPracticeFromDrawer"
+          >
+            <div class="w-9 h-9 rounded-xl bg-amber-500/30 text-amber-950 flex items-center justify-center shrink-0">
+              <Play class="w-5 h-5 fill-amber-950" />
+            </div>
+            <div class="flex flex-col flex-1">
+              <span class="font-heading font-black text-sm uppercase">Latihan Sendiri (Solo)</span>
+              <span class="font-sans text-[11px] text-amber-900 font-bold">Uji taktik melawan bot sebelum mabar!</span>
+            </div>
+          </button>
+        </div>
+      </div>
+    </transition>
+
+    <!-- Hero Section (Center of Viewport) -->
+    <main class="flex-1 flex flex-col items-center justify-center px-3.5 sm:px-4 py-3 sm:py-4 gap-4 sm:gap-6 max-w-4xl mx-auto w-full">
+      <!-- Title & Headline -->
+      <div class="text-center flex flex-col items-center gap-1.5 sm:gap-2">
+        <div class="inline-flex items-center gap-2 px-3 py-0.5 bg-amber-100 border border-amber-300 rounded-full text-[10px] sm:text-[11px] font-heading font-black text-amber-900 uppercase tracking-widest shadow-2xs">
+          <IndonesiaFlag class="w-3.5 h-2.5" />
+          <span>Permainan Tradisional Indonesia 3D</span>
+        </div>
+
+        <h1 class="font-heading font-black text-2xl xs:text-3xl sm:text-5xl text-neutral-950 tracking-tight uppercase leading-[1.15] sm:leading-[1.1]">
           Pertahankan Benteng, <span class="text-amber-500">Taklukkan</span> Lawanmu!
         </h1>
 
-        <p class="font-sans text-xs sm:text-sm text-neutral-600 font-medium max-w-md leading-relaxed">
-          Main bareng teman langsung dari browser! Nggak perlu download atau login — cukup buat ruangan, bagikan tautan, dan adu strategi!
+        <p class="font-sans text-xs sm:text-sm text-neutral-600 font-medium max-w-md leading-relaxed px-1">
+          Main bareng teman langsung dari browser HP & laptop! Nggak perlu install aplikasi — cukup buat ruangan, bagikan tautan, dan adu strategi!
         </p>
       </div>
 
-      <!-- Action Mode Selector (Standalone Wide Panel matching User Mockup) -->
+      <!-- Action Mode Selector -->
       <LobbyModeSelector
         class="w-full max-w-xl sm:max-w-2xl"
         :initial-username="roomStore.myUsername"
@@ -115,12 +271,12 @@ const handleStartPractice = (team: TeamId) => {
     </main>
 
     <!-- Footer -->
-    <footer class="w-full border-t border-neutral-300/80 bg-white/70 py-3 px-4 text-center flex flex-col items-center gap-1 z-10">
-      <span class="font-heading font-black text-[11px] uppercase tracking-wider text-neutral-600">
+    <footer class="w-full border-t border-neutral-300/80 bg-white/70 py-2 sm:py-3 px-3 sm:px-4 text-center flex flex-col items-center gap-0.5 sm:gap-1 z-10 shrink-0">
+      <span class="font-heading font-black text-[10px] sm:text-[11px] uppercase tracking-wider text-neutral-600">
         Bentengan 3D &bull; Pelestarian Budaya Permainan Tradisional Indonesia
       </span>
-      <span class="font-sans text-[10px] text-neutral-400 font-medium">
-        Ayo lestarikan serunya permainan tradisional Indonesia dalam dunia 3D modern!
+      <span class="font-sans text-[9px] sm:text-[10px] text-neutral-400 font-medium">
+        Lestarikan keseruan permainan tradisional Indonesia dalam dunia 3D modern!
       </span>
     </footer>
 
@@ -139,21 +295,23 @@ const handleStartPractice = (team: TeamId) => {
     <!-- Popover: Pilih Tim Latihan Solo -->
     <div
       v-if="showPracticePicker"
-      class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs"
+      class="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-xs"
       @click.self="showPracticePicker = false"
     >
-      <div class="timbul-card w-full max-w-sm p-6 flex flex-col items-center gap-4 shadow-2xl relative">
+      <div class="timbul-card w-full max-w-sm p-5 sm:p-6 flex flex-col items-center gap-4 shadow-2xl relative">
         <button
           type="button"
-          class="absolute top-4 right-4 text-neutral-400 hover:text-neutral-700 font-black text-sm cursor-pointer"
+          class="absolute top-4 right-4 text-neutral-400 hover:text-neutral-700 font-black text-sm cursor-pointer p-1"
           @click="showPracticePicker = false"
         >
-          ✕
+          <X class="w-4 h-4" />
         </button>
 
-        <div class="text-center">
-          <span class="text-2xl">🎮</span>
-          <h3 class="font-heading font-black text-lg text-neutral-900 uppercase">
+        <div class="text-center flex flex-col items-center gap-1">
+          <div class="w-10 h-10 rounded-2xl bg-amber-100 flex items-center justify-center text-amber-700">
+            <Play class="w-5 h-5 fill-amber-700" />
+          </div>
+          <h3 class="font-heading font-black text-base sm:text-lg text-neutral-900 uppercase pt-1">
             Pilih Tim Latihan
           </h3>
           <p class="font-sans text-xs text-neutral-500 font-medium">
@@ -164,18 +322,20 @@ const handleStartPractice = (team: TeamId) => {
         <div class="grid grid-cols-2 gap-3 w-full pt-1">
           <TactileButton
             variant="blue"
-            class="w-full text-xs py-2.5"
+            class="w-full text-xs py-2.5 flex items-center justify-center gap-1.5"
             @click="handleStartPractice('blue')"
           >
-            🔵 Benteng Biru
+            <Shield class="w-3.5 h-3.5 shrink-0" />
+            <span>Benteng Biru</span>
           </TactileButton>
 
           <TactileButton
             variant="red"
-            class="w-full text-xs py-2.5"
+            class="w-full text-xs py-2.5 flex items-center justify-center gap-1.5"
             @click="handleStartPractice('red')"
           >
-            🔴 Benteng Merah
+            <Swords class="w-3.5 h-3.5 shrink-0" />
+            <span>Benteng Merah</span>
           </TactileButton>
         </div>
       </div>

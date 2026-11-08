@@ -1,5 +1,13 @@
 <script setup lang="ts">
 import { ref } from 'vue'
+import {
+  Swords,
+  Shield,
+  Sparkles,
+  LogIn,
+  AlertCircle,
+  Users,
+} from 'lucide-vue-next'
 import type { TeamId } from '../../types/game.types'
 
 const props = defineProps<{
@@ -46,7 +54,7 @@ const onJoinRoom = () => {
 <template>
   <div
     data-testid="lobby-mode-selector"
-    class="bg-white border-2 border-neutral-200/90 rounded-[28px] p-6 sm:p-8 shadow-xs flex flex-col gap-4 relative"
+    class="bg-white border-2 border-neutral-200/90 rounded-[24px] sm:rounded-[28px] p-4 sm:p-8 shadow-xs flex flex-col gap-3.5 sm:gap-4 relative"
   >
     <!-- Input: Nama Panggilanmu -->
     <div class="flex flex-col gap-1.5">
@@ -63,15 +71,16 @@ const onJoinRoom = () => {
         type="text"
         maxlength="16"
         placeholder="Ketik nama panggilanmu..."
-        class="w-full bg-neutral-100/90 border border-neutral-300 focus:border-amber-400 focus:bg-white rounded-2xl px-4 py-3 font-sans font-bold text-neutral-800 text-sm outline-none transition-all"
+        class="w-full bg-neutral-100/90 border border-neutral-300 focus:border-amber-400 focus:bg-white rounded-2xl px-4 py-2.5 sm:py-3 font-sans font-bold text-neutral-800 text-base sm:text-sm outline-none transition-all placeholder:text-neutral-400"
       />
     </div>
 
     <!-- Pilihan Format Pertandingan (4v4 vs 6v6) -->
     <div class="flex flex-col gap-1.5">
       <div class="flex items-center justify-between">
-        <label class="font-heading font-black text-xs uppercase tracking-wider text-neutral-800">
-          Format Pertandingan
+        <label class="font-heading font-black text-xs uppercase tracking-wider text-neutral-800 flex items-center gap-1.5">
+          <Users class="w-3.5 h-3.5 text-neutral-600" />
+          <span>Format Pertandingan</span>
         </label>
         <span class="text-[11px] font-sans font-bold text-neutral-500">
           {{ selectedCapacity === 8 ? 'Maksimal 8 Pemain' : 'Maksimal 12 Pemain' }}
@@ -82,47 +91,56 @@ const onJoinRoom = () => {
           type="button"
           data-testid="capacity-4v4-btn"
           :class="[
-            'py-2 px-3 rounded-xl font-heading font-black text-xs uppercase tracking-wider transition-all cursor-pointer',
+            'py-2 px-3 rounded-xl font-heading font-black text-xs uppercase tracking-wider transition-all cursor-pointer flex items-center justify-center gap-1.5',
             selectedCapacity === 8
               ? 'bg-white text-neutral-900 shadow-sm border border-neutral-200'
               : 'text-neutral-500 hover:text-neutral-700',
           ]"
           @click="selectedCapacity = 8"
         >
-          ⚔️ 4 vs 4
+          <Swords class="w-3.5 h-3.5 text-amber-600" />
+          <span>4 vs 4</span>
         </button>
         <button
           type="button"
           data-testid="capacity-6v6-btn"
           :class="[
-            'py-2 px-3 rounded-xl font-heading font-black text-xs uppercase tracking-wider transition-all cursor-pointer',
+            'py-2 px-3 rounded-xl font-heading font-black text-xs uppercase tracking-wider transition-all cursor-pointer flex items-center justify-center gap-1.5',
             selectedCapacity === 12
               ? 'bg-white text-neutral-900 shadow-sm border border-neutral-200'
               : 'text-neutral-500 hover:text-neutral-700',
           ]"
           @click="selectedCapacity = 12"
         >
-          🛡️ 6 vs 6
+          <Shield class="w-3.5 h-3.5 text-blue-600" />
+          <span>6 vs 6</span>
         </button>
       </div>
     </div>
 
-    <!-- 2-Column Action Grid -->
+    <!-- 2-Column Action Grid on Desktop, Stacked with Divider on Mobile -->
     <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
       <!-- Kolom 1 (Kiri): Tombol Besar Buat Ruangan -->
       <button
         type="button"
         data-testid="lobby-create-room-btn"
         :disabled="isConnecting"
-        class="timbul-btn w-full min-h-[105px] h-full bg-[#ff5e42] hover:bg-[#ff6e54] text-white border-[#d83c20] border-b-[#b52a12] border-b-[5px] text-base font-black rounded-2xl flex items-center justify-center gap-2 p-4 cursor-pointer active:translate-y-[2px] active:border-b-[2px] transition-all disabled:opacity-50"
+        class="timbul-btn w-full py-3.5 sm:min-h-[105px] h-full bg-[#ff5e42] hover:bg-[#ff6e54] text-white border-[#d83c20] border-b-[#b52a12] border-b-[5px] text-sm sm:text-base font-black rounded-2xl flex items-center justify-center gap-2 p-3 sm:p-4 cursor-pointer active:translate-y-[2px] active:border-b-[2px] transition-all disabled:opacity-50"
         @click="onCreateHost"
       >
-        <span class="text-lg">✨</span>
+        <Sparkles class="w-5 h-5 text-amber-200 shrink-0" />
         <span>{{ isConnecting ? 'Menyiapkan Ruangan...' : 'Buat Ruangan' }}</span>
       </button>
 
+      <!-- Mobile-only subtle visual divider -->
+      <div class="flex items-center gap-2.5 sm:hidden py-0.5">
+        <div class="flex-1 h-px bg-neutral-200"></div>
+        <span class="text-[10px] font-heading font-black uppercase tracking-widest text-neutral-400">Atau Masukkan Kode</span>
+        <div class="flex-1 h-px bg-neutral-200"></div>
+      </div>
+
       <!-- Kolom 2 (Kanan): Input Kode + Gabung Ruangan (Full Width) -->
-      <div class="flex flex-col gap-2.5 h-full justify-between">
+      <div class="flex flex-col gap-2 sm:gap-2.5 h-full justify-between">
         <!-- Input Kode Room -->
         <input
           id="targetRoomCode"
@@ -131,7 +149,10 @@ const onJoinRoom = () => {
           type="text"
           maxlength="8"
           placeholder="K O D E"
-          class="w-full bg-neutral-100/90 border border-neutral-300 focus:border-indigo-400 focus:bg-white rounded-2xl py-2.5 px-3 text-center font-mono font-black text-neutral-800 text-sm tracking-[0.25em] uppercase outline-none transition-all placeholder:text-neutral-400 placeholder:tracking-[0.25em]"
+          autocapitalize="characters"
+          autocomplete="off"
+          spellcheck="false"
+          class="w-full bg-neutral-100/90 border border-neutral-300 focus:border-indigo-400 focus:bg-white rounded-2xl py-2.5 px-3 text-center font-mono font-black text-neutral-800 text-base sm:text-sm tracking-[0.25em] uppercase outline-none transition-all placeholder:text-neutral-400 placeholder:tracking-[0.25em]"
         />
 
         <!-- Tombol Gabung Ruangan (Full Width) -->
@@ -142,7 +163,7 @@ const onJoinRoom = () => {
           class="timbul-btn w-full py-3 px-3 bg-[#b29efb] hover:bg-[#bfaeff] text-[#2c1d68] border-[#8e75eb] border-b-[#755bd9] border-b-[4px] text-xs font-black rounded-2xl flex items-center justify-center gap-1.5 cursor-pointer active:translate-y-[2px] active:border-b-[2px] transition-all disabled:opacity-40"
           @click="onJoinRoom"
         >
-          <span class="text-sm">🚪</span>
+          <LogIn class="w-4 h-4 shrink-0" />
           <span>Gabung Ruangan</span>
         </button>
       </div>
@@ -152,9 +173,10 @@ const onJoinRoom = () => {
     <div
       v-if="connectionError"
       data-testid="lobby-connection-error"
-      class="p-2.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-semibold text-center"
+      class="p-2.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-semibold text-center flex items-center justify-center gap-2"
     >
-      ⚠️ {{ connectionError }}
+      <AlertCircle class="w-4 h-4 text-rose-600 shrink-0" />
+      <span>{{ connectionError }}</span>
     </div>
   </div>
 </template>
