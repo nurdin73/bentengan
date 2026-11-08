@@ -19,12 +19,15 @@ import {
 } from 'lucide-vue-next'
 import { useRoomStore } from '../../stores/room-store'
 import TactileButton from '../ui/TactileButton.vue'
+import ConfirmDialog from '../ui/ConfirmDialog.vue'
 import type { TeamId } from '../../types/game.types'
 
 const router = useRouter()
 const roomStore = useRoomStore()
 const copied = ref(false)
 const activeMobileTab = ref<TeamId>(roomStore.myTeam || 'blue')
+const showLeaveDialog = ref(false)
+const showStartDialog = ref(false)
 
 const emit = defineEmits<{
   (e: 'leave'): void
@@ -51,11 +54,21 @@ const onToggleReady = () => {
   roomStore.toggleReady()
 }
 
-const onStartMatch = () => {
+const handleStartClick = () => {
+  showStartDialog.value = true
+}
+
+const confirmStart = () => {
+  showStartDialog.value = false
   roomStore.startMatch()
 }
 
-const onLeave = () => {
+const handleLeaveClick = () => {
+  showLeaveDialog.value = true
+}
+
+const confirmLeave = () => {
+  showLeaveDialog.value = false
   roomStore.leaveRoom()
   emit('leave')
   router.push('/')
@@ -372,7 +385,7 @@ const onLeave = () => {
           variant="neutral"
           data-testid="waiting-leave-btn"
           class="w-full text-xs sm:text-sm py-3 flex items-center justify-center gap-1.5"
-          @click="onLeave"
+          @click="handleLeaveClick"
         >
           <ArrowLeft class="w-4 h-4 shrink-0" />
           <span>Keluar</span>
@@ -411,7 +424,7 @@ const onLeave = () => {
             data-testid="waiting-start-match-btn"
             :disabled="!roomStore.canStartMatch"
             class="w-full text-xs sm:text-sm py-3 flex items-center justify-center gap-2"
-            @click="onStartMatch"
+            @click="handleStartClick"
           >
             <Play class="w-4 h-4 fill-amber-950 shrink-0" />
             <span>Mulai Permainan!</span>
@@ -433,13 +446,55 @@ const onLeave = () => {
           type="button"
           data-testid="waiting-leave-btn"
           class="text-xs font-heading font-bold uppercase tracking-wider text-neutral-400 hover:text-neutral-600 transition-colors py-1 cursor-pointer self-center flex items-center gap-1.5"
-          @click="onLeave"
+          @click="handleLeaveClick"
         >
           <ArrowLeft class="w-3.5 h-3.5" />
           <span>Tutup / Keluar dari Ruangan</span>
         </button>
       </div>
     </div>
+
+    <!-- Dialog Konfirmasi Keluar Ruangan -->
+    <ConfirmDialog
+      v-if="showLeaveDialog"
+      type="danger"
+      data-testid="dialog-leave-room"
+      title="Keluar dari Ruangan?"
+      :message="roomStore.isHost
+        ? 'Sebagai Tuan Rumah (Host), jika Anda keluar maka ruangan ini akan ditutup dan seluruh pemain akan terputus.'
+        : 'Anda akan meninggalkan benteng dan kembali ke beranda.'"
+      confirm-text="Ya, Keluar"
+      cancel-text="Batal"
+      confirm-variant="red"
+      @confirm="confirmLeave"
+      @cancel="showLeaveDialog = false"
+      @close="showLeaveDialog = false"
+    />
+
+    <!-- Dialog Konfirmasi Mulai Pertandingan (Opsi A) -->
+    <ConfirmDialog
+      v-if="showStartDialog"
+      type="confirm"
+      data-testid="dialog-start-match"
+      title="Mulai Pertandingan?"
+      message="Seluruh pemain yang terhubung di Benteng Biru dan Merah akan langsung masuk ke arena 3D."
+      confirm-text="Mulai"
+      cancel-text="Batal"
+      confirm-variant="amber"
+      @confirm="confirmStart"
+      @cancel="showStartDialog = false"
+      @close="showStartDialog = false"
+    >
+      <div class="flex items-center justify-center gap-2 py-1 text-xs font-heading font-black">
+        <span class="px-2.5 py-1 rounded-xl bg-blue-100 text-blue-800 border border-blue-200">
+          🔵 Benteng Biru: {{ roomStore.bluePlayers.length }}
+        </span>
+        <span class="text-neutral-400">vs</span>
+        <span class="px-2.5 py-1 rounded-xl bg-red-100 text-red-800 border border-red-200">
+          🔴 Benteng Merah: {{ roomStore.redPlayers.length }}
+        </span>
+      </div>
+    </ConfirmDialog>
 
     <!-- Floating Toast Notifications for Lobby -->
     <div

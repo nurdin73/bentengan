@@ -7,6 +7,7 @@ import GameControlsModal from '../components/guide/GameControlsModal.vue'
 import GameRulesModal from '../components/guide/GameRulesModal.vue'
 import LobbyWaitingRoom from '../components/lobby/LobbyWaitingRoom.vue'
 import GameHUD from '../components/hud/GameHUD.vue'
+import ConfirmDialog from '../components/ui/ConfirmDialog.vue'
 import { useRoomStore } from '../stores/room-store'
 
 const mockPush = vi.fn()
@@ -233,6 +234,94 @@ describe('Mobile Responsive Layout & Icon Integration', () => {
       const cancelBtn = wrapperReady.find('[data-testid="waiting-toggle-ready-btn"]')
       expect(cancelBtn.text()).toContain('Batal')
       expect(cancelBtn.classes()).toContain('timbul-btn-red')
+    })
+
+    it('opens leave confirmation dialog when clicking leave button and confirms exit', async () => {
+      const roomStore = useRoomStore()
+      roomStore.isHost = false
+      const leaveSpy = vi.spyOn(roomStore, 'leaveRoom')
+
+      const wrapper = mount(LobbyWaitingRoom)
+
+      expect(wrapper.find('[data-testid="dialog-leave-room"]').exists()).toBe(false)
+
+      // Click leave button -> opens dialog
+      await wrapper.find('[data-testid="waiting-leave-btn"]').trigger('click')
+      expect(wrapper.find('[data-testid="dialog-leave-room"]').exists()).toBe(true)
+
+      // Click cancel inside dialog -> closes dialog
+      await wrapper.find('[data-testid="dialog-cancel-btn"]').trigger('click')
+      expect(wrapper.find('[data-testid="dialog-leave-room"]').exists()).toBe(false)
+      expect(leaveSpy).not.toHaveBeenCalled()
+
+      // Click leave again and confirm
+      await wrapper.find('[data-testid="waiting-leave-btn"]').trigger('click')
+      await wrapper.find('[data-testid="dialog-confirm-btn"]').trigger('click')
+      expect(leaveSpy).toHaveBeenCalled()
+      expect(mockPush).toHaveBeenCalledWith('/')
+    })
+
+    it('opens start match confirmation dialog for host and confirms start', async () => {
+      const roomStore = useRoomStore()
+      roomStore.isHost = true
+      roomStore.roomCode = 'BNTG9'
+      roomStore.players = [
+        { id: 'h1', peerId: 'p-h1', username: 'Host', teamId: 'blue', isHost: true, isReady: true },
+        { id: 'g1', peerId: 'p-g1', username: 'Guest', teamId: 'red', isHost: false, isReady: true },
+      ]
+      const startSpy = vi.spyOn(roomStore, 'startMatch')
+
+      const wrapper = mount(LobbyWaitingRoom)
+
+      const startBtn = wrapper.find('[data-testid="waiting-start-match-btn"]')
+      expect(startBtn.exists()).toBe(true)
+
+      // Click start button -> opens dialog
+      await startBtn.trigger('click')
+      expect(wrapper.find('[data-testid="dialog-start-match"]').exists()).toBe(true)
+
+      // Confirm start in dialog
+      await wrapper.find('[data-testid="dialog-confirm-btn"]').trigger('click')
+      expect(startSpy).toHaveBeenCalled()
+      expect(wrapper.find('[data-testid="dialog-start-match"]').exists()).toBe(false)
+    })
+  })
+
+  describe('ConfirmDialog Standalone Component', () => {
+    it('renders alert dialog with single confirm button', async () => {
+      const wrapper = mount(ConfirmDialog, {
+        props: {
+          type: 'alert',
+          title: 'Perhatian',
+          message: 'Ini pesan peringatan penting.',
+        },
+      })
+
+      expect(wrapper.find('[data-testid="dialog-title"]').text()).toBe('Perhatian')
+      expect(wrapper.find('[data-testid="dialog-message"]').text()).toBe('Ini pesan peringatan penting.')
+      expect(wrapper.find('[data-testid="dialog-cancel-btn"]').exists()).toBe(false)
+      expect(wrapper.find('[data-testid="dialog-confirm-btn"]').exists()).toBe(true)
+
+      await wrapper.find('[data-testid="dialog-confirm-btn"]').trigger('click')
+      expect(wrapper.emitted('confirm')).toBeTruthy()
+    })
+
+    it('renders confirm dialog with 2 buttons and emits cancel and close', async () => {
+      const wrapper = mount(ConfirmDialog, {
+        props: {
+          type: 'confirm',
+          title: 'Apakah Anda Yakin?',
+          confirmText: 'Lanjutkan',
+          cancelText: 'Batalkan',
+        },
+      })
+
+      expect(wrapper.find('[data-testid="dialog-cancel-btn"]').exists()).toBe(true)
+      expect(wrapper.find('[data-testid="dialog-confirm-btn"]').exists()).toBe(true)
+
+      await wrapper.find('[data-testid="dialog-cancel-btn"]').trigger('click')
+      expect(wrapper.emitted('cancel')).toBeTruthy()
+      expect(wrapper.emitted('close')).toBeTruthy()
     })
   })
 
