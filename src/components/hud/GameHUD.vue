@@ -15,13 +15,6 @@ onMounted(() => {
   isMobile.value = checkIsMobileTouchDevice()
 })
 
-const staminaColor = computed(() => {
-  if (gameStore.isStunned) return 'bg-red-500'
-  if (gameStore.staminaPercentage > 50) return 'bg-emerald-400'
-  if (gameStore.staminaPercentage > 25) return 'bg-amber-400'
-  return 'bg-red-400'
-})
-
 defineEmits<{
   (e: 'request-pointer-lock'): void
   (e: 'virtual-move', movement: VirtualMovementInput): void
@@ -151,39 +144,6 @@ defineEmits<{
         </div>
       </div>
     </div>
-
-    <!-- Bottom Stamina HUD -->
-    <footer class="flex items-center justify-center w-full pb-2">
-      <!-- Stamina Bar Panel -->
-      <div
-        data-testid="hud-stamina-panel"
-        class="timbul-card-dark p-3.5 w-full max-w-xs flex flex-col gap-1.5"
-      >
-        <div class="flex justify-between items-center text-xs font-heading font-bold uppercase tracking-wider">
-          <span class="flex items-center gap-1.5 text-neutral-300">
-            <span>⚡ Stamina</span>
-            <span
-              v-if="gameStore.isSprinting"
-              data-testid="hud-sprint-badge"
-              class="bg-amber-500 text-amber-950 px-1.5 py-0.2 rounded text-[10px] font-black"
-            >
-              SPRINT
-            </span>
-          </span>
-          <span class="text-neutral-400 font-mono font-bold">{{ Math.round(gameStore.stamina) }} / {{ gameStore.maxStamina }}</span>
-        </div>
-
-        <!-- Tactile Progress Bar -->
-        <div class="w-full bg-neutral-950 rounded-full h-3.5 p-0.5 border border-neutral-800 overflow-hidden shadow-inner">
-          <div
-            data-testid="hud-stamina-fill"
-            class="h-full rounded-full transition-all duration-75 border-b-2 border-black/30 shadow-sm"
-            :class="staminaColor"
-            :style="{ width: `${gameStore.staminaPercentage}%` }"
-          />
-        </div>
-      </div>
-    </footer>
 
     <!-- Toast Notification Stack -->
     <div

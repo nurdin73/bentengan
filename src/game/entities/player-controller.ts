@@ -4,6 +4,28 @@ import type { PhysicsWorld } from '../physics/physics-world'
 import type { GameplayEntity, MovementInput, PlayerStatus, TeamId } from '../../types/game.types'
 import { GAME_CONFIG } from '../core/constants'
 
+function drawRoundedRect(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  r: number,
+): void {
+  const radius = Math.min(r, w / 2, h / 2)
+  ctx.beginPath()
+  ctx.moveTo(x + radius, y)
+  ctx.lineTo(x + w - radius, y)
+  ctx.quadraticCurveTo(x + w, y, x + w, y + radius)
+  ctx.lineTo(x + w, y + h - radius)
+  ctx.quadraticCurveTo(x + w, y + h, x + w - radius, y + h)
+  ctx.lineTo(x + radius, y + h)
+  ctx.quadraticCurveTo(x, y + h, x, y + h - radius)
+  ctx.lineTo(x, y + radius)
+  ctx.quadraticCurveTo(x, y, x + radius, y)
+  ctx.closePath()
+}
+
 export interface PlayerControllerOptions {
   id: string
   name?: string
@@ -49,6 +71,15 @@ export class PlayerController implements GameplayEntity {
   public readonly stunStarsGroup: THREE.Group
   private readonly stunStarGeo: THREE.OctahedronGeometry
   private readonly stunStarMat: THREE.MeshBasicMaterial
+
+  // Overhead 3D Player Name & Stamina Bar Sprite
+  public readonly overheadSprite: THREE.Sprite
+  private readonly overheadCanvas: HTMLCanvasElement
+  private readonly overheadCtx: CanvasRenderingContext2D | null
+  private readonly overheadTexture: THREE.CanvasTexture
+  private lastRenderedStamina = -1
+  private lastRenderedStatus: PlayerStatus | '' = ''
+  private lastRenderedSprinting = false
 
   // Pre-allocated scratch objects for zero-allocation tick loops (Rule 3.A)
   private readonly scratchMove = new THREE.Vector3()
@@ -124,6 +155,24 @@ export class PlayerController implements GameplayEntity {
       this.stunStarsGroup.add(star)
     }
     this.mesh.add(this.stunStarsGroup)
+
+    // Overhead 3D Player Nameplate & Dynamic Stamina Bar
+    this.overheadCanvas = document.createElement('canvas')
+    this.overheadCanvas.width = 256
+    this.overheadCanvas.height = 72
+    this.overheadCtx = this.overheadCanvas.getContext('2d')
+
+    this.overheadTexture = new THREE.CanvasTexture(this.overheadCanvas)
+    const spriteMat = new THREE.SpriteMaterial({
+      map: this.overheadTexture,
+      transparent: true,
+      depthTest: false,
+    })
+    this.overheadSprite = new THREE.Sprite(spriteMat)
+    this.overheadSprite.scale.set(2.2, 0.62, 1.0)
+    this.overheadSprite.position.set(0, characterHeight + 0.45, 0)
+    this.mesh.add(this.overheadSprite)
+    this.updateOverheadDisplay()
 
     scene.add(this.mesh)
 
@@ -335,6 +384,93 @@ export class PlayerController implements GameplayEntity {
     if (isStunned) {
       this.stunStarsGroup.rotation.y += 0.08
     }
+
+    // Overhead 3D nameplate & stamina bar update
+    this.updateOverheadDisplay()
+  }
+
+  public updateOverheadDisplay(): void {
+    if (!this.overheadCtx) return
+
+    const staminaInt = Math.round(this.stamina)
+    if (
+      staminaInt === this.lastRenderedStamina &&
+      this.status === this.lastRenderedStatus &&
+      this.isSprinting === this.lastRenderedSprinting
+    ) {
+      return
+    }
+
+    this.lastRenderedStamina = staminaInt
+    this.lastRenderedStatus = this.status
+    this.lastRenderedSprinting = this.isSprinting
+
+    const ctx = this.overheadCtx
+    ctx.clearRect(0, 0, 256, 72)
+
+    // 1. Top Row: Rounded Nameplate Pill
+    ctx.fillStyle = 'rgba(15, 23, 42, 0.88)'
+    ctx.strokeStyle = this.teamId === 'blue' ? '#3b82f6' : '#ef4444'
+    ctx.lineWidth = 3
+
+    const npX = 8
+    const npY = 4
+    const npW = 240
+    const npH = 38
+    const npR = 19
+    drawRoundedRect(ctx, npX, npY, npW, npH, npR)
+    ctx.fill()
+    ctx.stroke()
+
+    // Team indicator dot
+    ctx.fillStyle = this.teamId === 'blue' ? '#60a5fa' : '#f87171'
+    ctx.beginPath()
+    ctx.arc(32, 23, 6, 0, Math.PI * 2)
+    ctx.fill()
+
+    // Username text
+    ctx.font = 'bold 18px system-ui, -apple-system, sans-serif'
+    ctx.fillStyle = '#ffffff'
+    ctx.textAlign = 'left'
+    ctx.textBaseline = 'middle'
+    const truncated = this.name.length > 12 ? this.name.substring(0, 11) + '…' : this.name
+    ctx.fillText(truncated, 48, 23)
+
+    // 2. Bottom Row: Sleek Stamina Bar
+    const barX = 14
+    const barY = 46
+    const barW = 228
+    const barH = 16
+    const barR = 8
+
+    // Background Track
+    ctx.fillStyle = 'rgba(2, 6, 23, 0.92)'
+    ctx.strokeStyle = 'rgba(51, 65, 85, 0.9)'
+    ctx.lineWidth = 2
+    drawRoundedRect(ctx, barX, barY, barW, barH, barR)
+    ctx.fill()
+    ctx.stroke()
+
+    // Dynamic Fill
+    const ratio = Math.max(0, Math.min(1, this.stamina / GAME_CONFIG.stamina.max))
+    const fillW = Math.max(0, (barW - 4) * ratio)
+
+    if (fillW > 0) {
+      if (this.status === 'stunned') {
+        ctx.fillStyle = '#ef4444'
+      } else if (ratio > 0.5) {
+        ctx.fillStyle = '#10b981'
+      } else if (ratio > 0.25) {
+        ctx.fillStyle = '#f59e0b'
+      } else {
+        ctx.fillStyle = '#f43f5e'
+      }
+
+      drawRoundedRect(ctx, barX + 2, barY + 2, fillW, barH - 4, Math.max(2, barR - 2))
+      ctx.fill()
+    }
+
+    this.overheadTexture.needsUpdate = true
   }
 
   public setVisualOpacity(opacity: number): void {
@@ -343,6 +479,9 @@ export class PlayerController implements GameplayEntity {
     this.bodyMat.opacity = opacity
     this.visorMat.transparent = isTransparent
     this.visorMat.opacity = opacity
+    if (this.overheadSprite.material) {
+      this.overheadSprite.material.opacity = opacity
+    }
   }
 
   public getPosition(): THREE.Vector3 {
@@ -359,6 +498,12 @@ export class PlayerController implements GameplayEntity {
     this.immunityAuraMesh.geometry.dispose()
     this.stunStarGeo.dispose()
     this.stunStarMat.dispose()
+    if (this.overheadTexture) {
+      this.overheadTexture.dispose()
+    }
+    if (this.overheadSprite.material) {
+      this.overheadSprite.material.dispose()
+    }
     this.physics.world.removeCollider(this.collider, false)
     this.physics.world.removeRigidBody(this.body)
   }
