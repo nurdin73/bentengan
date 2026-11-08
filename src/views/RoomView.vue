@@ -29,12 +29,25 @@ const tempUsername = ref(roomStore.myUsername)
 const isSubmittingJoin = ref(false)
 
 onMounted(async () => {
+  try {
+    const hostedRoom = sessionStorage.getItem('bentengan_hosted_room')
+    // If this browser tab was the Host of this room who reloaded: redirect back to Home
+    if (hostedRoom && hostedRoom === roomCode.value && !roomStore.isHost) {
+      sessionStorage.removeItem('bentengan_hosted_room')
+      roomStore.leaveRoom()
+      router.replace('/')
+      return
+    }
+  } catch {
+    // Ignore storage access errors in restricted contexts
+  }
+
   // If host already initialized room on this code, we're ready
   if (roomStore.isHost && roomStore.roomCode === roomCode.value) {
     return
   }
 
-  // If user navigated directly via URL, ensure we set room code
+  // If user navigated directly via URL or reloaded as guest, allow them to join/rejoin
   roomStore.roomCode = roomCode.value
 })
 

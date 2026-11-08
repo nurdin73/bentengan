@@ -127,4 +127,36 @@ describe('Milestone 5 — Scale, Edge Cases & Stabilization', () => {
       expect(scene.children).not.toContain(remote.mesh)
     })
   })
+
+  describe('Host Reload Redirection vs Guest Rejoin', () => {
+    it('sets sessionStorage on createHostRoom and removes it on leaveRoom', async () => {
+      const roomStore = useRoomStore()
+      vi.spyOn(peerNetworkManager, 'initHost').mockResolvedValue('test-peer')
+
+      await roomStore.createHostRoom('HOST12', 'blue')
+      expect(sessionStorage.getItem('bentengan_hosted_room')).toBe('HOST12')
+
+      roomStore.leaveRoom()
+      expect(sessionStorage.getItem('bentengan_hosted_room')).toBeNull()
+    })
+
+    it('identifies host reload via sessionStorage key matching room code', () => {
+      sessionStorage.setItem('bentengan_hosted_room', 'ROOM99')
+
+      const isHostReload = (roomCode: string, isHostActive: boolean) => {
+        const hosted = sessionStorage.getItem('bentengan_hosted_room')
+        return Boolean(hosted && hosted === roomCode && !isHostActive)
+      }
+
+      // Reloading host tab (state reset, isHostActive = false)
+      expect(isHostReload('ROOM99', false)).toBe(true)
+
+      // Active host that navigated legitimately (isHostActive = true)
+      expect(isHostReload('ROOM99', true)).toBe(false)
+
+      // Guest reloading (never set bentengan_hosted_room for this room)
+      sessionStorage.removeItem('bentengan_hosted_room')
+      expect(isHostReload('ROOM99', false)).toBe(false)
+    })
+  })
 })

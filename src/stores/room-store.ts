@@ -123,6 +123,12 @@ export const useRoomStore = defineStore('room', {
       this.hasAcknowledgedRules = true // Host creates room and already knows rules
 
       try {
+        sessionStorage.setItem('bentengan_hosted_room', this.roomCode)
+      } catch {
+        // Ignore storage errors in restricted contexts
+      }
+
+      try {
         await peerNetworkManager.initHost(
           this.roomCode,
           {
@@ -190,6 +196,11 @@ export const useRoomStore = defineStore('room', {
     },
 
     leaveRoom() {
+      try {
+        sessionStorage.removeItem('bentengan_hosted_room')
+      } catch {
+        // Ignore storage errors
+      }
       peerNetworkManager.disconnect()
       this.roomCode = ''
       this.isHost = false
