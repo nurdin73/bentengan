@@ -80,7 +80,18 @@ const onLeave = () => {
 
       <!-- Latency & Connected Info -->
       <div class="flex items-center gap-3">
-        <div class="flex items-center gap-1.5 px-3 py-1.5 bg-neutral-100 border border-neutral-200 rounded-xl font-mono text-xs font-bold text-neutral-600">
+        <div
+          v-if="roomStore.isReconnecting"
+          data-testid="waiting-reconnecting-badge"
+          class="flex items-center gap-1.5 px-3 py-1.5 bg-amber-100 border border-amber-300 rounded-xl font-mono text-xs font-bold text-amber-800 animate-pulse"
+        >
+          <span class="w-2.5 h-2.5 rounded-full bg-amber-500" />
+          <span>Menyambung Ulang...</span>
+        </div>
+        <div
+          v-else
+          class="flex items-center gap-1.5 px-3 py-1.5 bg-neutral-100 border border-neutral-200 rounded-xl font-mono text-xs font-bold text-neutral-600"
+        >
           <span
             class="w-2.5 h-2.5 rounded-full"
             :class="roomStore.latencyMs < 100 ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'"
@@ -88,6 +99,26 @@ const onLeave = () => {
           <span>{{ roomStore.latencyMs < 100 ? 'Sinyal Lancar' : 'Sinyal Sedang' }} ({{ roomStore.latencyMs }} ms)</span>
         </div>
       </div>
+    </div>
+
+    <!-- Reconnecting Banner Notice if active -->
+    <div
+      v-if="roomStore.isReconnecting"
+      data-testid="waiting-reconnecting-banner"
+      class="p-3 rounded-2xl bg-amber-50 border-2 border-amber-300 text-amber-900 text-xs font-bold flex items-center justify-between gap-3 shadow-xs"
+    >
+      <div class="flex items-center gap-2">
+        <span class="text-base animate-spin">🔄</span>
+        <span>{{ roomStore.reconnectMessage || 'Koneksi terputus. Mencoba menyambung kembali...' }}</span>
+      </div>
+      <button
+        v-if="!roomStore.isHost"
+        data-testid="waiting-reconnect-retry-btn"
+        class="px-3 py-1 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-xs font-heading font-black cursor-pointer shadow-xs whitespace-nowrap"
+        @click="roomStore.manualRetryReconnect()"
+      >
+        Coba Sekarang
+      </button>
     </div>
 
     <!-- Connection Error Notice if present -->
@@ -296,6 +327,43 @@ const onLeave = () => {
       >
         ← Keluar dari Ruangan
       </button>
+    </div>
+
+    <!-- Floating Toast Notifications for Lobby -->
+    <div
+      data-testid="lobby-toast-stack"
+      class="fixed bottom-6 right-6 flex flex-col gap-2 z-50 max-w-sm pointer-events-auto"
+    >
+      <transition-group
+        enter-active-class="transition duration-200 ease-out"
+        enter-from-class="translate-y-4 opacity-0"
+        enter-to-class="translate-y-0 opacity-100"
+        leave-active-class="transition duration-150 ease-in"
+        leave-from-class="translate-y-0 opacity-100"
+        leave-to-class="translate-y-4 opacity-0"
+      >
+        <div
+          v-for="toast in roomStore.activeToasts"
+          :key="toast.id"
+          :data-testid="`lobby-toast-${toast.type}`"
+          :class="[
+            'px-4 py-2.5 rounded-xl text-xs font-heading font-bold shadow-xl border-b-[3px] flex items-center justify-between gap-3',
+            toast.type === 'warn'
+              ? 'bg-amber-500 text-amber-950 border-amber-700'
+              : toast.type === 'success'
+                ? 'bg-emerald-600 text-white border-emerald-800'
+                : 'bg-neutral-800 text-neutral-100 border-neutral-900',
+          ]"
+        >
+          <span>{{ toast.message }}</span>
+          <button
+            class="text-xs opacity-75 hover:opacity-100 ml-2 cursor-pointer"
+            @click="roomStore.removeToast(toast.id)"
+          >
+            ✕
+          </button>
+        </div>
+      </transition-group>
     </div>
   </div>
 </template>

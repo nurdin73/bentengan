@@ -8,6 +8,7 @@ import {
   type PlayerUpdateMessage,
   type WorldSnapshotMessage,
   type GameEventMessage,
+  type PeerStatusNotification,
   isMatchStartable,
 } from './network-protocol'
 
@@ -33,6 +34,10 @@ export interface PeerNetworkEvents {
   onWorldSnapshot: (snapshot: WorldSnapshotMessage) => void
   onGameEvent: (event: GameEventMessage) => void
   onPlayerLeft: (playerId: string) => void
+  onPlayerReconnected: (player: RoomPlayer) => void
+  onReconnecting: (message: string) => void
+  onReconnected: () => void
+  onPeerStatusNotification: (notification: PeerStatusNotification) => void
 }
 
 export class PeerNetworkManager {
@@ -44,6 +49,14 @@ export class PeerNetworkManager {
   private currentRoom: Room | null = null
   private localPlayerId = ''
   private isHost = false
+  private isIntentionalDisconnect = false
+  private reconnectTimer: ReturnType<typeof setTimeout> | null = null
+  private reconnectAttempts = 0
+  private disconnectGraceTimers = new Map<string, ReturnType<typeof setTimeout>>()
+  private cachedClientParams: {
+    roomCode: string
+    player: Omit<RoomPlayer, 'peerId' | 'isHost' | 'isReady'>
+  } | null = null
 
   public events: Partial<PeerNetworkEvents> = {}
 
@@ -64,6 +77,12 @@ export class PeerNetworkManager {
     maxPlayers: 8 | 12 = 8,
   ): Promise<string> {
     this.disconnect()
+    this.isIntentionalDisconnect = false
+    this.reconnectAttempts = 0
+    if (this.reconnectTimer) {
+      clearTimeout(this.reconnectTimer)
+      this.reconnectTimer = null
+    }
 
     const hostPeerId = getHostPeerId(roomCode)
     this.localPlayerId = player.id
@@ -75,6 +94,14 @@ export class PeerNetworkManager {
         this.peer = peerInstance
 
         peerInstance.on('open', (id) => {
+          if (this.currentRoom) {
+            // Reconnected to signaling server with existing active room
+            this.events.onReconnected?.()
+            this.broadcastRoomState()
+            resolve(id)
+            return
+          }
+
           this.currentRoom = {
             id: `room-${roomCode}`,
             roomCode: roomCode.toUpperCase(),
@@ -112,7 +139,17 @@ export class PeerNetworkManager {
         })
 
         peerInstance.on('disconnected', () => {
-          this.events.onDisconnected?.()
+          if (!this.isIntentionalDisconnect && this.currentRoom) {
+            this.events.onReconnecting?.('Koneksi server signaling terputus. Menyambung ulang...')
+            try {
+              peerInstance.reconnect()
+            } catch (err) {
+              console.warn('Gagal memanggil peer.reconnect():', err)
+              this.events.onDisconnected?.()
+            }
+          } else {
+            this.events.onDisconnected?.()
+          }
         })
       } catch (err) {
         reject(err)
@@ -128,6 +165,13 @@ export class PeerNetworkManager {
     player: Omit<RoomPlayer, 'peerId' | 'isHost' | 'isReady'>,
   ): Promise<void> {
     this.disconnect()
+    this.isIntentionalDisconnect = false
+    this.cachedClientParams = { roomCode, player }
+    this.reconnectAttempts = 0
+    if (this.reconnectTimer) {
+      clearTimeout(this.reconnectTimer)
+      this.reconnectTimer = null
+    }
 
     this.localPlayerId = player.id
     this.isHost = false
@@ -181,7 +225,11 @@ export class PeerNetworkManager {
           })
 
           conn.on('close', () => {
-            this.events.onDisconnected?.()
+            if (!this.isIntentionalDisconnect && hasConnected) {
+              this.attemptClientReconnect()
+            } else {
+              this.events.onDisconnected?.()
+            }
           })
         })
 
@@ -342,6 +390,19 @@ export class PeerNetworkManager {
    * Closes all peer connections and resets state.
    */
   public disconnect(): void {
+    this.isIntentionalDisconnect = true
+    if (this.reconnectTimer) {
+      clearTimeout(this.reconnectTimer)
+      this.reconnectTimer = null
+    }
+    this.reconnectAttempts = 0
+    this.cachedClientParams = null
+
+    for (const timer of this.disconnectGraceTimers.values()) {
+      clearTimeout(timer)
+    }
+    this.disconnectGraceTimers.clear()
+
     if (this.pingIntervalId) {
       clearInterval(this.pingIntervalId)
       this.pingIntervalId = null
@@ -376,6 +437,134 @@ export class PeerNetworkManager {
 
     this.currentRoom = null
     this.isHost = false
+  }
+
+  /**
+   * Broadcasts peer connection status updates (disconnected, reconnected, left) to all peers.
+   */
+  public broadcastPeerStatus(
+    playerId: string,
+    username: string,
+    status: 'disconnected' | 'reconnected' | 'left',
+  ): void {
+    const notif: PeerStatusNotification = {
+      type: 'PEER_STATUS_NOTIFICATION',
+      playerId,
+      username,
+      status,
+      timestamp: Date.now(),
+    }
+    this.broadcastMessage(notif)
+    this.events.onPeerStatusNotification?.(notif)
+  }
+
+  /**
+   * Graceful client reconnection loop with exponential/interval retry.
+   */
+  public attemptClientReconnect(): void {
+    if (!this.cachedClientParams || this.isIntentionalDisconnect) return
+
+    const MAX_ATTEMPTS = 5
+    const RETRY_INTERVAL_MS = 2500
+
+    if (this.reconnectAttempts >= MAX_ATTEMPTS) {
+      this.events.onConnectionError?.('Gagal terhubung kembali ke Host setelah 5 percobaan.')
+      this.events.onDisconnected?.()
+      return
+    }
+
+    this.reconnectAttempts++
+    this.events.onReconnecting?.(
+      `Koneksi ke Host terputus. Mencoba menghubungkan kembali (${this.reconnectAttempts}/${MAX_ATTEMPTS})...`,
+    )
+
+    if (this.reconnectTimer) {
+      clearTimeout(this.reconnectTimer)
+      this.reconnectTimer = null
+    }
+
+    this.reconnectTimer = setTimeout(() => {
+      if (this.isIntentionalDisconnect || !this.cachedClientParams) return
+
+      const { roomCode, player } = this.cachedClientParams
+      const hostPeerId = getHostPeerId(roomCode)
+
+      if (this.peer && this.peer.disconnected && !this.peer.destroyed) {
+        try {
+          this.peer.reconnect()
+        } catch {
+          // Ignore
+        }
+      }
+
+      if (!this.peer || this.peer.destroyed) {
+        this.peer = new Peer(PEER_CONFIG)
+      }
+
+      const connectToHost = () => {
+        if (!this.peer || this.peer.destroyed || this.isIntentionalDisconnect) return
+
+        const conn = this.peer.connect(hostPeerId, {
+          reliable: true,
+        })
+        this.hostConnection = conn
+
+        let hasReconnected = false
+
+        const handleOpen = () => {
+          if (hasReconnected) return
+          hasReconnected = true
+          this.reconnectAttempts = 0
+          if (this.reconnectTimer) {
+            clearTimeout(this.reconnectTimer)
+            this.reconnectTimer = null
+          }
+
+          const joinMsg: NetworkMessage = {
+            type: 'JOIN_REQUEST',
+            playerId: player.id,
+            username: player.username,
+            teamId: player.teamId,
+          }
+          conn.send(joinMsg)
+          this.startPingHeartbeat()
+          this.events.onReconnected?.()
+        }
+
+        if (conn.open) {
+          handleOpen()
+        } else {
+          conn.on('open', handleOpen)
+        }
+
+        conn.on('data', (raw) => {
+          this.handleClientIncomingData(raw)
+        })
+
+        conn.on('error', (_err) => {
+          // Error will trigger close or next retry loop
+        })
+
+        conn.on('close', () => {
+          if (!this.isIntentionalDisconnect) {
+            this.attemptClientReconnect()
+          }
+        })
+      }
+
+      if (this.peer.open) {
+        connectToHost()
+      } else {
+        this.peer.once('open', () => {
+          connectToHost()
+        })
+        this.peer.once('error', () => {
+          if (!this.isIntentionalDisconnect) {
+            this.attemptClientReconnect()
+          }
+        })
+      }
+    }, RETRY_INTERVAL_MS)
   }
 
   // --- Private Host Methods ---
@@ -422,11 +611,28 @@ export class PeerNetworkManager {
 
           // Replace existing if reconnecting or add new
           const existingIdx = this.currentRoom.players.findIndex((p) => p.id === msg.playerId)
-          if (existingIdx !== -1) {
+          const isReconnecting = existingIdx !== -1
+          if (isReconnecting) {
+            const existingTimer = this.disconnectGraceTimers.get(msg.playerId)
+            if (existingTimer) {
+              clearTimeout(existingTimer)
+              this.disconnectGraceTimers.delete(msg.playerId)
+            }
             this.currentRoom.players[existingIdx] = newPlayer
           } else {
             this.currentRoom.players.push(newPlayer)
           }
+
+          // Defensive deduplication to ensure currentRoom.players is strictly unique by ID
+          const uniquePlayers: RoomPlayer[] = []
+          const seenPlayerIds = new Set<string>()
+          for (const p of this.currentRoom.players) {
+            if (!seenPlayerIds.has(p.id)) {
+              seenPlayerIds.add(p.id)
+              uniquePlayers.push(p)
+            }
+          }
+          this.currentRoom.players = uniquePlayers
 
           const resp: NetworkMessage = {
             type: 'JOIN_RESPONSE',
@@ -435,6 +641,11 @@ export class PeerNetworkManager {
           }
           conn.send(resp)
           this.broadcastRoomState()
+
+          if (isReconnecting) {
+            this.broadcastPeerStatus(msg.playerId, msg.username, 'reconnected')
+            this.events.onPlayerReconnected?.(newPlayer)
+          }
           break
         }
 
@@ -478,10 +689,31 @@ export class PeerNetworkManager {
       if (this.currentRoom) {
         const leftPlayer = this.currentRoom.players.find((p) => p.peerId === leavingPeerId)
         if (leftPlayer) {
-          this.events.onPlayerLeft?.(leftPlayer.id)
+          this.broadcastPeerStatus(leftPlayer.id, leftPlayer.username, 'disconnected')
+
+          if (this.currentRoom.status === 'playing') {
+            // Grace period of 15 seconds during active gameplay before permanent removal
+            const existingTimer = this.disconnectGraceTimers.get(leftPlayer.id)
+            if (existingTimer) clearTimeout(existingTimer)
+
+            const timer = setTimeout(() => {
+              this.disconnectGraceTimers.delete(leftPlayer.id)
+              if (this.currentRoom) {
+                this.events.onPlayerLeft?.(leftPlayer.id)
+                this.currentRoom.players = this.currentRoom.players.filter((p) => p.id !== leftPlayer.id)
+                this.broadcastRoomState()
+                this.broadcastPeerStatus(leftPlayer.id, leftPlayer.username, 'left')
+              }
+            }, 15000)
+
+            this.disconnectGraceTimers.set(leftPlayer.id, timer)
+          } else {
+            // Immediate removal while in lobby waiting room
+            this.events.onPlayerLeft?.(leftPlayer.id)
+            this.currentRoom.players = this.currentRoom.players.filter((p) => p.peerId !== leavingPeerId)
+            this.broadcastRoomState()
+          }
         }
-        this.currentRoom.players = this.currentRoom.players.filter((p) => p.peerId !== leavingPeerId)
-        this.broadcastRoomState()
       }
     })
   }
@@ -551,6 +783,11 @@ export class PeerNetworkManager {
 
       case 'GAME_EVENT': {
         this.events.onGameEvent?.(msg)
+        break
+      }
+
+      case 'PEER_STATUS_NOTIFICATION': {
+        this.events.onPeerStatusNotification?.(msg)
         break
       }
     }

@@ -78,8 +78,42 @@ defineEmits<{
       </div>
     </header>
 
-    <!-- Center Alerts (Rescue Prompt / Immunity / Stun) -->
+    <!-- Center Alerts (Rescue Prompt / Immunity / Stun / Reconnecting) -->
     <div class="flex flex-col items-center justify-center gap-3">
+      <!-- Reconnecting Overlay Banner -->
+      <transition
+        enter-active-class="transition duration-200 ease-out"
+        enter-from-class="scale-95 opacity-0"
+        enter-to-class="scale-100 opacity-100"
+        leave-active-class="transition duration-150 ease-in"
+        leave-from-class="scale-100 opacity-100"
+        leave-to-class="scale-95 opacity-0"
+      >
+        <div
+          v-if="roomStore.isReconnecting"
+          data-testid="hud-reconnecting-overlay"
+          class="pointer-events-auto bg-amber-500/95 text-amber-950 border-b-[5px] border-amber-700 px-6 py-4 rounded-2xl shadow-2xl flex flex-col sm:flex-row items-center gap-4 max-w-lg mx-auto text-center sm:text-left animate-pulse"
+        >
+          <span class="text-3xl">🔄</span>
+          <div class="flex-1">
+            <div class="font-heading font-black text-base uppercase tracking-wider">
+              MENYAMBUNG ULANG KONEKSI...
+            </div>
+            <div class="text-xs font-sans font-bold text-amber-900 mt-0.5">
+              {{ roomStore.reconnectMessage || 'Koneksi terputus. Sistem sedang mencoba menghubungkan kembali secara otomatis...' }}
+            </div>
+          </div>
+          <button
+            v-if="!roomStore.isHost"
+            data-testid="hud-reconnect-retry-btn"
+            class="timbul-btn bg-amber-800 hover:bg-amber-900 text-white font-heading font-bold text-xs px-3 py-2 rounded-xl whitespace-nowrap cursor-pointer"
+            @click="roomStore.manualRetryReconnect()"
+          >
+            Coba Sekarang
+          </button>
+        </div>
+      </transition>
+
       <!-- Rescue Prompt (When near jailed ally) -->
       <transition
         enter-active-class="transition duration-150 ease-out"
@@ -224,5 +258,42 @@ defineEmits<{
         </div>
       </div>
     </footer>
+
+    <!-- Toast Notification Stack -->
+    <div
+      data-testid="hud-toast-stack"
+      class="fixed top-20 right-4 sm:right-6 flex flex-col gap-2 z-50 pointer-events-auto max-w-sm"
+    >
+      <transition-group
+        enter-active-class="transition duration-200 ease-out"
+        enter-from-class="translate-x-8 opacity-0"
+        enter-to-class="translate-x-0 opacity-100"
+        leave-active-class="transition duration-150 ease-in"
+        leave-from-class="translate-x-0 opacity-100"
+        leave-to-class="translate-x-8 opacity-0"
+      >
+        <div
+          v-for="toast in roomStore.activeToasts"
+          :key="toast.id"
+          :data-testid="`hud-toast-${toast.type}`"
+          :class="[
+            'px-4 py-2.5 rounded-xl text-xs font-heading font-bold shadow-xl border-b-[3px] flex items-center justify-between gap-3',
+            toast.type === 'warn'
+              ? 'bg-amber-500 text-amber-950 border-amber-700'
+              : toast.type === 'success'
+                ? 'bg-emerald-600 text-white border-emerald-800'
+                : 'bg-neutral-800 text-neutral-100 border-neutral-900',
+          ]"
+        >
+          <span>{{ toast.message }}</span>
+          <button
+            class="text-xs opacity-75 hover:opacity-100 ml-2 cursor-pointer"
+            @click="roomStore.removeToast(toast.id)"
+          >
+            ✕
+          </button>
+        </div>
+      </transition-group>
+    </div>
   </div>
 </template>

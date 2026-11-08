@@ -10,6 +10,7 @@ const gameStore = useGameStore()
 const roomStore = useRoomStore()
 
 let engine: GameEngine | null = null
+let prevRoomStateUpdated: typeof peerNetworkManager.events.onRoomStateUpdated | undefined
 
 const onPointerLockChange = () => {
   if (engine) {
@@ -44,6 +45,11 @@ onMounted(async () => {
   })
 
   // Hook real-time multiplayer network listeners to engine
+  prevRoomStateUpdated = peerNetworkManager.events.onRoomStateUpdated
+  peerNetworkManager.events.onRoomStateUpdated = (room) => {
+    prevRoomStateUpdated?.(room)
+    engine?.updateRoomPlayers(room.players)
+  }
   peerNetworkManager.events.onPlayerUpdate = (update) => {
     engine?.onPlayerUpdate(update)
   }
@@ -55,6 +61,9 @@ onMounted(async () => {
   }
   peerNetworkManager.events.onPlayerLeft = (playerId) => {
     engine?.removeRemotePlayer(playerId)
+  }
+  peerNetworkManager.events.onPlayerReconnected = (player) => {
+    engine?.spawnOrRestoreRemotePlayer(player)
   }
 
   await engine.init({
@@ -71,10 +80,12 @@ onMounted(async () => {
 
 onUnmounted(() => {
   document.removeEventListener('pointerlockchange', onPointerLockChange)
+  peerNetworkManager.events.onRoomStateUpdated = prevRoomStateUpdated
   peerNetworkManager.events.onPlayerUpdate = undefined
   peerNetworkManager.events.onWorldSnapshot = undefined
   peerNetworkManager.events.onGameEvent = undefined
   peerNetworkManager.events.onPlayerLeft = undefined
+  peerNetworkManager.events.onPlayerReconnected = undefined
 
   if (engine) {
     engine.dispose()

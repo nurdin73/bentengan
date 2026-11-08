@@ -80,6 +80,7 @@ export class GameEngine {
   public localPlayer: PlayerController | null = null
   public readonly bots: BotController[] = []
   public readonly remotePlayers = new Map<string, RemotePlayerController>()
+  public roomPlayers: RoomPlayer[] = []
 
   // Network & Multiplayer State
   public isHost = false
@@ -177,8 +178,9 @@ export class GameEngine {
     this.remotePlayers.clear()
 
     const roomPlayers = options.roomPlayers ?? []
+    this.roomPlayers = [...roomPlayers]
 
-    if (this.isPractice || roomPlayers.length <= 1) {
+    if (this.isPractice) {
       // 3. Spawn Local Player for Practice Mode
       const spawnZ = teamId === 'blue' ? -20 : 20
       this.localPlayer = new PlayerController(this.scene, this.physics, {
@@ -198,7 +200,7 @@ export class GameEngine {
       // A. Spawn Local Player
       const myTeamPlayers = teamId === 'blue' ? bluePlayers : redPlayers
       const myIdx = Math.max(0, myTeamPlayers.findIndex((p) => p.id === this.localPlayerId))
-      const localSpawnPos = calculateSpawnPosition(teamId, myIdx, myTeamPlayers.length)
+      const localSpawnPos = calculateSpawnPosition(teamId, myIdx, Math.max(1, myTeamPlayers.length))
 
       this.localPlayer = new PlayerController(this.scene, this.physics, {
         id: this.localPlayerId,
@@ -213,7 +215,7 @@ export class GameEngine {
 
         const pTeamPlayers = p.teamId === 'blue' ? bluePlayers : redPlayers
         const pIdx = Math.max(0, pTeamPlayers.findIndex((tp) => tp.id === p.id))
-        const pSpawnPos = calculateSpawnPosition(p.teamId, pIdx, pTeamPlayers.length)
+        const pSpawnPos = calculateSpawnPosition(p.teamId, pIdx, Math.max(1, pTeamPlayers.length))
 
         const remote = new RemotePlayerController(this.scene, this.physics, {
           id: p.id,
@@ -437,7 +439,12 @@ export class GameEngine {
     if (this.isHost) {
       // Host authoritative world snapshot
       const allStates: PlayerNetworkState[] = [localState]
+      const seenIds = new Set<string>([this.localPlayerId])
+
       for (const [id, remote] of this.remotePlayers.entries()) {
+        if (!id || id === this.localPlayerId || seenIds.has(id)) continue
+        seenIds.add(id)
+
         const rPos = remote.getPosition()
         allStates.push({
           id,
@@ -456,8 +463,70 @@ export class GameEngine {
     }
   }
 
+  public updateRoomPlayers(players: RoomPlayer[]): void {
+    this.roomPlayers = [...players]
+  }
+
+  public spawnOrRestoreRemotePlayer(
+    player: RoomPlayer,
+    initialPos?: [number, number, number],
+  ): RemotePlayerController | null {
+    if (!player || player.id === this.localPlayerId) {
+      return null
+    }
+
+    const existing = this.remotePlayers.get(player.id)
+    if (existing) {
+      if (initialPos) {
+        existing.setTargetTransform(initialPos, player.teamId === 'blue' ? Math.PI : 0)
+      }
+      return existing
+    }
+
+    // Clean up any lingering/orphaned 3D mesh for this player in the scene
+    const orphanedMesh = this.scene.children.find(
+      (c) => c.userData?.playerId === player.id,
+    )
+    if (orphanedMesh) {
+      this.scene.remove(orphanedMesh)
+    }
+
+    const defaultZ = player.teamId === 'blue' ? -20 : 20
+    const spawnPos: [number, number, number] = initialPos ?? [0, 1, defaultZ]
+
+    const remote = new RemotePlayerController(this.scene, this.physics, {
+      id: player.id,
+      name: player.username,
+      teamId: player.teamId,
+      initialPosition: spawnPos,
+    })
+
+    const facingYaw = player.teamId === 'blue' ? Math.PI : 0
+    remote.setTargetTransform(spawnPos, facingYaw)
+
+    this.remotePlayers.set(player.id, remote)
+
+    // Keep internal roomPlayers roster in sync
+    const rIdx = this.roomPlayers.findIndex((p) => p.id === player.id)
+    if (rIdx !== -1) {
+      this.roomPlayers[rIdx] = player
+    } else {
+      this.roomPlayers.push(player)
+    }
+
+    return remote
+  }
+
   public onPlayerUpdate(update: PlayerUpdateMessage): void {
-    const remote = this.remotePlayers.get(update.playerId)
+    if (update.playerId === this.localPlayerId) return
+
+    let remote = this.remotePlayers.get(update.playerId)
+    if (!remote && this.isHost) {
+      const playerInfo = this.roomPlayers.find((p) => p.id === update.playerId)
+      if (playerInfo) {
+        remote = this.spawnOrRestoreRemotePlayer(playerInfo, update.state.position) ?? undefined
+      }
+    }
     if (remote) {
       remote.setTargetTransform(
         update.state.position,
@@ -471,23 +540,35 @@ export class GameEngine {
   }
 
   public onWorldSnapshot(snapshot: WorldSnapshotMessage): void {
+    const seenPlayerIds = new Set<string>()
+
     for (const pState of snapshot.players) {
-      if (pState.id === this.localPlayerId) {
-        // Authoritative reconciliation for local player if jailed or stunned
-        if (this.localPlayer && pState.status !== this.localPlayer.status) {
-          this.localPlayer.status = pState.status
-          if (pState.status === 'jailed') {
-            const jailPos =
-              this.playerTeam === 'blue'
-                ? this.arena.zones.blueJailPosition
-                : this.arena.zones.redJailPosition
-            this.localPlayer.teleportTo(jailPos.x, jailPos.y, jailPos.z)
+      if (!pState.id || pState.id === this.localPlayerId || seenPlayerIds.has(pState.id)) {
+        if (pState.id === this.localPlayerId && this.localPlayer) {
+          // Authoritative reconciliation for local player if jailed or stunned
+          if (pState.status !== this.localPlayer.status) {
+            this.localPlayer.status = pState.status
+            if (pState.status === 'jailed') {
+              const jailPos =
+                this.playerTeam === 'blue'
+                  ? this.arena.zones.blueJailPosition
+                  : this.arena.zones.redJailPosition
+              this.localPlayer.teleportTo(jailPos.x, jailPos.y, jailPos.z)
+            }
           }
         }
         continue
       }
 
-      const remote = this.remotePlayers.get(pState.id)
+      seenPlayerIds.add(pState.id)
+
+      let remote = this.remotePlayers.get(pState.id)
+      if (!remote) {
+        const playerInfo = this.roomPlayers.find((p) => p.id === pState.id)
+        if (playerInfo) {
+          remote = this.spawnOrRestoreRemotePlayer(playerInfo, pState.position) ?? undefined
+        }
+      }
       if (remote) {
         remote.setTargetTransform(
           pState.position,

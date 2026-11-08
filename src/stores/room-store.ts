@@ -4,8 +4,16 @@ import { isMatchStartable } from '../game/network/network-protocol'
 import { peerNetworkManager } from '../game/network/peer-network-manager'
 import { useGameStore } from './game-store'
 
-function generatePlayerId(): string {
-  return `p-${Math.random().toString(36).substring(2, 7)}`
+function getOrGeneratePlayerId(): string {
+  try {
+    const existing = sessionStorage.getItem('bentengan_player_id')
+    if (existing) return existing
+    const newId = `p-${Math.random().toString(36).substring(2, 7)}`
+    sessionStorage.setItem('bentengan_player_id', newId)
+    return newId
+  } catch {
+    return `p-${Math.random().toString(36).substring(2, 7)}`
+  }
 }
 
 export const useRoomStore = defineStore('room', {
@@ -13,7 +21,7 @@ export const useRoomStore = defineStore('room', {
     roomCode: '',
     isHost: false,
     status: 'waiting' as RoomStatus,
-    myPlayerId: generatePlayerId(),
+    myPlayerId: getOrGeneratePlayerId(),
     myUsername: 'Pemain ' + Math.floor(10 + Math.random() * 90),
     myTeam: 'blue' as TeamId,
     players: [] as RoomPlayer[],
@@ -22,6 +30,14 @@ export const useRoomStore = defineStore('room', {
     // Multiplayer & Rules Briefing Gate
     hasAcknowledgedRules: false,
     isConnecting: false,
+    isReconnecting: false,
+    reconnectMessage: '',
+    activeToasts: [] as Array<{
+      id: string
+      message: string
+      type: 'warn' | 'info' | 'success'
+      timestamp: number
+    }>,
     connectionError: null as string | null,
     latencyMs: 0,
   }),
@@ -67,6 +83,8 @@ export const useRoomStore = defineStore('room', {
           this.isConnecting = false
         },
         onDisconnected: () => {
+          this.isReconnecting = false
+          this.reconnectMessage = ''
           if (this.status === 'playing') {
             const gameStore = useGameStore()
             gameStore.finishMatch({
@@ -85,6 +103,46 @@ export const useRoomStore = defineStore('room', {
         onLatencyUpdated: (latencyMs: number) => {
           this.latencyMs = latencyMs
         },
+        onReconnecting: (msg: string) => {
+          this.isReconnecting = true
+          this.reconnectMessage = msg
+          this.pushToast(msg, 'warn')
+        },
+        onReconnected: () => {
+          this.isReconnecting = false
+          this.reconnectMessage = ''
+          this.pushToast('Koneksi berhasil dipulihkan!', 'success')
+        },
+        onPeerStatusNotification: (n) => {
+          const msg =
+            n.status === 'reconnected'
+              ? `✅ ${n.username} terhubung kembali!`
+              : `⚠️ ${n.username} terputus dari ruangan...`
+          this.pushToast(msg, n.status === 'reconnected' ? 'success' : 'warn')
+        },
+      }
+    },
+
+    pushToast(message: string, type: 'warn' | 'info' | 'success' = 'info') {
+      const id = `toast-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`
+      this.activeToasts.push({
+        id,
+        message,
+        type,
+        timestamp: Date.now(),
+      })
+      setTimeout(() => {
+        this.removeToast(id)
+      }, 4000)
+    },
+
+    removeToast(id: string) {
+      this.activeToasts = this.activeToasts.filter((t) => t.id !== id)
+    },
+
+    manualRetryReconnect() {
+      if (!this.isHost) {
+        peerNetworkManager.attemptClientReconnect()
       }
     },
 
@@ -207,6 +265,9 @@ export const useRoomStore = defineStore('room', {
       this.status = 'waiting'
       this.players = []
       this.isConnecting = false
+      this.isReconnecting = false
+      this.reconnectMessage = ''
+      this.activeToasts = []
       this.connectionError = null
       this.hasAcknowledgedRules = false
       this.latencyMs = 0

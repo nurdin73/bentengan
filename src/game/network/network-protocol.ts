@@ -114,6 +114,14 @@ export const GameEventMessageSchema = z.object({
   timestamp: z.number(),
 })
 
+export const PeerStatusNotificationSchema = z.object({
+  type: z.literal('PEER_STATUS_NOTIFICATION'),
+  playerId: z.string(),
+  username: z.string(),
+  status: z.enum(['disconnected', 'reconnected', 'left']),
+  timestamp: z.number(),
+})
+
 export const NetworkMessageSchema = z.discriminatedUnion('type', [
   JoinRequestMessageSchema,
   JoinResponseMessageSchema,
@@ -126,6 +134,7 @@ export const NetworkMessageSchema = z.discriminatedUnion('type', [
   PlayerUpdateMessageSchema,
   WorldSnapshotMessageSchema,
   GameEventMessageSchema,
+  PeerStatusNotificationSchema,
 ])
 
 export type NetworkMessage = z.infer<typeof NetworkMessageSchema>
@@ -141,6 +150,7 @@ export type PlayerNetworkState = z.infer<typeof PlayerNetworkStateSchema>
 export type PlayerUpdateMessage = z.infer<typeof PlayerUpdateMessageSchema>
 export type WorldSnapshotMessage = z.infer<typeof WorldSnapshotMessageSchema>
 export type GameEventMessage = z.infer<typeof GameEventMessageSchema>
+export type PeerStatusNotification = z.infer<typeof PeerStatusNotificationSchema>
 
 /**
  * Validates whether the incoming payload matches the network protocol schema.

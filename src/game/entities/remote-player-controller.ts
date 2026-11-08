@@ -56,6 +56,7 @@ export class RemotePlayerController implements GameplayEntity {
 
     // 1. Create Three.js Visual Mesh Group
     this.mesh = new THREE.Group()
+    this.mesh.userData = { playerId: this.id, type: 'remote_player' }
     this.mesh.position.copy(this.targetPosition)
 
     // Capsule Chibi Body
