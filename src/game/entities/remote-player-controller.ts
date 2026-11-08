@@ -38,6 +38,11 @@ export class RemotePlayerController implements GameplayEntity {
   private readonly immunityAuraMat: THREE.MeshBasicMaterial
   private readonly nameplateSprite: THREE.Sprite
 
+  // Dizzy / Stunned visual orbit
+  public readonly stunStarsGroup: THREE.Group
+  private readonly stunStarGeo: THREE.OctahedronGeometry
+  private readonly stunStarMat: THREE.MeshBasicMaterial
+
   constructor(scene: THREE.Scene, physics: PhysicsWorld, options: RemotePlayerControllerOptions) {
     this.id = options.id
     this.name = options.name || 'Lawan'
@@ -100,6 +105,24 @@ export class RemotePlayerController implements GameplayEntity {
     this.nameplateSprite = this.createNameplateSprite(this.name, options.teamId)
     this.nameplateSprite.position.set(0, characterHeight + 0.4, 0)
     this.mesh.add(this.nameplateSprite)
+
+    // Stunned Dizzy Stars Orbit (Overhead)
+    this.stunStarsGroup = new THREE.Group()
+    this.stunStarsGroup.position.set(0, characterHeight * 0.5 + 0.25, 0)
+    this.stunStarsGroup.visible = false
+
+    this.stunStarGeo = new THREE.OctahedronGeometry(0.12)
+    this.stunStarMat = new THREE.MeshBasicMaterial({ color: 0xfacc15 })
+
+    const starCount = 3
+    const orbitRadius = 0.35
+    for (let i = 0; i < starCount; i++) {
+      const angle = (i * Math.PI * 2) / starCount
+      const star = new THREE.Mesh(this.stunStarGeo, this.stunStarMat)
+      star.position.set(Math.cos(angle) * orbitRadius, 0, Math.sin(angle) * orbitRadius)
+      this.stunStarsGroup.add(star)
+    }
+    this.mesh.add(this.stunStarsGroup)
 
     scene.add(this.mesh)
 
@@ -239,6 +262,12 @@ export class RemotePlayerController implements GameplayEntity {
       this.immunityAuraMesh.rotation.z += dt * 3
     }
 
+    const isStunned = this.status === 'stunned' || now < this.stunUntil
+    this.stunStarsGroup.visible = isStunned
+    if (isStunned) {
+      this.stunStarsGroup.rotation.y += dt * 6
+    }
+
     if (this.status === 'jailed') {
       this.bodyMat.opacity = 0.45
       this.visorMat.opacity = 0.45
@@ -263,6 +292,8 @@ export class RemotePlayerController implements GameplayEntity {
     this.visorMat.dispose()
     this.immunityAuraMat.dispose()
     this.immunityAuraMesh.geometry.dispose()
+    this.stunStarGeo.dispose()
+    this.stunStarMat.dispose()
     if (this.nameplateSprite.material.map) {
       this.nameplateSprite.material.map.dispose()
     }

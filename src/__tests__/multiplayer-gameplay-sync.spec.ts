@@ -175,4 +175,29 @@ describe('Multiplayer Gameplay Real-Time Synchronization', () => {
     remoteBlue.dispose(scene)
     remoteRed.dispose(scene)
   })
+
+  it('displays orbiting stun stars when remote player is stunned', () => {
+    const remote = new RemotePlayerController(scene, physics, {
+      id: 'remote-stun-test',
+      name: 'Bob',
+      teamId: 'red',
+      initialPosition: [0, 1, 20],
+    })
+
+    expect(remote.stunStarsGroup.visible).toBe(false)
+
+    // Receive stunned state
+    remote.setTargetTransform([0, 1, 20], 0, 'stunned', false, 0, 5000)
+    remote.updateInterpolation(0.05, 1000)
+
+    expect(remote.stunStarsGroup.visible).toBe(true)
+
+    // Return to normal
+    remote.setTargetTransform([0, 1, 20], 0, 'normal', false, 0, 0)
+    remote.updateInterpolation(0.05, 6000)
+
+    expect(remote.stunStarsGroup.visible).toBe(false)
+
+    remote.dispose(scene)
+  })
 })

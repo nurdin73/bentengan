@@ -45,6 +45,11 @@ export class PlayerController implements GameplayEntity {
   private readonly immunityAuraMesh: THREE.Mesh
   private readonly immunityAuraMat: THREE.MeshBasicMaterial
 
+  // Dizzy / Stunned visual orbit
+  public readonly stunStarsGroup: THREE.Group
+  private readonly stunStarGeo: THREE.OctahedronGeometry
+  private readonly stunStarMat: THREE.MeshBasicMaterial
+
   // Pre-allocated scratch objects for zero-allocation tick loops (Rule 3.A)
   private readonly scratchMove = new THREE.Vector3()
   private readonly scratchVelocity = { x: 0, y: 0, z: 0 }
@@ -101,6 +106,24 @@ export class PlayerController implements GameplayEntity {
     this.immunityAuraMesh.rotation.x = Math.PI / 2
     this.immunityAuraMesh.visible = false
     this.mesh.add(this.immunityAuraMesh)
+
+    // Stunned Dizzy Stars Orbit (Overhead)
+    this.stunStarsGroup = new THREE.Group()
+    this.stunStarsGroup.position.set(0, characterHeight * 0.5 + 0.25, 0)
+    this.stunStarsGroup.visible = false
+
+    this.stunStarGeo = new THREE.OctahedronGeometry(0.12)
+    this.stunStarMat = new THREE.MeshBasicMaterial({ color: 0xfacc15 })
+
+    const starCount = 3
+    const orbitRadius = 0.35
+    for (let i = 0; i < starCount; i++) {
+      const angle = (i * Math.PI * 2) / starCount
+      const star = new THREE.Mesh(this.stunStarGeo, this.stunStarMat)
+      star.position.set(Math.cos(angle) * orbitRadius, 0, Math.sin(angle) * orbitRadius)
+      this.stunStarsGroup.add(star)
+    }
+    this.mesh.add(this.stunStarsGroup)
 
     scene.add(this.mesh)
 
@@ -305,6 +328,13 @@ export class PlayerController implements GameplayEntity {
         this.immunityAuraMesh.rotation.z += 0.04
       }
     }
+
+    // Stunned dizzy stars visualization
+    const isStunned = this.status === 'stunned' || now < this.stunUntil
+    this.stunStarsGroup.visible = isStunned
+    if (isStunned) {
+      this.stunStarsGroup.rotation.y += 0.08
+    }
   }
 
   public setVisualOpacity(opacity: number): void {
@@ -327,6 +357,8 @@ export class PlayerController implements GameplayEntity {
     this.visorMat.dispose()
     this.immunityAuraMat.dispose()
     this.immunityAuraMesh.geometry.dispose()
+    this.stunStarGeo.dispose()
+    this.stunStarMat.dispose()
     this.physics.world.removeCollider(this.collider, false)
     this.physics.world.removeRigidBody(this.body)
   }

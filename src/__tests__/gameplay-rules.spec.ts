@@ -16,9 +16,15 @@ describe('GameplayRules — Milestone 2 Core Mechanics', () => {
   describe('Capture Validation & Traditional Bentengan Territory Rules', () => {
     it('should allow capture of an enemy player trespassing in home territory (Z < 0 for Red)', () => {
       // Blue hunter is defending home territory (Z = -5)
-      const hunter = createMockEntity({ teamId: 'blue', getPosition: () => ({ x: 0, y: 0, z: -5 }) })
+      const hunter = createMockEntity({
+        teamId: 'blue',
+        getPosition: () => ({ x: 0, y: 0, z: -5 }),
+      })
       // Red target has invaded Blue territory (Z = -5, which is Z < 0)
-      const target = createMockEntity({ teamId: 'red', getPosition: () => ({ x: 1.0, y: 0, z: -5 }) })
+      const target = createMockEntity({
+        teamId: 'red',
+        getPosition: () => ({ x: 1.0, y: 0, z: -5 }),
+      })
 
       expect(GameplayRules.isInEnemyTerritory(target)).toBe(true)
       expect(GameplayRules.canCapture(hunter, target, 1000)).toBe(true)
@@ -26,9 +32,15 @@ describe('GameplayRules — Milestone 2 Core Mechanics', () => {
 
     it('should prevent capture of an enemy player in their own territory (Safe Home Territory)', () => {
       // Blue hunter has invaded Red territory (Z = 10)
-      const hunter = createMockEntity({ teamId: 'blue', getPosition: () => ({ x: 0, y: 0, z: 10 }) })
+      const hunter = createMockEntity({
+        teamId: 'blue',
+        getPosition: () => ({ x: 0, y: 0, z: 10 }),
+      })
       // Red target is in their own home territory (Z = 10, which is Z >= 0)
-      const target = createMockEntity({ teamId: 'red', getPosition: () => ({ x: 1.0, y: 0, z: 10 }) })
+      const target = createMockEntity({
+        teamId: 'red',
+        getPosition: () => ({ x: 1.0, y: 0, z: 10 }),
+      })
 
       expect(GameplayRules.isInEnemyTerritory(target)).toBe(false)
       // Hunter cannot capture target in target's home territory!
@@ -36,14 +48,23 @@ describe('GameplayRules — Milestone 2 Core Mechanics', () => {
     })
 
     it('should prevent capture of teammates', () => {
-      const hunter = createMockEntity({ teamId: 'blue', getPosition: () => ({ x: 0, y: 0, z: -5 }) })
-      const ally = createMockEntity({ teamId: 'blue', getPosition: () => ({ x: 1.0, y: 0, z: -5 }) })
+      const hunter = createMockEntity({
+        teamId: 'blue',
+        getPosition: () => ({ x: 0, y: 0, z: -5 }),
+      })
+      const ally = createMockEntity({
+        teamId: 'blue',
+        getPosition: () => ({ x: 1.0, y: 0, z: -5 }),
+      })
 
       expect(GameplayRules.canCapture(hunter, ally, 1000)).toBe(false)
     })
 
     it('should prevent capture when target is immune', () => {
-      const hunter = createMockEntity({ teamId: 'blue', getPosition: () => ({ x: 0, y: 0, z: -5 }) })
+      const hunter = createMockEntity({
+        teamId: 'blue',
+        getPosition: () => ({ x: 0, y: 0, z: -5 }),
+      })
       const immuneTarget = createMockEntity({
         teamId: 'red',
         immunityUntil: 5000,
@@ -56,7 +77,10 @@ describe('GameplayRules — Milestone 2 Core Mechanics', () => {
     })
 
     it('should allow capturing a stunned enemy trespassing in territory', () => {
-      const hunter = createMockEntity({ teamId: 'blue', getPosition: () => ({ x: 0, y: 0, z: -5 }) })
+      const hunter = createMockEntity({
+        teamId: 'blue',
+        getPosition: () => ({ x: 0, y: 0, z: -5 }),
+      })
       const stunnedTarget = createMockEntity({
         teamId: 'red',
         status: 'stunned',
@@ -67,7 +91,10 @@ describe('GameplayRules — Milestone 2 Core Mechanics', () => {
     })
 
     it('should prevent capture if target is already jailed', () => {
-      const hunter = createMockEntity({ teamId: 'blue', getPosition: () => ({ x: 0, y: 0, z: -5 }) })
+      const hunter = createMockEntity({
+        teamId: 'blue',
+        getPosition: () => ({ x: 0, y: 0, z: -5 }),
+      })
       const jailedTarget = createMockEntity({
         teamId: 'red',
         status: 'jailed',
@@ -78,8 +105,14 @@ describe('GameplayRules — Milestone 2 Core Mechanics', () => {
     })
 
     it('should reject capture when distance exceeds 1.5m', () => {
-      const hunter = createMockEntity({ teamId: 'blue', getPosition: () => ({ x: 0, y: 0, z: -5 }) })
-      const farTarget = createMockEntity({ teamId: 'red', getPosition: () => ({ x: 2.0, y: 0, z: -5 }) })
+      const hunter = createMockEntity({
+        teamId: 'blue',
+        getPosition: () => ({ x: 0, y: 0, z: -5 }),
+      })
+      const farTarget = createMockEntity({
+        teamId: 'red',
+        getPosition: () => ({ x: 2.0, y: 0, z: -5 }),
+      })
 
       expect(GameplayRules.canCapture(hunter, farTarget, 1000)).toBe(false)
     })
@@ -87,7 +120,10 @@ describe('GameplayRules — Milestone 2 Core Mechanics', () => {
 
   describe('Rescue Validation', () => {
     it('should allow rescuing a jailed teammate within 1.5m', () => {
-      const rescuer = createMockEntity({ teamId: 'blue', getPosition: () => ({ x: 10, y: 0, z: 20 }) })
+      const rescuer = createMockEntity({
+        teamId: 'blue',
+        getPosition: () => ({ x: 10, y: 0, z: 20 }),
+      })
       const jailedAlly = createMockEntity({
         teamId: 'blue',
         status: 'jailed',
@@ -98,7 +134,10 @@ describe('GameplayRules — Milestone 2 Core Mechanics', () => {
     })
 
     it('should not allow rescuing enemies in jail', () => {
-      const rescuer = createMockEntity({ teamId: 'blue', getPosition: () => ({ x: 10, y: 0, z: 20 }) })
+      const rescuer = createMockEntity({
+        teamId: 'blue',
+        getPosition: () => ({ x: 10, y: 0, z: 20 }),
+      })
       const jailedEnemy = createMockEntity({
         teamId: 'red',
         status: 'jailed',
@@ -193,4 +232,3 @@ describe('GameplayRules — Milestone 2 Core Mechanics', () => {
     })
   })
 })
-
