@@ -75,8 +75,8 @@ const openPracticeFromDrawer = () => {
     <!-- Navbar (Sticky Top) -->
     <header class="sticky top-0 w-full border-b border-neutral-300/80 bg-white/85 backdrop-blur-md px-3.5 sm:px-8 py-2.5 sm:py-3.5 flex items-center justify-between z-30 shrink-0 transition-all">
       <div class="flex items-center gap-2 sm:gap-3">
-        <div class="w-9 h-9 sm:w-10 sm:h-10 rounded-2xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center shrink-0">
-          <Castle class="w-5 h-5 sm:w-6 sm:h-6 text-amber-600" />
+        <div class="w-9 h-9 sm:w-10 sm:h-10 rounded-2xl bg-neutral-900 border border-amber-500/40 p-0.5 flex items-center justify-center shrink-0 shadow-xs overflow-hidden">
+          <img :src="'/icons/icon-192x192.png'" alt="Bentengan 3D Logo" class="w-full h-full object-cover rounded-xl" />
         </div>
         <div class="flex flex-col">
           <span class="font-heading font-black text-lg sm:text-xl text-neutral-900 tracking-wider uppercase leading-none">
@@ -166,8 +166,8 @@ const openPracticeFromDrawer = () => {
         <!-- Drawer Header -->
         <div class="flex items-center justify-between border-b border-neutral-200 pb-3">
           <div class="flex items-center gap-2.5">
-            <div class="w-9 h-9 rounded-2xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center">
-              <Castle class="w-5 h-5 text-amber-600" />
+            <div class="w-9 h-9 rounded-2xl bg-neutral-900 border border-amber-500/40 p-0.5 flex items-center justify-center shrink-0 shadow-xs overflow-hidden">
+              <img :src="'/icons/icon-192x192.png'" alt="Bentengan 3D Logo" class="w-full h-full object-cover rounded-xl" />
             </div>
             <div class="flex flex-col">
               <span class="font-heading font-black text-lg text-neutral-900 uppercase leading-none">
