@@ -1,7 +1,11 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import type { VirtualMovementInput } from '../../game/input/input-manager'
-import { checkIsMobileTouchDevice } from './mobile-device.utils'
+import {
+  checkIsMobileTouchDevice,
+  requestFullscreenAndLandscape,
+  toggleFullscreen,
+} from './mobile-device.utils'
 
 export interface MobileTouchControlsProps {
   forceShow?: boolean
@@ -14,11 +18,20 @@ const props = withDefaults(defineProps<MobileTouchControlsProps>(), {
 const emit = defineEmits<{
   (e: 'virtual-move', movement: VirtualMovementInput): void
   (e: 'virtual-sprint', sprint: boolean): void
+  (e: 'virtual-jump', jump: boolean): void
   (e: 'virtual-look', delta: { deltaX: number; deltaY: number }): void
 }>()
 
 const isDetectedMobile = ref(false)
 const isActive = computed(() => props.forceShow || isDetectedMobile.value)
+
+let hasAttemptedAutoFullscreen = false
+const triggerAutoFullscreen = () => {
+  if (!hasAttemptedAutoFullscreen) {
+    hasAttemptedAutoFullscreen = true
+    requestFullscreenAndLandscape()
+  }
+}
 
 // 1. Virtual Joystick State
 const baseRef = ref<HTMLDivElement | null>(null)
@@ -28,6 +41,7 @@ const maxRadius = 45
 let joystickTouchId: number | null = null
 
 const handleJoystickStart = (e: TouchEvent) => {
+  triggerAutoFullscreen()
   if (joystickTouchId !== null) return
   const touch = e.changedTouches[0]
   if (!touch || !baseRef.value) return
@@ -105,6 +119,7 @@ let sprintTouchId: number | null = null
 
 const handleSprintStart = (e: TouchEvent) => {
   e.preventDefault()
+  triggerAutoFullscreen()
   if (sprintTouchId !== null) return
   const touch = e.changedTouches[0]
   if (!touch) return
@@ -128,12 +143,43 @@ const handleSprintEnd = (e: TouchEvent) => {
   }
 }
 
-// 3. Camera Touch Drag Zone (Right Screen Half)
+// 3. Jump Button State
+const isJumpActive = ref(false)
+let jumpTouchId: number | null = null
+
+const handleJumpStart = (e: TouchEvent) => {
+  e.preventDefault()
+  triggerAutoFullscreen()
+  if (jumpTouchId !== null) return
+  const touch = e.changedTouches[0]
+  if (!touch) return
+
+  jumpTouchId = touch.identifier
+  isJumpActive.value = true
+  emit('virtual-jump', true)
+}
+
+const handleJumpEnd = (e: TouchEvent) => {
+  if (jumpTouchId === null) return
+
+  for (let i = 0; i < e.changedTouches.length; i++) {
+    const touch = e.changedTouches[i]
+    if (touch && touch.identifier === jumpTouchId) {
+      jumpTouchId = null
+      isJumpActive.value = false
+      emit('virtual-jump', false)
+      break
+    }
+  }
+}
+
+// 4. Camera Touch Drag Zone (Right Screen Half)
 let lookTouchId: number | null = null
 let lastLookX = 0
 let lastLookY = 0
 
 const handleLookStart = (e: TouchEvent) => {
+  triggerAutoFullscreen()
   if (lookTouchId !== null) return
   const touch = e.changedTouches[0]
   if (!touch) return
@@ -179,6 +225,7 @@ onMounted(() => {
 onUnmounted(() => {
   joystickTouchId = null
   sprintTouchId = null
+  jumpTouchId = null
   lookTouchId = null
 })
 </script>
@@ -192,12 +239,23 @@ onUnmounted(() => {
     <!-- Right Screen Half: Touch Look Drag Zone -->
     <div
       data-testid="hud-touch-look-zone"
-      class="pointer-events-auto absolute top-16 right-0 bottom-28 w-1/2 cursor-grab touch-none"
+      class="pointer-events-auto absolute top-16 right-0 bottom-48 w-1/2 cursor-grab touch-none"
       @touchstart.passive="handleLookStart"
       @touchmove.passive="handleLookMove"
       @touchend.passive="handleLookEnd"
       @touchcancel.passive="handleLookEnd"
     />
+
+    <!-- Top Right: Fullscreen Quick Toggle Button -->
+    <button
+      data-testid="hud-fullscreen-btn"
+      type="button"
+      class="pointer-events-auto absolute top-4 right-4 flex h-10 w-10 cursor-pointer items-center justify-center rounded-xl border border-neutral-700 bg-neutral-900/80 text-base font-bold text-white shadow-lg backdrop-blur-sm transition-all active:scale-95"
+      title="Toggle Fullscreen"
+      @click="toggleFullscreen"
+    >
+      ⛶
+    </button>
 
     <!-- Bottom Left: Virtual Analog Joystick -->
     <div
@@ -231,7 +289,29 @@ onUnmounted(() => {
       </div>
     </div>
 
-    <!-- Bottom Right: Tactile Sprint Button -->
+    <!-- Bottom Right Action Cluster: Jump Button -->
+    <div
+      class="pointer-events-auto absolute right-8 bottom-28 flex flex-col items-center gap-1 touch-none"
+    >
+      <button
+        data-testid="hud-touch-jump-btn"
+        type="button"
+        :class="[
+          'timbul-btn flex h-15 w-15 cursor-pointer flex-col items-center justify-center rounded-full border-b-[5px] transition-all duration-75 select-none active:translate-y-1',
+          isJumpActive
+            ? 'border-sky-700 bg-sky-400 text-sky-950 ring-4 ring-sky-300/60 translate-y-1'
+            : 'border-sky-800 bg-sky-500 text-sky-950 shadow-2xl',
+        ]"
+        @touchstart="handleJumpStart"
+        @touchend="handleJumpEnd"
+        @touchcancel="handleJumpEnd"
+      >
+        <span class="text-lg">🦘</span>
+        <span class="font-heading text-[10px] font-black tracking-wider uppercase">LOMPAT</span>
+      </button>
+    </div>
+
+    <!-- Bottom Right Action Cluster: Sprint Button -->
     <div
       class="pointer-events-auto absolute right-6 bottom-8 flex flex-col items-center gap-1 touch-none"
     >

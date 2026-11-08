@@ -106,6 +106,10 @@ const setVirtualSprint = (sprint: boolean) => {
   engine?.input.setVirtualSprint(sprint)
 }
 
+const setVirtualJump = (jump: boolean) => {
+  engine?.input.setVirtualJump(jump)
+}
+
 const injectTouchDelta = (deltaX: number, deltaY: number) => {
   engine?.input.injectTouchDelta(deltaX, deltaY)
 }
@@ -118,6 +122,7 @@ defineExpose({
   requestPointerLock,
   setVirtualMovement,
   setVirtualSprint,
+  setVirtualJump,
   injectTouchDelta,
   triggerVirtualInteract,
 })

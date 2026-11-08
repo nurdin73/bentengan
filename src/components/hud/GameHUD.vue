@@ -3,6 +3,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useGameStore } from '../../stores/game-store'
 import { useRoomStore } from '../../stores/room-store'
 import MobileTouchControls from './MobileTouchControls.vue'
+import RotateDevicePrompt from './RotateDevicePrompt.vue'
 import { checkIsMobileTouchDevice } from './mobile-device.utils'
 import type { VirtualMovementInput } from '../../game/input/input-manager'
 
@@ -19,6 +20,7 @@ defineEmits<{
   (e: 'request-pointer-lock'): void
   (e: 'virtual-move', movement: VirtualMovementInput): void
   (e: 'virtual-sprint', sprint: boolean): void
+  (e: 'virtual-jump', jump: boolean): void
   (e: 'virtual-look', delta: { deltaX: number; deltaY: number }): void
   (e: 'virtual-interact'): void
 }>()
@@ -182,10 +184,14 @@ defineEmits<{
       </transition-group>
     </div>
 
+    <!-- Rotate Device Prompt (Mobile Portrait Warning) -->
+    <RotateDevicePrompt />
+
     <!-- Mobile Virtual Joystick & Touch Controls -->
     <MobileTouchControls
       @virtual-move="$emit('virtual-move', $event)"
       @virtual-sprint="$emit('virtual-sprint', $event)"
+      @virtual-jump="$emit('virtual-jump', $event)"
       @virtual-look="$emit('virtual-look', $event)"
     />
   </div>

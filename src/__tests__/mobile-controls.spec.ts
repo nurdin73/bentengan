@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { mount } from '@vue/test-utils'
 import { InputManager } from '../game/input/input-manager'
 import MobileTouchControls from '../components/hud/MobileTouchControls.vue'
+import RotateDevicePrompt from '../components/hud/RotateDevicePrompt.vue'
 import { checkIsMobileTouchDevice } from '../components/hud/mobile-device.utils'
 
 describe('Mobile Touch Controls & Virtual Input Integration', () => {
@@ -50,6 +51,19 @@ describe('Mobile Touch Controls & Virtual Input Integration', () => {
       expect(state.sprint).toBe(false)
     })
 
+    it('merges virtual jump state correctly', () => {
+      let state = input.getMovementInput(0)
+      expect(state.jump).toBe(false)
+
+      input.setVirtualJump(true)
+      state = input.getMovementInput(0)
+      expect(state.jump).toBe(true)
+
+      input.setVirtualJump(false)
+      state = input.getMovementInput(0)
+      expect(state.jump).toBe(false)
+    })
+
     it('accumulates touch look delta into consumeMouseDelta', () => {
       input.injectTouchDelta(12, -8)
       input.injectTouchDelta(5, 3)
@@ -76,6 +90,7 @@ describe('Mobile Touch Controls & Virtual Input Integration', () => {
     it('resets virtual states on input.reset()', () => {
       input.setVirtualMovement({ forward: true, left: true })
       input.setVirtualSprint(true)
+      input.setVirtualJump(true)
       input.injectTouchDelta(10, 20)
 
       input.reset()
@@ -84,6 +99,7 @@ describe('Mobile Touch Controls & Virtual Input Integration', () => {
       expect(state.forward).toBe(false)
       expect(state.left).toBe(false)
       expect(state.sprint).toBe(false)
+      expect(state.jump).toBe(false)
 
       const delta = input.consumeMouseDelta()
       expect(delta.deltaX).toBe(0)
@@ -232,6 +248,36 @@ describe('Mobile Touch Controls & Virtual Input Integration', () => {
       expect(wrapper.emitted('virtual-sprint')?.[1]).toEqual([false])
     })
 
+    it('dispatches virtual-jump events on jump button touch interaction', async () => {
+      const wrapper = mount(MobileTouchControls, {
+        props: { forceShow: true },
+      })
+
+      const jumpBtn = wrapper.find('[data-testid="hud-touch-jump-btn"]')
+      expect(jumpBtn.exists()).toBe(true)
+
+      await jumpBtn.trigger('touchstart', {
+        changedTouches: [{ identifier: 4, clientX: 300, clientY: 500 }],
+      })
+
+      expect(wrapper.emitted('virtual-jump')?.[0]).toEqual([true])
+
+      await jumpBtn.trigger('touchend', {
+        changedTouches: [{ identifier: 4, clientX: 300, clientY: 500 }],
+      })
+
+      expect(wrapper.emitted('virtual-jump')?.[1]).toEqual([false])
+    })
+
+    it('renders fullscreen toggle button and triggers requestFullscreenAndLandscape', async () => {
+      const wrapper = mount(MobileTouchControls, {
+        props: { forceShow: true },
+      })
+
+      const fsBtn = wrapper.find('[data-testid="hud-fullscreen-btn"]')
+      expect(fsBtn.exists()).toBe(true)
+    })
+
     it('dispatches virtual-look events on touch look zone dragging', async () => {
       const wrapper = mount(MobileTouchControls, {
         props: { forceShow: true },
@@ -254,6 +300,25 @@ describe('Mobile Touch Controls & Virtual Input Integration', () => {
         deltaX: 30,
         deltaY: -15,
       })
+    })
+  })
+
+  describe('RotateDevicePrompt Component', () => {
+    it('does not render prompt when not in portrait and forceShow is false', () => {
+      const wrapper = mount(RotateDevicePrompt, {
+        props: { forceShow: false },
+      })
+      expect(wrapper.find('[data-testid="rotate-device-prompt"]').exists()).toBe(false)
+    })
+
+    it('renders rotation instructions overlay when forceShow is true', () => {
+      const wrapper = mount(RotateDevicePrompt, {
+        props: { forceShow: true },
+      })
+
+      const overlay = wrapper.find('[data-testid="rotate-device-prompt"]')
+      expect(overlay.exists()).toBe(true)
+      expect(overlay.text()).toContain('Miringkan Layar Anda')
     })
   })
 })

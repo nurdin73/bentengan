@@ -30,6 +30,7 @@ export class InputManager {
     right: false,
   }
   private isVirtualSprint = false
+  private isVirtualJump = false
   private isVirtualInteract = false
 
   private mouseDeltaX = 0
@@ -114,6 +115,10 @@ export class InputManager {
     this.isVirtualSprint = sprint
   }
 
+  public setVirtualJump(jump: boolean): void {
+    this.isVirtualJump = jump
+  }
+
   public triggerVirtualInteract(): void {
     this.isVirtualInteract = true
   }
@@ -133,7 +138,7 @@ export class InputManager {
       left: Boolean(this.keys.KeyA || this.keys.ArrowLeft || this.virtualMovement.left),
       right: Boolean(this.keys.KeyD || this.keys.ArrowRight || this.virtualMovement.right),
       sprint: Boolean(this.keys.ShiftLeft || this.keys.ShiftRight || this.isVirtualSprint),
-      jump: Boolean(this.keys.Space),
+      jump: Boolean(this.keys.Space || this.isVirtualJump),
       interact,
       cameraYaw,
     }
@@ -150,6 +155,7 @@ export class InputManager {
       right: false,
     }
     this.isVirtualSprint = false
+    this.isVirtualJump = false
     this.isVirtualInteract = false
     this.mouseDeltaX = 0
     this.mouseDeltaY = 0

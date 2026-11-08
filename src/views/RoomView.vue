@@ -74,6 +74,10 @@ const handleVirtualSprint = (sprint: boolean) => {
   gameCanvasRef.value?.setVirtualSprint(sprint)
 }
 
+const handleVirtualJump = (jump: boolean) => {
+  gameCanvasRef.value?.setVirtualJump(jump)
+}
+
 const handleVirtualLook = (delta: { deltaX: number; deltaY: number }) => {
   gameCanvasRef.value?.injectTouchDelta(delta.deltaX, delta.deltaY)
 }
@@ -107,6 +111,7 @@ const handleLeaveToHome = () => {
       @request-pointer-lock="handleRequestPointerLock"
       @virtual-move="handleVirtualMove"
       @virtual-sprint="handleVirtualSprint"
+      @virtual-jump="handleVirtualJump"
       @virtual-look="handleVirtualLook"
       @virtual-interact="handleVirtualInteract"
     />
