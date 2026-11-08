@@ -159,7 +159,7 @@ export class PlayerController implements GameplayEntity {
     // Overhead 3D Player Nameplate & Dynamic Stamina Bar
     this.overheadCanvas = document.createElement('canvas')
     this.overheadCanvas.width = 256
-    this.overheadCanvas.height = 72
+    this.overheadCanvas.height = 60
     this.overheadCtx = this.overheadCanvas.getContext('2d')
 
     this.overheadTexture = new THREE.CanvasTexture(this.overheadCanvas)
@@ -169,8 +169,8 @@ export class PlayerController implements GameplayEntity {
       depthTest: false,
     })
     this.overheadSprite = new THREE.Sprite(spriteMat)
-    this.overheadSprite.scale.set(2.2, 0.62, 1.0)
-    this.overheadSprite.position.set(0, characterHeight + 0.45, 0)
+    this.overheadSprite.scale.set(1.7, 0.42, 1.0)
+    this.overheadSprite.position.set(0, characterHeight * 0.5 + 0.35, 0)
     this.mesh.add(this.overheadSprite)
     this.updateOverheadDisplay()
 
@@ -406,54 +406,41 @@ export class PlayerController implements GameplayEntity {
     this.lastRenderedSprinting = this.isSprinting
 
     const ctx = this.overheadCtx
-    ctx.clearRect(0, 0, 256, 72)
+    ctx.clearRect(0, 0, 256, 60)
 
-    // 1. Top Row: Rounded Nameplate Pill
-    ctx.fillStyle = 'rgba(15, 23, 42, 0.88)'
-    ctx.strokeStyle = this.teamId === 'blue' ? '#3b82f6' : '#ef4444'
-    ctx.lineWidth = 3
-
-    const npX = 8
-    const npY = 4
-    const npW = 240
-    const npH = 38
-    const npR = 19
-    drawRoundedRect(ctx, npX, npY, npW, npH, npR)
-    ctx.fill()
-    ctx.stroke()
-
-    // Team indicator dot
-    ctx.fillStyle = this.teamId === 'blue' ? '#60a5fa' : '#f87171'
-    ctx.beginPath()
-    ctx.arc(32, 23, 6, 0, Math.PI * 2)
-    ctx.fill()
-
-    // Username text
-    ctx.font = 'bold 18px system-ui, -apple-system, sans-serif'
-    ctx.fillStyle = '#ffffff'
-    ctx.textAlign = 'left'
-    ctx.textBaseline = 'middle'
+    // 1. Top Row: Minimalist Floating Name with High-Contrast Drop Outline
     const truncated = this.name.length > 12 ? this.name.substring(0, 11) + '…' : this.name
-    ctx.fillText(truncated, 48, 23)
+    ctx.font = 'bold 20px system-ui, -apple-system, sans-serif'
+    ctx.textAlign = 'center'
+    ctx.textBaseline = 'middle'
 
-    // 2. Bottom Row: Sleek Stamina Bar
-    const barX = 14
-    const barY = 46
-    const barW = 228
-    const barH = 16
-    const barR = 8
+    // Dark stroke outline ensures 100% legibility against both dark and bright arena surfaces
+    ctx.strokeStyle = 'rgba(2, 6, 23, 0.95)'
+    ctx.lineWidth = 3.5
+    ctx.lineJoin = 'round'
+    ctx.strokeText(truncated, 128, 20)
+
+    ctx.fillStyle = '#ffffff'
+    ctx.fillText(truncated, 128, 20)
+
+    // 2. Bottom Row: Sleek Minimal Stamina Strip
+    const barW = 130
+    const barH = 6
+    const barX = (256 - barW) / 2
+    const barY = 36
+    const barR = 3
 
     // Background Track
-    ctx.fillStyle = 'rgba(2, 6, 23, 0.92)'
-    ctx.strokeStyle = 'rgba(51, 65, 85, 0.9)'
-    ctx.lineWidth = 2
+    ctx.fillStyle = 'rgba(2, 6, 23, 0.85)'
+    ctx.strokeStyle = 'rgba(51, 65, 85, 0.8)'
+    ctx.lineWidth = 1.5
     drawRoundedRect(ctx, barX, barY, barW, barH, barR)
     ctx.fill()
     ctx.stroke()
 
     // Dynamic Fill
     const ratio = Math.max(0, Math.min(1, this.stamina / GAME_CONFIG.stamina.max))
-    const fillW = Math.max(0, (barW - 4) * ratio)
+    const fillW = Math.max(0, (barW - 2) * ratio)
 
     if (fillW > 0) {
       if (this.status === 'stunned') {
@@ -466,7 +453,7 @@ export class PlayerController implements GameplayEntity {
         ctx.fillStyle = '#f43f5e'
       }
 
-      drawRoundedRect(ctx, barX + 2, barY + 2, fillW, barH - 4, Math.max(2, barR - 2))
+      drawRoundedRect(ctx, barX + 1, barY + 1, fillW, barH - 2, Math.max(1, barR - 1))
       ctx.fill()
     }
 

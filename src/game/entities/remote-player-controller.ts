@@ -104,7 +104,7 @@ export class RemotePlayerController implements GameplayEntity {
 
     // Overhead Billboard Nameplate Sprite
     this.nameplateSprite = this.createNameplateSprite(this.name, options.teamId)
-    this.nameplateSprite.position.set(0, characterHeight + 0.4, 0)
+    this.nameplateSprite.position.set(0, characterHeight * 0.5 + 0.35, 0)
     this.mesh.add(this.nameplateSprite)
 
     // Stunned Dizzy Stars Orbit (Overhead)
@@ -148,48 +148,25 @@ export class RemotePlayerController implements GameplayEntity {
   private createNameplateSprite(username: string, team: TeamId): THREE.Sprite {
     const canvas = document.createElement('canvas')
     canvas.width = 256
-    canvas.height = 64
+    canvas.height = 48
     const ctx = canvas.getContext('2d')
 
     if (ctx) {
-      // Rounded background pill
-      ctx.fillStyle = 'rgba(15, 23, 42, 0.85)'
-      ctx.strokeStyle = team === 'blue' ? '#3b82f6' : '#ef4444'
-      ctx.lineWidth = 4
-
-      const x = 8
-      const y = 8
-      const w = 240
-      const h = 48
-      const r = 24
-
-      ctx.beginPath()
-      ctx.moveTo(x + r, y)
-      ctx.lineTo(x + w - r, y)
-      ctx.quadraticCurveTo(x + w, y, x + w, y + r)
-      ctx.lineTo(x + w, y + h - r)
-      ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h)
-      ctx.lineTo(x + r, y + h)
-      ctx.quadraticCurveTo(x, y + h, x, y + h - r)
-      ctx.lineTo(x, y + r)
-      ctx.quadraticCurveTo(x, y, x + r, y)
-      ctx.closePath()
-      ctx.fill()
-      ctx.stroke()
-
-      // Team indicator dot
-      ctx.fillStyle = team === 'blue' ? '#60a5fa' : '#f87171'
-      ctx.beginPath()
-      ctx.arc(36, 32, 8, 0, Math.PI * 2)
-      ctx.fill()
-
-      // Username text
-      ctx.font = 'bold 22px system-ui, -apple-system, sans-serif'
-      ctx.fillStyle = '#ffffff'
-      ctx.textAlign = 'left'
-      ctx.textBaseline = 'middle'
       const truncatedName = username.length > 12 ? username.substring(0, 11) + '…' : username
-      ctx.fillText(truncatedName, 54, 32)
+
+      ctx.font = 'bold 20px system-ui, -apple-system, sans-serif'
+      ctx.textAlign = 'center'
+      ctx.textBaseline = 'middle'
+
+      // Dark stroke outline
+      ctx.strokeStyle = 'rgba(2, 6, 23, 0.95)'
+      ctx.lineWidth = 3.5
+      ctx.lineJoin = 'round'
+      ctx.strokeText(truncatedName, 128, 24)
+
+      // Team colored text with crisp outline
+      ctx.fillStyle = team === 'blue' ? '#93c5fd' : '#fca5a5'
+      ctx.fillText(truncatedName, 128, 24)
     }
 
     const texture = new THREE.CanvasTexture(canvas)
@@ -199,7 +176,7 @@ export class RemotePlayerController implements GameplayEntity {
       depthTest: false,
     })
     const sprite = new THREE.Sprite(spriteMat)
-    sprite.scale.set(2.0, 0.5, 1.0)
+    sprite.scale.set(1.6, 0.35, 1.0)
     return sprite
   }
 

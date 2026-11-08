@@ -22,6 +22,7 @@ describe('PlayerController Overhead World-Space Stamina & Nameplate', () => {
       stroke: vi.fn<() => void>(),
       arc: vi.fn<() => void>(),
       fillText: vi.fn<() => void>(),
+      strokeText: vi.fn<() => void>(),
     }
     HTMLCanvasElement.prototype.getContext = vi.fn<
       (contextId: string, options?: unknown) => RenderingContext | null
@@ -51,7 +52,7 @@ describe('PlayerController Overhead World-Space Stamina & Nameplate', () => {
 
     expect(player.overheadSprite).toBeDefined()
     expect(player.mesh.children).toContain(player.overheadSprite)
-    expect(player.overheadSprite.position.y).toBeGreaterThan(1.5)
+    expect(player.overheadSprite.position.y).toBeCloseTo(1.15, 2)
 
     player.dispose()
   })
