@@ -1,5 +1,12 @@
 import type { MovementInput } from '../../types/game.types'
 
+export interface VirtualMovementInput {
+  forward: boolean
+  backward: boolean
+  left: boolean
+  right: boolean
+}
+
 export class InputManager {
   private keys: Record<string, boolean> = {
     KeyW: false,
@@ -15,6 +22,15 @@ export class InputManager {
     Space: false,
     KeyE: false,
   }
+
+  private virtualMovement: VirtualMovementInput = {
+    forward: false,
+    backward: false,
+    left: false,
+    right: false,
+  }
+  private isVirtualSprint = false
+  private isVirtualInteract = false
 
   private mouseDeltaX = 0
   private mouseDeltaY = 0
@@ -87,15 +103,38 @@ export class InputManager {
     return delta
   }
 
+  public setVirtualMovement(movement: Partial<VirtualMovementInput>): void {
+    this.virtualMovement = {
+      ...this.virtualMovement,
+      ...movement,
+    }
+  }
+
+  public setVirtualSprint(sprint: boolean): void {
+    this.isVirtualSprint = sprint
+  }
+
+  public triggerVirtualInteract(): void {
+    this.isVirtualInteract = true
+  }
+
+  public injectTouchDelta(deltaX: number, deltaY: number): void {
+    this.mouseDeltaX += deltaX
+    this.mouseDeltaY += deltaY
+  }
+
   public getMovementInput(cameraYaw: number): MovementInput {
+    const interact = Boolean(this.keys.KeyE || this.isVirtualInteract)
+    this.isVirtualInteract = false
+
     return {
-      forward: Boolean(this.keys.KeyW || this.keys.ArrowUp),
-      backward: Boolean(this.keys.KeyS || this.keys.ArrowDown),
-      left: Boolean(this.keys.KeyA || this.keys.ArrowLeft),
-      right: Boolean(this.keys.KeyD || this.keys.ArrowRight),
-      sprint: Boolean(this.keys.ShiftLeft || this.keys.ShiftRight),
+      forward: Boolean(this.keys.KeyW || this.keys.ArrowUp || this.virtualMovement.forward),
+      backward: Boolean(this.keys.KeyS || this.keys.ArrowDown || this.virtualMovement.backward),
+      left: Boolean(this.keys.KeyA || this.keys.ArrowLeft || this.virtualMovement.left),
+      right: Boolean(this.keys.KeyD || this.keys.ArrowRight || this.virtualMovement.right),
+      sprint: Boolean(this.keys.ShiftLeft || this.keys.ShiftRight || this.isVirtualSprint),
       jump: Boolean(this.keys.Space),
-      interact: Boolean(this.keys.KeyE),
+      interact,
       cameraYaw,
     }
   }
@@ -104,6 +143,14 @@ export class InputManager {
     Object.keys(this.keys).forEach((k) => {
       this.keys[k] = false
     })
+    this.virtualMovement = {
+      forward: false,
+      backward: false,
+      left: false,
+      right: false,
+    }
+    this.isVirtualSprint = false
+    this.isVirtualInteract = false
     this.mouseDeltaX = 0
     this.mouseDeltaY = 0
   }

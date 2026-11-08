@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted } from 'vue'
 import { GameEngine } from '../../game/core/engine'
+import type { VirtualMovementInput } from '../../game/input/input-manager'
 import { useGameStore } from '../../stores/game-store'
 import { useRoomStore } from '../../stores/room-store'
 import { peerNetworkManager } from '../../game/network/peer-network-manager'
@@ -97,8 +98,28 @@ const requestPointerLock = () => {
   engine?.input.requestPointerLock()
 }
 
+const setVirtualMovement = (movement: Partial<VirtualMovementInput>) => {
+  engine?.input.setVirtualMovement(movement)
+}
+
+const setVirtualSprint = (sprint: boolean) => {
+  engine?.input.setVirtualSprint(sprint)
+}
+
+const injectTouchDelta = (deltaX: number, deltaY: number) => {
+  engine?.input.injectTouchDelta(deltaX, deltaY)
+}
+
+const triggerVirtualInteract = () => {
+  engine?.input.triggerVirtualInteract()
+}
+
 defineExpose({
   requestPointerLock,
+  setVirtualMovement,
+  setVirtualSprint,
+  injectTouchDelta,
+  triggerVirtualInteract,
 })
 </script>
 

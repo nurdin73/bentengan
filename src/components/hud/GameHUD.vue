@@ -1,10 +1,19 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useGameStore } from '../../stores/game-store'
 import { useRoomStore } from '../../stores/room-store'
+import MobileTouchControls from './MobileTouchControls.vue'
+import { checkIsMobileTouchDevice } from './mobile-device.utils'
+import type { VirtualMovementInput } from '../../game/input/input-manager'
 
 const gameStore = useGameStore()
 const roomStore = useRoomStore()
+
+const isMobile = ref(false)
+
+onMounted(() => {
+  isMobile.value = checkIsMobileTouchDevice()
+})
 
 const staminaColor = computed(() => {
   if (gameStore.isStunned) return 'bg-red-500'
@@ -15,71 +24,17 @@ const staminaColor = computed(() => {
 
 defineEmits<{
   (e: 'request-pointer-lock'): void
+  (e: 'virtual-move', movement: VirtualMovementInput): void
+  (e: 'virtual-sprint', sprint: boolean): void
+  (e: 'virtual-look', delta: { deltaX: number; deltaY: number }): void
+  (e: 'virtual-interact'): void
 }>()
 </script>
 
 <template>
   <div data-testid="game-hud" class="pointer-events-none absolute inset-0 flex flex-col justify-between p-4 sm:p-6">
-    <!-- Top Header Bar -->
-    <header class="flex items-start justify-between w-full">
-      <!-- Team & Player Badge -->
-      <div
-        data-testid="hud-team-badge"
-        class="timbul-card-dark px-4 py-2 flex items-center gap-3 pointer-events-auto"
-      >
-        <div
-          class="w-3.5 h-3.5 rounded-full ring-2 ring-white/50"
-          :class="roomStore.myTeam === 'blue' ? 'bg-blue-500' : 'bg-red-500'"
-        />
-        <div>
-          <span class="text-xs uppercase tracking-wider text-neutral-400 font-bold block">Tim Anda</span>
-          <span class="font-heading font-black text-sm uppercase text-white tracking-wide">
-            {{ roomStore.myTeam === 'blue' ? 'Benteng Biru' : 'Benteng Merah' }}
-          </span>
-        </div>
-      </div>
-
-      <!-- Live Team Roster / Jail Tracker -->
-      <div
-        data-testid="hud-roster-tracker"
-        class="timbul-card-dark px-4 py-2 flex items-center gap-4 text-xs font-heading font-bold"
-      >
-        <div class="flex items-center gap-2">
-          <span class="w-2.5 h-2.5 rounded-full bg-blue-500" />
-          <span class="text-neutral-300">Biru:</span>
-          <span data-testid="hud-blue-jailed" class="font-mono text-neutral-100">
-            {{ gameStore.blueJailedCount }}/{{ gameStore.blueTotalCount }} Jailed
-          </span>
-        </div>
-
-        <div class="w-px h-4 bg-neutral-700" />
-
-        <div class="flex items-center gap-2">
-          <span class="w-2.5 h-2.5 rounded-full bg-red-500" />
-          <span class="text-neutral-300">Merah:</span>
-          <span data-testid="hud-red-jailed" class="font-mono text-neutral-100">
-            {{ gameStore.redJailedCount }}/{{ gameStore.redTotalCount }} Jailed
-          </span>
-        </div>
-      </div>
-
-      <!-- Territory Safety Badge -->
-      <div
-        data-testid="hud-territory-badge"
-        :class="[
-          'px-4 py-2 rounded-2xl flex items-center gap-2 border-b-[4px] font-heading font-black text-xs uppercase tracking-wider transition-all duration-200 shadow-lg',
-          gameStore.isInEnemyTerritory
-            ? 'bg-red-600 text-white border-red-900 animate-pulse'
-            : 'bg-emerald-600 text-white border-emerald-900',
-        ]"
-      >
-        <span>{{ gameStore.isInEnemyTerritory ? '⚠️' : '🛡️' }}</span>
-        <span>{{ gameStore.isInEnemyTerritory ? 'Wilayah Lawan (Bahaya!)' : 'Wilayah Sendiri (Aman)' }}</span>
-      </div>
-    </header>
-
     <!-- Center Alerts (Rescue Prompt / Immunity / Stun / Reconnecting) -->
-    <div class="flex flex-col items-center justify-center gap-3">
+    <div class="flex flex-col items-center justify-center gap-3 pt-4">
       <!-- Reconnecting Overlay Banner -->
       <transition
         enter-active-class="transition duration-200 ease-out"
@@ -126,12 +81,15 @@ defineEmits<{
         <div
           v-if="gameStore.canRescueNearby"
           data-testid="hud-rescue-prompt"
-          class="bg-blue-600/95 border-b-[5px] border-blue-900 text-white font-heading font-black px-6 py-3 rounded-2xl shadow-2xl flex items-center gap-3 animate-bounce"
+          class="pointer-events-auto cursor-pointer bg-blue-600/95 border-b-[5px] border-blue-900 text-white font-heading font-black px-6 py-3 rounded-2xl shadow-2xl flex items-center gap-3 animate-bounce active:translate-y-1"
+          @click="$emit('virtual-interact')"
         >
           <span class="text-2xl">🤝</span>
           <div>
             <div class="text-lg uppercase tracking-wider text-stroke-black">BEBASKAN REKAN!</div>
-            <div class="text-xs font-sans text-blue-100 font-bold">Tekan <kbd class="bg-blue-800 px-1 rounded">E</kbd> untuk menyelamatkan rekan satu tim!</div>
+            <div class="text-xs font-sans text-blue-100 font-bold">
+              {{ isMobile ? 'Ketuk di sini untuk bebaskan rekan!' : 'Tekan E untuk menyelamatkan rekan satu tim!' }}
+            </div>
           </div>
         </div>
       </transition>
@@ -180,9 +138,9 @@ defineEmits<{
         </div>
       </transition>
 
-      <!-- Pointer Lock Instruction Hint -->
+      <!-- Pointer Lock Instruction Hint (Desktop only) -->
       <div
-        v-if="!gameStore.isPointerLocked"
+        v-if="!gameStore.isPointerLocked && !isMobile"
         data-testid="hud-pointer-lock-prompt"
         class="pointer-events-auto cursor-pointer timbul-card-dark bg-neutral-900/90 hover:bg-neutral-800 px-5 py-3 rounded-2xl border-b-[4px] border-neutral-950 flex items-center gap-3 transition-all"
         @click="$emit('request-pointer-lock')"
@@ -194,44 +152,12 @@ defineEmits<{
       </div>
     </div>
 
-    <!-- Bottom Controls & Stamina HUD -->
-    <footer class="flex flex-col sm:flex-row items-end sm:items-end justify-between gap-4 w-full">
-      <!-- Controls Cheatsheet -->
-      <div
-        data-testid="hud-controls-helper"
-        class="timbul-card-dark px-4 py-3 text-xs font-sans text-neutral-300 hidden md:flex flex-col gap-1.5 opacity-80"
-      >
-        <div class="font-heading font-bold text-amber-400 uppercase tracking-wider text-[11px]">Kontrol Desktop</div>
-        <div class="flex items-center gap-2">
-          <kbd class="bg-neutral-800 px-1.5 py-0.5 rounded border border-neutral-700 font-mono font-bold">W A S D</kbd>
-          <span>Bergerak</span>
-        </div>
-        <div class="flex items-center gap-2">
-          <kbd class="bg-neutral-800 px-1.5 py-0.5 rounded border border-neutral-700 font-mono font-bold">Shift</kbd>
-          <span>Sprint</span>
-        </div>
-        <div class="flex items-center gap-2">
-          <kbd class="bg-neutral-800 px-1.5 py-0.5 rounded border border-neutral-700 font-mono font-bold">Space</kbd>
-          <span>Melompat (Jump)</span>
-        </div>
-        <div class="flex items-center gap-2">
-          <kbd class="bg-neutral-800 px-1.5 py-0.5 rounded border border-neutral-700 font-mono font-bold">E</kbd>
-          <span>Bebaskan Rekan (Rescue)</span>
-        </div>
-        <div class="flex items-center gap-2">
-          <kbd class="bg-neutral-800 px-1.5 py-0.5 rounded border border-neutral-700 font-mono font-bold">Sentuh Lawan</kbd>
-          <span>Tangkap (Capture 1.5m)</span>
-        </div>
-        <div class="flex items-center gap-2">
-          <kbd class="bg-neutral-800 px-1.5 py-0.5 rounded border border-neutral-700 font-mono font-bold">Sentuh Benteng</kbd>
-          <span>Menang (Base Capture)</span>
-        </div>
-      </div>
-
+    <!-- Bottom Stamina HUD -->
+    <footer class="flex items-center justify-center w-full pb-2">
       <!-- Stamina Bar Panel -->
       <div
         data-testid="hud-stamina-panel"
-        class="timbul-card-dark p-4 w-full sm:w-80 flex flex-col gap-2"
+        class="timbul-card-dark p-3.5 w-full max-w-xs flex flex-col gap-1.5"
       >
         <div class="flex justify-between items-center text-xs font-heading font-bold uppercase tracking-wider">
           <span class="flex items-center gap-1.5 text-neutral-300">
@@ -248,7 +174,7 @@ defineEmits<{
         </div>
 
         <!-- Tactile Progress Bar -->
-        <div class="w-full bg-neutral-950 rounded-full h-4 p-0.5 border border-neutral-800 overflow-hidden shadow-inner">
+        <div class="w-full bg-neutral-950 rounded-full h-3.5 p-0.5 border border-neutral-800 overflow-hidden shadow-inner">
           <div
             data-testid="hud-stamina-fill"
             class="h-full rounded-full transition-all duration-75 border-b-2 border-black/30 shadow-sm"
@@ -295,5 +221,12 @@ defineEmits<{
         </div>
       </transition-group>
     </div>
+
+    <!-- Mobile Virtual Joystick & Touch Controls -->
+    <MobileTouchControls
+      @virtual-move="$emit('virtual-move', $event)"
+      @virtual-sprint="$emit('virtual-sprint', $event)"
+      @virtual-look="$emit('virtual-look', $event)"
+    />
   </div>
 </template>

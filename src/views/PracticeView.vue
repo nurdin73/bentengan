@@ -7,6 +7,7 @@ import GameCanvas from '../components/game/GameCanvas.vue'
 import GameHUD from '../components/hud/GameHUD.vue'
 import ResultsModal from '../components/results/ResultsModal.vue'
 import type { TeamId } from '../types/game.types'
+import type { VirtualMovementInput } from '../game/input/input-manager'
 
 const route = useRoute()
 const router = useRouter()
@@ -23,6 +24,22 @@ onMounted(() => {
 
 const handleRequestPointerLock = () => {
   gameCanvasRef.value?.requestPointerLock()
+}
+
+const handleVirtualMove = (move: VirtualMovementInput) => {
+  gameCanvasRef.value?.setVirtualMovement(move)
+}
+
+const handleVirtualSprint = (sprint: boolean) => {
+  gameCanvasRef.value?.setVirtualSprint(sprint)
+}
+
+const handleVirtualLook = (delta: { deltaX: number; deltaY: number }) => {
+  gameCanvasRef.value?.injectTouchDelta(delta.deltaX, delta.deltaY)
+}
+
+const handleVirtualInteract = () => {
+  gameCanvasRef.value?.triggerVirtualInteract()
 }
 
 const handleRestart = () => {
@@ -50,6 +67,10 @@ const handleExitToHome = () => {
     <GameHUD
       v-if="roomStore.status === 'playing'"
       @request-pointer-lock="handleRequestPointerLock"
+      @virtual-move="handleVirtualMove"
+      @virtual-sprint="handleVirtualSprint"
+      @virtual-look="handleVirtualLook"
+      @virtual-interact="handleVirtualInteract"
     />
 
     <!-- Results Modal on Finish -->
