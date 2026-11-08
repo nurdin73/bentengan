@@ -5,9 +5,34 @@ import { InputManager } from '../input/input-manager'
 import { ThirdPersonCameraController } from '../camera/third-person'
 import { PlayerController } from '../entities/player-controller'
 import { BotController } from '../entities/bot-controller'
+import { RemotePlayerController } from '../entities/remote-player-controller'
 import { GameplayRules } from '../systems/gameplay-rules'
 import { GAME_CONFIG } from './constants'
-import type { TeamId, PlayerStatus, MatchResult, GameplayEntity, MovementInput } from '../../types/game.types'
+import { peerNetworkManager } from '../network/peer-network-manager'
+import type {
+  PlayerNetworkState,
+  PlayerUpdateMessage,
+  WorldSnapshotMessage,
+  GameEventMessage,
+} from '../network/network-protocol'
+import type {
+  TeamId,
+  PlayerStatus,
+  MatchResult,
+  MatchEndReason,
+  GameplayEntity,
+  MovementInput,
+  RoomPlayer,
+} from '../../types/game.types'
+
+export interface GameEngineInitOptions {
+  localPlayerId?: string
+  localPlayerUsername?: string
+  teamId?: TeamId
+  roomPlayers?: RoomPlayer[]
+  isPractice?: boolean
+  isHost?: boolean
+}
 
 export interface GameEngineStateCallback {
   onPlayerStateChange: (state: {
@@ -30,6 +55,18 @@ export interface GameEngineStateCallback {
   onMatchEnd: (result: MatchResult) => void
 }
 
+function calculateSpawnPosition(
+  team: TeamId,
+  indexInTeam: number,
+  teamTotal: number,
+): [number, number, number] {
+  const spawnZ = team === 'blue' ? -20 : 20
+  const spacing = 4.5
+  const startX = -((teamTotal - 1) * spacing) / 2
+  const spawnX = teamTotal <= 1 ? 0 : startX + indexInTeam * spacing
+  return [spawnX, 1, spawnZ]
+}
+
 export class GameEngine {
   private readonly container: HTMLElement
   public readonly scene: THREE.Scene
@@ -42,6 +79,15 @@ export class GameEngine {
   public cameraController!: ThirdPersonCameraController
   public localPlayer: PlayerController | null = null
   public readonly bots: BotController[] = []
+  public readonly remotePlayers = new Map<string, RemotePlayerController>()
+
+  // Network & Multiplayer State
+  public isHost = false
+  public isPractice = true
+  public localPlayerId = 'local-player'
+  public localPlayerUsername = 'Anda'
+  private networkTimer = 0
+  private worldTick = 0
 
   // Fixed timestep accumulator
   private isRunning = false
@@ -104,9 +150,19 @@ export class GameEngine {
     this.scene.add(sunLight)
   }
 
-  public async init(teamId: TeamId = 'blue'): Promise<void> {
+  public async init(
+    optionsOrTeam: TeamId | GameEngineInitOptions = 'blue',
+  ): Promise<void> {
+    const options: GameEngineInitOptions =
+      typeof optionsOrTeam === 'string' ? { teamId: optionsOrTeam } : optionsOrTeam
+
+    const teamId = options.teamId ?? 'blue'
     this.playerTeam = teamId
     this.isMatchFinished = false
+    this.isPractice = options.isPractice ?? (options.roomPlayers && options.roomPlayers.length > 1 ? false : true)
+    this.isHost = options.isHost ?? false
+    this.localPlayerId = options.localPlayerId ?? 'local-player'
+    this.localPlayerUsername = options.localPlayerUsername ?? 'Anda'
 
     // 1. Initialize Rapier Physics World
     this.physics = await PhysicsWorld.create()
@@ -114,20 +170,69 @@ export class GameEngine {
     // 2. Create Symmetrical Arena
     this.arena = new ArenaGreybox(this.scene, this.physics)
 
-    // 3. Spawn Local Player
-    const spawnZ = teamId === 'blue' ? -20 : 20
-    this.localPlayer = new PlayerController(this.scene, this.physics, {
-      id: 'local-player',
-      teamId,
-      initialPosition: [0, 1, spawnZ],
-    })
+    // Clear any lingering remote players
+    for (const remote of this.remotePlayers.values()) {
+      remote.dispose(this.scene)
+    }
+    this.remotePlayers.clear()
+
+    const roomPlayers = options.roomPlayers ?? []
+
+    if (this.isPractice || roomPlayers.length <= 1) {
+      // 3. Spawn Local Player for Practice Mode
+      const spawnZ = teamId === 'blue' ? -20 : 20
+      this.localPlayer = new PlayerController(this.scene, this.physics, {
+        id: this.localPlayerId,
+        name: this.localPlayerUsername,
+        teamId,
+        initialPosition: [0, 1, spawnZ],
+      })
+
+      // 4. Spawn Milestone 2 Simulated Roster (Solo Practice against AI)
+      this.spawnSimulatedBots(teamId)
+    } else {
+      // Multiplayer Room: Spawn real players from room roster (No fake bots)
+      const bluePlayers = roomPlayers.filter((p) => p.teamId === 'blue')
+      const redPlayers = roomPlayers.filter((p) => p.teamId === 'red')
+
+      // A. Spawn Local Player
+      const myTeamPlayers = teamId === 'blue' ? bluePlayers : redPlayers
+      const myIdx = Math.max(0, myTeamPlayers.findIndex((p) => p.id === this.localPlayerId))
+      const localSpawnPos = calculateSpawnPosition(teamId, myIdx, myTeamPlayers.length)
+
+      this.localPlayer = new PlayerController(this.scene, this.physics, {
+        id: this.localPlayerId,
+        name: this.localPlayerUsername,
+        teamId,
+        initialPosition: localSpawnPos,
+      })
+
+      // B. Spawn Remote Players (Opponents & Teammates)
+      for (const p of roomPlayers) {
+        if (p.id === this.localPlayerId) continue
+
+        const pTeamPlayers = p.teamId === 'blue' ? bluePlayers : redPlayers
+        const pIdx = Math.max(0, pTeamPlayers.findIndex((tp) => tp.id === p.id))
+        const pSpawnPos = calculateSpawnPosition(p.teamId, pIdx, pTeamPlayers.length)
+
+        const remote = new RemotePlayerController(this.scene, this.physics, {
+          id: p.id,
+          name: p.username,
+          teamId: p.teamId,
+          initialPosition: pSpawnPos,
+        })
+
+        // Orient remote player towards the opposing fortress
+        const facingYaw = p.teamId === 'blue' ? Math.PI : 0
+        remote.setTargetTransform(pSpawnPos, facingYaw)
+
+        this.remotePlayers.set(p.id, remote)
+      }
+    }
 
     const initialYaw = teamId === 'blue' ? Math.PI : 0
     this.cameraController.setYaw(initialYaw)
     this.cameraController.snap(this.localPlayer.getPosition())
-
-    // 4. Spawn Milestone 2 Simulated Roster (1 Ally in Jail for Rescue test, 2 Enemy bots for Capture test)
-    this.spawnSimulatedBots(teamId)
 
     // 5. Start Fixed Timestep Simulation & Render Loop
     this.isRunning = true
@@ -205,9 +310,11 @@ export class GameEngine {
 
     // Fixed timestep physics update (60 Hz)
     while (this.accumulator >= this.fixedDt) {
-      const allEntities: GameplayEntity[] = this.localPlayer
-        ? [this.localPlayer, ...this.bots]
-        : [...this.bots]
+      const allEntities: GameplayEntity[] = [
+        ...(this.localPlayer ? [this.localPlayer] : []),
+        ...this.remotePlayers.values(),
+        ...this.bots,
+      ]
 
       let input: MovementInput = {
         forward: false,
@@ -294,10 +401,114 @@ export class GameEngine {
       bot.syncVisuals(alpha, now)
     }
 
+    for (const remote of this.remotePlayers.values()) {
+      remote.updateInterpolation(frameTime, now)
+    }
+
+    // Network synchronization tick (20 Hz per PRD Section 11.4)
+    if (!this.isPractice) {
+      this.networkTimer += frameTime
+      if (this.networkTimer >= 0.05) {
+        this.networkTimer = 0
+        this.syncNetworkTick()
+      }
+    }
+
     // Render frame
     this.renderer.render(this.scene, this.camera)
 
     this.animationFrameId = requestAnimationFrame((t) => this.loop(t))
+  }
+
+  private syncNetworkTick(): void {
+    if (!this.localPlayer) return
+
+    const localPos = this.localPlayer.getPosition()
+    const localState: PlayerNetworkState = {
+      id: this.localPlayerId,
+      position: [localPos.x, localPos.y, localPos.z],
+      rotationY: this.localPlayer.mesh.rotation.y,
+      status: this.localPlayer.status,
+      isSprinting: this.localPlayer.isSprinting,
+      immunityUntil: this.localPlayer.immunityUntil,
+      stunUntil: this.localPlayer.stunUntil,
+    }
+
+    if (this.isHost) {
+      // Host authoritative world snapshot
+      const allStates: PlayerNetworkState[] = [localState]
+      for (const [id, remote] of this.remotePlayers.entries()) {
+        const rPos = remote.getPosition()
+        allStates.push({
+          id,
+          position: [rPos.x, rPos.y, rPos.z],
+          rotationY: remote.mesh.rotation.y,
+          status: remote.status,
+          isSprinting: remote.isSprinting,
+          immunityUntil: remote.immunityUntil,
+          stunUntil: remote.stunUntil,
+        })
+      }
+      peerNetworkManager.broadcastWorldSnapshot(this.worldTick++, allStates)
+    } else {
+      // Client sends local transform to Host
+      peerNetworkManager.sendPlayerUpdate(localState)
+    }
+  }
+
+  public onPlayerUpdate(update: PlayerUpdateMessage): void {
+    const remote = this.remotePlayers.get(update.playerId)
+    if (remote) {
+      remote.setTargetTransform(
+        update.state.position,
+        update.state.rotationY,
+        update.state.status,
+        update.state.isSprinting,
+        update.state.immunityUntil,
+        update.state.stunUntil,
+      )
+    }
+  }
+
+  public onWorldSnapshot(snapshot: WorldSnapshotMessage): void {
+    for (const pState of snapshot.players) {
+      if (pState.id === this.localPlayerId) {
+        // Authoritative reconciliation for local player if jailed or stunned
+        if (this.localPlayer && pState.status !== this.localPlayer.status) {
+          this.localPlayer.status = pState.status
+          if (pState.status === 'jailed') {
+            const jailPos =
+              this.playerTeam === 'blue'
+                ? this.arena.zones.blueJailPosition
+                : this.arena.zones.redJailPosition
+            this.localPlayer.teleportTo(jailPos.x, jailPos.y, jailPos.z)
+          }
+        }
+        continue
+      }
+
+      const remote = this.remotePlayers.get(pState.id)
+      if (remote) {
+        remote.setTargetTransform(
+          pState.position,
+          pState.rotationY,
+          pState.status,
+          pState.isSprinting,
+          pState.immunityUntil,
+          pState.stunUntil,
+        )
+      }
+    }
+  }
+
+  public onGameEvent(event: GameEventMessage): void {
+    if (event.event === 'capture') {
+      this.callbacks.onCapture(event.sourceId ?? '', event.targetId ?? '')
+    } else if (event.event === 'rescue') {
+      this.callbacks.onRescue(event.sourceId ?? '', event.targetId ?? '')
+    } else if (event.event === 'match_end' && event.winner && event.reason) {
+      this.endMatch(event.winner, event.reason)
+    }
   }
 
   private evaluateGameplayRules(
@@ -340,6 +551,13 @@ export class GameEngine {
               entity.status = 'normal'
               entity.immunityUntil = now + GAME_CONFIG.gameplay.immunityDurationMs
               this.callbacks.onRescue('Anda', entity.name)
+              if (this.isHost && !this.isPractice) {
+                peerNetworkManager.broadcastGameEvent({
+                  event: 'rescue',
+                  sourceId: 'Anda',
+                  targetId: entity.name,
+                })
+              }
             }
           }
         }
@@ -357,6 +575,13 @@ export class GameEngine {
             const rescuerName = bot.name
             const targetName = target === this.localPlayer ? 'Anda' : target.name
             this.callbacks.onRescue(rescuerName, targetName)
+            if (this.isHost && !this.isPractice) {
+              peerNetworkManager.broadcastGameEvent({
+                event: 'rescue',
+                sourceId: rescuerName,
+                targetId: targetName,
+              })
+            }
           }
         }
       }
@@ -381,6 +606,13 @@ export class GameEngine {
           const hunterName = hunter === this.localPlayer ? 'Anda' : hunter.name
           const targetName = target === this.localPlayer ? 'Anda' : target.name
           this.callbacks.onCapture(hunterName, targetName)
+          if (this.isHost && !this.isPractice) {
+            peerNetworkManager.broadcastGameEvent({
+              event: 'capture',
+              sourceId: hunterName,
+              targetId: targetName,
+            })
+          }
         }
       }
     }
@@ -442,9 +674,17 @@ export class GameEngine {
     }
   }
 
-  private endMatch(winner: TeamId, reason: 'base_capture' | 'team_elimination'): void {
+  private endMatch(winner: TeamId, reason: MatchEndReason): void {
     if (this.isMatchFinished) return
     this.isMatchFinished = true
+
+    if (this.isHost && !this.isPractice) {
+      peerNetworkManager.broadcastGameEvent({
+        event: 'match_end',
+        winner,
+        reason,
+      })
+    }
 
     const durationSeconds = Math.round((performance.now() - this.matchStartTime) / 1000)
 
@@ -455,7 +695,7 @@ export class GameEngine {
       duration: durationSeconds,
       players: [
         {
-          playerId: 'local-player',
+          playerId: this.localPlayerId,
           teamId: this.playerTeam,
           captures: 0,
           rescues: 0,
@@ -489,6 +729,11 @@ export class GameEngine {
       bot.dispose()
     }
     this.bots.length = 0
+
+    for (const remote of this.remotePlayers.values()) {
+      remote.dispose(this.scene)
+    }
+    this.remotePlayers.clear()
 
     if (this.arena) {
       this.arena.dispose()

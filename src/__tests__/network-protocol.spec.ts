@@ -101,7 +101,7 @@ describe('Team Balance & Match Start Validation', () => {
   it('disallows starting when room has zero players', () => {
     const res = isMatchStartable([])
     expect(res.startable).toBe(false)
-    expect(res.reason).toContain('Tidak ada pemain')
+    expect(res.reason).toContain('Belum ada pemain')
   })
 
   it('disallows starting when one team has zero players', () => {
@@ -112,7 +112,7 @@ describe('Team Balance & Match Start Validation', () => {
 
     const res = isMatchStartable(players)
     expect(res.startable).toBe(false)
-    expect(res.reason).toContain('Kedua tim (Biru & Merah) wajib memiliki minimal 1 pemain')
+    expect(res.reason).toContain('Setiap benteng (Biru & Merah) harus ada penjaganya')
   })
 
   it('disallows starting when player counts are uneven (e.g. 2v1)', () => {
@@ -124,7 +124,7 @@ describe('Team Balance & Match Start Validation', () => {
 
     const res = isMatchStartable(players)
     expect(res.startable).toBe(false)
-    expect(res.reason).toContain('belum seimbang')
+    expect(res.reason).toContain('harus seimbang')
   })
 
   it('disallows starting when any player is not ready', () => {
@@ -135,7 +135,7 @@ describe('Team Balance & Match Start Validation', () => {
 
     const res = isMatchStartable(players)
     expect(res.startable).toBe(false)
-    expect(res.reason).toContain('belum siap (Ready)')
+    expect(res.reason).toContain('belum menekan tombol Siap')
   })
 
   it('allows starting when teams are balanced (1v1) and all are ready', () => {

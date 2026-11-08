@@ -77,6 +77,43 @@ export const PongMessageSchema = z.object({
   timestamp: z.number(),
 })
 
+// In-Game Real-Time Synchronization Schemas (20 Hz per PRD Section 11.4)
+export const PlayerStatusSchema = z.enum(['normal', 'stunned', 'jailed'])
+
+export const PlayerNetworkStateSchema = z.object({
+  id: z.string(),
+  position: z.tuple([z.number(), z.number(), z.number()]),
+  rotationY: z.number(),
+  velocity: z.tuple([z.number(), z.number(), z.number()]).optional(),
+  status: PlayerStatusSchema,
+  isSprinting: z.boolean(),
+  immunityUntil: z.number(),
+  stunUntil: z.number(),
+})
+
+export const PlayerUpdateMessageSchema = z.object({
+  type: z.literal('PLAYER_UPDATE'),
+  playerId: z.string(),
+  state: PlayerNetworkStateSchema,
+})
+
+export const WorldSnapshotMessageSchema = z.object({
+  type: z.literal('WORLD_SNAPSHOT'),
+  tick: z.number(),
+  timestamp: z.number(),
+  players: z.array(PlayerNetworkStateSchema),
+})
+
+export const GameEventMessageSchema = z.object({
+  type: z.literal('GAME_EVENT'),
+  event: z.enum(['capture', 'rescue', 'base_capture', 'match_end']),
+  winner: TeamIdSchema.optional(),
+  reason: z.enum(['base_capture', 'team_elimination', 'host_disconnect']).optional(),
+  sourceId: z.string().optional(),
+  targetId: z.string().optional(),
+  timestamp: z.number(),
+})
+
 export const NetworkMessageSchema = z.discriminatedUnion('type', [
   JoinRequestMessageSchema,
   JoinResponseMessageSchema,
@@ -86,6 +123,9 @@ export const NetworkMessageSchema = z.discriminatedUnion('type', [
   MatchStartMessageSchema,
   PingMessageSchema,
   PongMessageSchema,
+  PlayerUpdateMessageSchema,
+  WorldSnapshotMessageSchema,
+  GameEventMessageSchema,
 ])
 
 export type NetworkMessage = z.infer<typeof NetworkMessageSchema>
@@ -97,6 +137,10 @@ export type SetReadyMessage = z.infer<typeof SetReadyMessageSchema>
 export type MatchStartMessage = z.infer<typeof MatchStartMessageSchema>
 export type PingMessage = z.infer<typeof PingMessageSchema>
 export type PongMessage = z.infer<typeof PongMessageSchema>
+export type PlayerNetworkState = z.infer<typeof PlayerNetworkStateSchema>
+export type PlayerUpdateMessage = z.infer<typeof PlayerUpdateMessageSchema>
+export type WorldSnapshotMessage = z.infer<typeof WorldSnapshotMessageSchema>
+export type GameEventMessage = z.infer<typeof GameEventMessageSchema>
 
 /**
  * Validates whether the incoming payload matches the network protocol schema.
@@ -121,7 +165,7 @@ export function isMatchStartable(players: RoomPlayer[]): {
   reason?: string
 } {
   if (players.length === 0) {
-    return { startable: false, reason: 'Tidak ada pemain di dalam room.' }
+    return { startable: false, reason: 'Belum ada pemain di dalam ruangan.' }
   }
 
   const blueCount = players.filter((p) => p.teamId === 'blue').length
@@ -130,14 +174,14 @@ export function isMatchStartable(players: RoomPlayer[]): {
   if (blueCount === 0 || redCount === 0) {
     return {
       startable: false,
-      reason: 'Kedua tim (Biru & Merah) wajib memiliki minimal 1 pemain.',
+      reason: 'Setiap benteng (Biru & Merah) harus ada penjaganya dulu ya!',
     }
   }
 
   if (blueCount !== redCount) {
     return {
       startable: false,
-      reason: `Jumlah pemain belum seimbang (Biru: ${blueCount}, Merah: ${redCount}).`,
+      reason: `Jumlah anggota tim harus seimbang (Biru: ${blueCount}, Merah: ${redCount}) biar adil!`,
     }
   }
 
@@ -145,7 +189,7 @@ export function isMatchStartable(players: RoomPlayer[]): {
   if (unreadyPlayers.length > 0) {
     return {
       startable: false,
-      reason: `${unreadyPlayers.length} pemain belum siap (Ready).`,
+      reason: `Masih ada ${unreadyPlayers.length} teman yang belum menekan tombol Siap!`,
     }
   }
 

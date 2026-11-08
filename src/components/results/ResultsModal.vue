@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import { useRouter } from 'vue-router'
 import { useGameStore } from '../../stores/game-store'
 import { useRoomStore } from '../../stores/room-store'
 import TactileButton from '../ui/TactileButton.vue'
 
+const router = useRouter()
 const gameStore = useGameStore()
 const roomStore = useRoomStore()
 
@@ -32,6 +34,11 @@ const reasonText = computed(() => {
 defineEmits<{
   (e: 'restart'): void
 }>()
+
+const handleLeaveToHome = () => {
+  roomStore.leaveRoom()
+  router.push('/')
+}
 </script>
 
 <template>
@@ -106,11 +113,20 @@ defineEmits<{
         <TactileButton
           variant="amber"
           data-testid="results-restart-btn"
-          class="w-full text-lg"
+          class="w-full text-base sm:text-lg"
           @click="$emit('restart')"
         >
-          🔄 Main Lagi (Latihan)
+          {{ roomStore.roomCode === 'LOKAL' ? '🔄 Main Lagi (Latihan)' : '🔄 Kembali ke Ruang Tunggu (Main Lagi)' }}
         </TactileButton>
+
+        <button
+          type="button"
+          data-testid="results-leave-home-btn"
+          class="text-xs font-heading font-bold uppercase tracking-wider text-neutral-400 hover:text-neutral-600 transition-colors py-1 cursor-pointer self-center"
+          @click="handleLeaveToHome"
+        >
+          ← Keluar ke Beranda
+        </button>
       </div>
     </div>
   </div>

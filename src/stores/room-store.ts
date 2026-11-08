@@ -188,5 +188,15 @@ export const useRoomStore = defineStore('room', {
     setMatchStatus(status: RoomStatus) {
       this.status = status
     },
+
+    returnToLobbyForRematch() {
+      this.status = 'waiting'
+      for (const p of this.players) {
+        p.isReady = false
+      }
+      if (this.isHost && this.roomCode !== 'LOKAL') {
+        peerNetworkManager.returnToLobby()
+      }
+    },
   },
 })

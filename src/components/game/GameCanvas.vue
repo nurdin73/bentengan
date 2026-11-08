@@ -3,6 +3,7 @@ import { ref, onMounted, onUnmounted } from 'vue'
 import { GameEngine } from '../../game/core/engine'
 import { useGameStore } from '../../stores/game-store'
 import { useRoomStore } from '../../stores/room-store'
+import { peerNetworkManager } from '../../game/network/peer-network-manager'
 
 const containerRef = ref<HTMLDivElement | null>(null)
 const gameStore = useGameStore()
@@ -42,12 +43,35 @@ onMounted(async () => {
     },
   })
 
-  await engine.init(roomStore.myTeam)
+  // Hook real-time multiplayer network listeners to engine
+  peerNetworkManager.events.onPlayerUpdate = (update) => {
+    engine?.onPlayerUpdate(update)
+  }
+  peerNetworkManager.events.onWorldSnapshot = (snapshot) => {
+    engine?.onWorldSnapshot(snapshot)
+  }
+  peerNetworkManager.events.onGameEvent = (event) => {
+    engine?.onGameEvent(event)
+  }
+
+  await engine.init({
+    localPlayerId: roomStore.myPlayerId,
+    localPlayerUsername: roomStore.myUsername,
+    teamId: roomStore.myTeam,
+    roomPlayers: roomStore.players,
+    isPractice: roomStore.roomCode === 'LOKAL',
+    isHost: roomStore.isHost,
+  })
+
   document.addEventListener('pointerlockchange', onPointerLockChange)
 })
 
 onUnmounted(() => {
   document.removeEventListener('pointerlockchange', onPointerLockChange)
+  peerNetworkManager.events.onPlayerUpdate = undefined
+  peerNetworkManager.events.onWorldSnapshot = undefined
+  peerNetworkManager.events.onGameEvent = undefined
+
   if (engine) {
     engine.dispose()
     engine = null

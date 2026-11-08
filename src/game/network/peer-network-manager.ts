@@ -2,11 +2,26 @@ import { Peer, type DataConnection } from 'peerjs'
 import type { Room, RoomPlayer, TeamId } from '../../types/game.types'
 import {
   getHostPeerId,
-  getClientPeerId,
   parseNetworkMessage,
   type NetworkMessage,
+  type PlayerNetworkState,
+  type PlayerUpdateMessage,
+  type WorldSnapshotMessage,
+  type GameEventMessage,
   isMatchStartable,
 } from './network-protocol'
+
+const PEER_CONFIG = {
+  debug: 1,
+  config: {
+    iceServers: [
+      { urls: 'stun:stun.l.google.com:19302' },
+      { urls: 'stun:stun1.l.google.com:19302' },
+      { urls: 'stun:stun2.l.google.com:19302' },
+      { urls: 'stun:global.stun.twilio.com:3478' },
+    ],
+  },
+}
 
 export interface PeerNetworkEvents {
   onRoomStateUpdated: (room: Room) => void
@@ -14,6 +29,9 @@ export interface PeerNetworkEvents {
   onConnectionError: (errorMsg: string) => void
   onDisconnected: () => void
   onLatencyUpdated: (latencyMs: number) => void
+  onPlayerUpdate: (update: PlayerUpdateMessage) => void
+  onWorldSnapshot: (snapshot: WorldSnapshotMessage) => void
+  onGameEvent: (event: GameEventMessage) => void
 }
 
 export class PeerNetworkManager {
@@ -52,9 +70,7 @@ export class PeerNetworkManager {
 
     return new Promise((resolve, reject) => {
       try {
-        const peerInstance = new Peer(hostPeerId, {
-          debug: 1,
-        })
+        const peerInstance = new Peer(hostPeerId, PEER_CONFIG)
         this.peer = peerInstance
 
         peerInstance.on('open', (id) => {
@@ -70,7 +86,7 @@ export class PeerNetworkManager {
                 peerId: id,
                 username: player.username,
                 teamId: player.teamId,
-                isReady: player.isReady,
+                isReady: false,
                 isHost: true,
               },
             ],
@@ -86,7 +102,10 @@ export class PeerNetworkManager {
         })
 
         peerInstance.on('error', (err) => {
-          const msg = `Host Peer error: ${err.message || 'Koneksi gagal'}`
+          let msg = `Gagal membuat ruangan: ${err.message || 'Koneksi bermasalah'}`
+          if (err.type === 'unavailable-id') {
+            msg = `Kode ruangan ${roomCode.toUpperCase()} sedang aktif dipakai. Coba kode lain atau tunggu 1 menit.`
+          }
           this.events.onConnectionError?.(msg)
           reject(new Error(msg))
         })
@@ -101,7 +120,7 @@ export class PeerNetworkManager {
   }
 
   /**
-   * Connects client to an existing host room.
+   * Connects client to an existing host room using an auto-generated unique ID.
    */
   public async joinRoom(
     roomCode: string,
@@ -111,15 +130,15 @@ export class PeerNetworkManager {
 
     this.localPlayerId = player.id
     this.isHost = false
-    const clientPeerId = getClientPeerId(roomCode, player.id)
     const hostPeerId = getHostPeerId(roomCode)
 
     return new Promise((resolve, reject) => {
       try {
-        const peerInstance = new Peer(clientPeerId, {
-          debug: 1,
-        })
+        // Auto-generated unique peer ID prevents ID-taken collisions on PeerServer Cloud
+        const peerInstance = new Peer(PEER_CONFIG)
         this.peer = peerInstance
+
+        let hasConnected = false
 
         peerInstance.on('open', () => {
           const conn = peerInstance.connect(hostPeerId, {
@@ -128,7 +147,10 @@ export class PeerNetworkManager {
 
           this.hostConnection = conn
 
-          conn.on('open', () => {
+          const handleOpen = () => {
+            if (hasConnected) return
+            hasConnected = true
+
             // Send Join Request to Host
             const joinMsg: NetworkMessage = {
               type: 'JOIN_REQUEST',
@@ -139,7 +161,13 @@ export class PeerNetworkManager {
             conn.send(joinMsg)
             this.startPingHeartbeat()
             resolve()
-          })
+          }
+
+          if (conn.open) {
+            handleOpen()
+          } else {
+            conn.on('open', handleOpen)
+          }
 
           conn.on('data', (raw) => {
             this.handleClientIncomingData(raw)
@@ -148,6 +176,7 @@ export class PeerNetworkManager {
           conn.on('error', (err) => {
             const msg = `Koneksi ke host terputus: ${err.message}`
             this.events.onConnectionError?.(msg)
+            if (!hasConnected) reject(new Error(msg))
           })
 
           conn.on('close', () => {
@@ -156,9 +185,9 @@ export class PeerNetworkManager {
         })
 
         peerInstance.on('error', (err) => {
-          let errorMsg = `Gagal bergabung ke room: ${err.message}`
+          let errorMsg = `Gagal bergabung ke ruangan: ${err.message}`
           if (err.type === 'peer-unavailable') {
-            errorMsg = `Room ${roomCode.toUpperCase()} tidak ditemukan atau Host sedang offline.`
+            errorMsg = `Ruangan ${roomCode.toUpperCase()} tidak ditemukan atau Host sedang offline.`
           }
           this.events.onConnectionError?.(errorMsg)
           reject(new Error(errorMsg))
@@ -181,13 +210,19 @@ export class PeerNetworkManager {
         me.teamId = teamId
         this.broadcastRoomState()
       }
-    } else if (this.hostConnection?.open) {
+    } else if (this.hostConnection) {
       const msg: NetworkMessage = {
         type: 'SET_TEAM',
         playerId: this.localPlayerId,
         teamId,
       }
-      this.hostConnection.send(msg)
+      try {
+        if (this.hostConnection.open) {
+          this.hostConnection.send(msg)
+        }
+      } catch (err) {
+        console.warn('Gagal kirim SET_TEAM:', err)
+      }
     }
   }
 
@@ -203,14 +238,34 @@ export class PeerNetworkManager {
         me.isReady = isReady
         this.broadcastRoomState()
       }
-    } else if (this.hostConnection?.open) {
+    } else if (this.hostConnection) {
       const msg: NetworkMessage = {
         type: 'SET_READY',
         playerId: this.localPlayerId,
         isReady,
       }
-      this.hostConnection.send(msg)
+      try {
+        if (this.hostConnection.open) {
+          this.hostConnection.send(msg)
+        }
+      } catch (err) {
+        console.warn('Gagal kirim SET_READY:', err)
+      }
     }
+  }
+
+  /**
+   * Host resets match for a rematch, returning everyone to waiting room with unready state.
+   */
+  public returnToLobby(): void {
+    if (!this.isHost || !this.currentRoom) return
+
+    this.currentRoom.status = 'waiting'
+    for (const p of this.currentRoom.players) {
+      p.isReady = false
+    }
+
+    this.broadcastRoomState()
   }
 
   /**
@@ -239,6 +294,50 @@ export class PeerNetworkManager {
   }
 
   /**
+   * Client sends its local player transform and status to host (20 Hz).
+   */
+  public sendPlayerUpdate(state: PlayerNetworkState): void {
+    if (this.isHost || !this.hostConnection?.open) return
+    const msg: NetworkMessage = {
+      type: 'PLAYER_UPDATE',
+      playerId: this.localPlayerId,
+      state,
+    }
+    try {
+      this.hostConnection.send(msg)
+    } catch {
+      // Ignore transient send failures
+    }
+  }
+
+  /**
+   * Host broadcasts the authoritative world snapshot (all player positions/states) to all clients (20 Hz).
+   */
+  public broadcastWorldSnapshot(tick: number, players: PlayerNetworkState[]): void {
+    if (!this.isHost) return
+    const msg: NetworkMessage = {
+      type: 'WORLD_SNAPSHOT',
+      tick,
+      timestamp: Date.now(),
+      players,
+    }
+    this.broadcastMessage(msg)
+  }
+
+  /**
+   * Host broadcasts a discrete gameplay event (capture, rescue, base capture, match end) to all clients.
+   */
+  public broadcastGameEvent(event: Omit<GameEventMessage, 'type' | 'timestamp'>): void {
+    if (!this.isHost) return
+    const msg: NetworkMessage = {
+      type: 'GAME_EVENT',
+      ...event,
+      timestamp: Date.now(),
+    }
+    this.broadcastMessage(msg)
+  }
+
+  /**
    * Closes all peer connections and resets state.
    */
   public disconnect(): void {
@@ -248,17 +347,29 @@ export class PeerNetworkManager {
     }
 
     for (const conn of this.clientConnections.values()) {
-      conn.close()
+      try {
+        conn.close()
+      } catch {
+        // Ignore close errors
+      }
     }
     this.clientConnections.clear()
 
     if (this.hostConnection) {
-      this.hostConnection.close()
+      try {
+        this.hostConnection.close()
+      } catch {
+        // Ignore close errors
+      }
       this.hostConnection = null
     }
 
     if (this.peer) {
-      this.peer.destroy()
+      try {
+        this.peer.destroy()
+      } catch {
+        // Ignore destroy errors
+      }
       this.peer = null
     }
 
@@ -269,9 +380,18 @@ export class PeerNetworkManager {
   // --- Private Host Methods ---
 
   private handleHostIncomingConnection(conn: DataConnection): void {
-    conn.on('open', () => {
+    // Immediately register connection to prevent missed open events
+    this.clientConnections.set(conn.peer, conn)
+
+    const onOpen = () => {
       this.clientConnections.set(conn.peer, conn)
-    })
+    }
+
+    if (conn.open) {
+      onOpen()
+    } else {
+      conn.on('open', onOpen)
+    }
 
     conn.on('data', (raw) => {
       const msg = parseNetworkMessage(raw)
@@ -283,7 +403,7 @@ export class PeerNetworkManager {
             const resp: NetworkMessage = {
               type: 'JOIN_RESPONSE',
               accepted: false,
-              reason: 'Room sudah penuh.',
+              reason: 'Ruangan sudah penuh.',
             }
             conn.send(resp)
             conn.close()
@@ -343,6 +463,11 @@ export class PeerNetworkManager {
           conn.send(pong)
           break
         }
+
+        case 'PLAYER_UPDATE': {
+          this.events.onPlayerUpdate?.(msg)
+          break
+        }
       }
     })
 
@@ -368,9 +493,13 @@ export class PeerNetworkManager {
   }
 
   private broadcastMessage(msg: NetworkMessage): void {
-    for (const conn of this.clientConnections.values()) {
-      if (conn.open) {
-        conn.send(msg)
+    for (const [peerId, conn] of this.clientConnections.entries()) {
+      try {
+        if (conn.open) {
+          conn.send(msg)
+        }
+      } catch (err) {
+        console.warn('Gagal broadcast ke peer:', peerId, err)
       }
     }
   }
@@ -408,6 +537,16 @@ export class PeerNetworkManager {
         this.events.onLatencyUpdated?.(Math.max(1, Math.round(rtt / 2)))
         break
       }
+
+      case 'WORLD_SNAPSHOT': {
+        this.events.onWorldSnapshot?.(msg)
+        break
+      }
+
+      case 'GAME_EVENT': {
+        this.events.onGameEvent?.(msg)
+        break
+      }
     }
   }
 
@@ -427,4 +566,3 @@ export class PeerNetworkManager {
 }
 
 export const peerNetworkManager = new PeerNetworkManager()
-

@@ -39,15 +39,11 @@ const emit = defineEmits<{
         class="p-3.5 rounded-2xl bg-neutral-50 border-2 border-neutral-200 flex flex-col gap-1.5"
       >
         <div class="flex items-center gap-2 text-blue-600 font-heading font-bold text-sm uppercase">
-          <span class="w-6 h-6 rounded-lg bg-blue-100 flex items-center justify-center text-xs"
-            >🌐</span
-          >
-          <span>1. Wilayah & Garis Batas</span>
+          <span class="w-6 h-6 rounded-lg bg-blue-100 flex items-center justify-center text-xs">🌐</span>
+          <span>1. Garis Tengah Pembatas</span>
         </div>
         <p class="font-sans text-xs text-neutral-600 leading-relaxed">
-          Arena terbagi dua oleh garis tengah (<span class="font-mono font-bold">Z = 0</span>). Di
-          wilayah sendiri Anda aman; saat melintasi garis ke wilayah lawan, Anda
-          <span class="font-bold text-rose-600">bisa ditangkap</span>!
+          Arena terbagi dua oleh garis tengah. Di area benteng sendiri kamu aman! Tapi begitu nyebrang ke wilayah lawan, kamu jadi buronan dan <span class="font-bold text-rose-600">bisa ditangkap</span>!
         </p>
       </div>
 
@@ -57,14 +53,11 @@ const emit = defineEmits<{
         class="p-3.5 rounded-2xl bg-neutral-50 border-2 border-neutral-200 flex flex-col gap-1.5"
       >
         <div class="flex items-center gap-2 text-rose-600 font-heading font-bold text-sm uppercase">
-          <span class="w-6 h-6 rounded-lg bg-rose-100 flex items-center justify-center text-xs"
-            >🎯</span
-          >
-          <span>2. Menangkap Lawan</span>
+          <span class="w-6 h-6 rounded-lg bg-rose-100 flex items-center justify-center text-xs">🎯</span>
+          <span>2. Siapa Terakhir Keluar, Dia Menang!</span>
         </div>
         <p class="font-sans text-xs text-neutral-600 leading-relaxed">
-          Pemain yang <span class="font-bold">keluar benteng lebih baru</span> berhak menangkap
-          lawan yang keluar lebih dulu. Cukup dekati dan sentuh lawan yang menyusup ke wilayah Anda.
+          Pemain yang <span class="font-bold">keluar benteng belakangan</span> berhak mengejar dan menepuk lawan yang keluar lebih dulu. Pantau terus pergerakan musuh!
         </p>
       </div>
 
@@ -76,15 +69,11 @@ const emit = defineEmits<{
         <div
           class="flex items-center gap-2 text-amber-600 font-heading font-bold text-sm uppercase"
         >
-          <span class="w-6 h-6 rounded-lg bg-amber-100 flex items-center justify-center text-xs"
-            >⛓️</span
-          >
-          <span>3. Penjara & Penyelamatan</span>
+          <span class="w-6 h-6 rounded-lg bg-amber-100 flex items-center justify-center text-xs">⛓️</span>
+          <span>3. Selamatkan Teman Satu Tim!</span>
         </div>
         <p class="font-sans text-xs text-neutral-600 leading-relaxed">
-          Pemain tertangkap dibawa ke tiang penjara lawan. Rekan tim dapat menyusup dan
-          <span class="font-bold text-emerald-600">menyentuh tawanan</span> untuk membebaskan mereka
-          (+2 detik imunitas kabur).
+          Teman yang tertangkap akan disandera di tiang lawan. Susup ke sana dan <span class="font-bold text-emerald-600">tepuk mereka</span> untuk membebaskan (+2 detik kebal buat kabur bareng)!
         </p>
       </div>
 
@@ -96,17 +85,11 @@ const emit = defineEmits<{
         <div
           class="flex items-center gap-2 text-emerald-600 font-heading font-bold text-sm uppercase"
         >
-          <span class="w-6 h-6 rounded-lg bg-emerald-100 flex items-center justify-center text-xs"
-            >🏆</span
-          >
-          <span>4. Syarat Kemenangan</span>
+          <span class="w-6 h-6 rounded-lg bg-emerald-100 flex items-center justify-center text-xs">🏆</span>
+          <span>4. Rebut Tiang Benteng Lawan!</span>
         </div>
         <p class="font-sans text-xs text-neutral-600 leading-relaxed">
-          Menangkan pertandingan dengan menyusup dan
-          <span class="font-bold text-emerald-700">menyentuh Tiang Benteng lawan</span> (<span
-            class="font-mono"
-            >R &le; 2.6m</span
-          >) atau penjarakan seluruh pemain lawan!
+          Cukup susup dan <span class="font-bold text-emerald-700">tepuk tiang benteng lawan</span> untuk menang seketika, atau tangkap semua pemain lawan sampai habis!
         </p>
       </div>
     </div>

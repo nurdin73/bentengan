@@ -1,11 +1,17 @@
 <script setup lang="ts">
 import { ref } from 'vue'
+import { useRouter } from 'vue-router'
 import { useRoomStore } from '../../stores/room-store'
 import TactileButton from '../ui/TactileButton.vue'
 import type { TeamId } from '../../types/game.types'
 
+const router = useRouter()
 const roomStore = useRoomStore()
 const copied = ref(false)
+
+const emit = defineEmits<{
+  (e: 'leave'): void
+}>()
 
 const copyRoomCode = async () => {
   try {
@@ -33,6 +39,8 @@ const onStartMatch = () => {
 
 const onLeave = () => {
   roomStore.leaveRoom()
+  emit('leave')
+  router.push('/')
 }
 </script>
 
@@ -59,14 +67,23 @@ const onLeave = () => {
 
       <!-- Latency & Connected Info -->
       <div class="flex items-center gap-3">
-        <div class="flex items-center gap-1.5 px-3 py-1 bg-neutral-100 border border-neutral-200 rounded-xl font-mono text-xs font-bold text-neutral-600">
+        <div class="flex items-center gap-1.5 px-3 py-1.5 bg-neutral-100 border border-neutral-200 rounded-xl font-mono text-xs font-bold text-neutral-600">
           <span
             class="w-2.5 h-2.5 rounded-full"
             :class="roomStore.latencyMs < 100 ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'"
           />
-          <span>{{ roomStore.latencyMs }} ms</span>
+          <span>{{ roomStore.latencyMs < 100 ? 'Sinyal Lancar' : 'Sinyal Sedang' }} ({{ roomStore.latencyMs }} ms)</span>
         </div>
       </div>
+    </div>
+
+    <!-- Connection Error Notice if present -->
+    <div
+      v-if="roomStore.connectionError"
+      data-testid="waiting-connection-error"
+      class="p-3 rounded-2xl bg-rose-50 border-2 border-rose-300 text-rose-700 text-xs font-bold text-center"
+    >
+      ⚠️ {{ roomStore.connectionError }}
     </div>
 
     <!-- 2 Separated Fortress Columns: Blue & Red -->
@@ -231,7 +248,7 @@ const onLeave = () => {
           class="w-full text-sm py-3"
           @click="onToggleReady"
         >
-          {{ roomStore.isReady ? '✅ Sudah Siap (Ready)' : '⏳ Klik untuk Siap (Ready)' }}
+          {{ roomStore.isReady ? '✅ Siap! (Klik jika batal)' : '⏳ Saya Siap Main!' }}
         </TactileButton>
 
         <!-- Host-only Start Match Button -->
@@ -243,7 +260,7 @@ const onLeave = () => {
             class="w-full text-sm py-3"
             @click="onStartMatch"
           >
-            🚀 Mulai Pertandingan (Host)
+            🚀 Mulai Permainan!
           </TactileButton>
         </div>
       </div>
@@ -264,7 +281,7 @@ const onLeave = () => {
         class="text-xs font-heading font-bold uppercase tracking-wider text-neutral-400 hover:text-neutral-600 transition-colors py-1 cursor-pointer self-center"
         @click="onLeave"
       >
-        ← Keluar dari Room
+        ← Keluar dari Ruangan
       </button>
     </div>
   </div>
