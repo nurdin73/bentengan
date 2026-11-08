@@ -16,6 +16,7 @@ import {
   ArrowLeft,
   AlertCircle,
   X,
+  Castle,
 } from 'lucide-vue-next'
 import { useRoomStore } from '../../stores/room-store'
 import TactileButton from '../ui/TactileButton.vue'
@@ -216,10 +217,9 @@ const confirmLeave = () => {
         <!-- Header Benteng Biru -->
         <div class="flex items-center justify-between border-b border-blue-200 pb-2.5">
           <div class="flex items-center gap-2">
-            <span class="w-3.5 h-3.5 rounded-full bg-blue-500 shadow-xs" />
-            <span class="font-heading font-black text-xs sm:text-sm uppercase text-blue-900 tracking-wider flex items-center gap-1.5">
-              <Shield class="w-4 h-4 text-blue-600" />
-              <span>Benteng Biru</span>
+            <Castle class="w-4 h-4 text-blue-600 shrink-0" />
+            <span class="font-heading font-black text-xs sm:text-sm uppercase text-blue-900 tracking-wider">
+              Benteng Biru
             </span>
           </div>
           <span class="px-2.5 py-0.5 rounded-full bg-blue-200/80 text-blue-800 font-heading font-black text-xs">
@@ -295,10 +295,9 @@ const confirmLeave = () => {
         <!-- Header Benteng Merah -->
         <div class="flex items-center justify-between border-b border-red-200 pb-2.5">
           <div class="flex items-center gap-2">
-            <span class="w-3.5 h-3.5 rounded-full bg-red-500 shadow-xs" />
-            <span class="font-heading font-black text-xs sm:text-sm uppercase text-red-900 tracking-wider flex items-center gap-1.5">
-              <Swords class="w-4 h-4 text-red-600" />
-              <span>Benteng Merah</span>
+            <Castle class="w-4 h-4 text-red-600 shrink-0" />
+            <span class="font-heading font-black text-xs sm:text-sm uppercase text-red-900 tracking-wider">
+              Benteng Merah
             </span>
           </div>
           <span class="px-2.5 py-0.5 rounded-full bg-red-200/80 text-red-800 font-heading font-black text-xs">
@@ -486,12 +485,14 @@ const confirmLeave = () => {
       @close="showStartDialog = false"
     >
       <div class="flex items-center justify-center gap-2 py-1 text-xs font-heading font-black">
-        <span class="px-2.5 py-1 rounded-xl bg-blue-100 text-blue-800 border border-blue-200">
-          🔵 Benteng Biru: {{ roomStore.bluePlayers.length }}
+        <span class="px-2.5 py-1 rounded-xl bg-blue-100 text-blue-800 border border-blue-200 flex items-center gap-1.5">
+          <Castle class="w-3.5 h-3.5 text-blue-600" />
+          <span>Benteng Biru: {{ roomStore.bluePlayers.length }}</span>
         </span>
         <span class="text-neutral-400">vs</span>
-        <span class="px-2.5 py-1 rounded-xl bg-red-100 text-red-800 border border-red-200">
-          🔴 Benteng Merah: {{ roomStore.redPlayers.length }}
+        <span class="px-2.5 py-1 rounded-xl bg-red-100 text-red-800 border border-red-200 flex items-center gap-1.5">
+          <Castle class="w-3.5 h-3.5 text-red-600" />
+          <span>Benteng Merah: {{ roomStore.redPlayers.length }}</span>
         </span>
       </div>
     </ConfirmDialog>
