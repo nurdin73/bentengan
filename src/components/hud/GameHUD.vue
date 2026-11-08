@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
+import { Wifi } from 'lucide-vue-next'
 import { useGameStore } from '../../stores/game-store'
 import { useRoomStore } from '../../stores/room-store'
 import MobileTouchControls from './MobileTouchControls.vue'
@@ -27,7 +28,34 @@ defineEmits<{
 </script>
 
 <template>
-  <div data-testid="game-hud" class="pointer-events-none absolute inset-0 flex flex-col justify-between p-4 sm:p-6">
+  <div data-testid="game-hud" class="pointer-events-none absolute inset-0 flex flex-col justify-between p-3 sm:p-5">
+    <!-- Top Bar: Network Signal on Left -->
+    <div class="flex items-center justify-between w-full z-30">
+      <div
+        data-testid="hud-network-signal"
+        class="pointer-events-auto flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-neutral-900/80 backdrop-blur-md border border-neutral-700/80 shadow-md text-xs font-mono font-bold text-neutral-200 select-none"
+      >
+        <Wifi
+          data-testid="hud-signal-icon"
+          :class="[
+            'w-3.5 h-3.5 shrink-0 transition-colors',
+            roomStore.isReconnecting
+              ? 'text-amber-400 animate-pulse'
+              : roomStore.latencyMs < 80
+                ? 'text-emerald-400'
+                : roomStore.latencyMs < 150
+                  ? 'text-amber-400'
+                  : 'text-rose-500 animate-pulse',
+          ]"
+        />
+        <span>{{ roomStore.isReconnecting ? 'Menyambung...' : `${roomStore.latencyMs} ms` }}</span>
+        <span v-if="roomStore.roomCode && roomStore.roomCode !== 'LOKAL'" class="text-neutral-500 text-[10px] hidden xs:inline">
+          &bull; {{ roomStore.roomCode }}
+        </span>
+      </div>
+      <div />
+    </div>
+
     <!-- Center Alerts (Rescue Prompt / Immunity / Stun / Reconnecting) -->
     <div class="flex flex-col items-center justify-center gap-3 pt-4">
       <!-- Reconnecting Overlay Banner -->

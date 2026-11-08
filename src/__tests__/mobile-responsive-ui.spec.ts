@@ -6,6 +6,7 @@ import LobbyModeSelector from '../components/lobby/LobbyModeSelector.vue'
 import GameControlsModal from '../components/guide/GameControlsModal.vue'
 import GameRulesModal from '../components/guide/GameRulesModal.vue'
 import LobbyWaitingRoom from '../components/lobby/LobbyWaitingRoom.vue'
+import GameHUD from '../components/hud/GameHUD.vue'
 import { useRoomStore } from '../stores/room-store'
 
 const mockPush = vi.fn()
@@ -205,18 +206,60 @@ describe('Mobile Responsive Layout & Icon Integration', () => {
       expect(rosterRed.classes()).toContain('flex')
     })
 
-    it('toggles ready state when clicking ready CTA button', async () => {
+    it('toggles ready state when clicking ready CTA button with Ready and Batal copy', async () => {
       const roomStore = useRoomStore()
+      roomStore.isHost = false
       roomStore.myPlayerId = 'p-me'
       roomStore.players = [{ id: 'p-me', peerId: 'peer-me', username: 'Hero', teamId: 'blue', isHost: false, isReady: false }]
 
       const wrapper = mount(LobbyWaitingRoom)
 
+      // Non-host: Leave button and Ready button side-by-side
+      const leaveBtn = wrapper.find('[data-testid="waiting-leave-btn"]')
+      expect(leaveBtn.exists()).toBe(true)
+      expect(leaveBtn.text()).toContain('Keluar')
+
       const readyBtn = wrapper.find('[data-testid="waiting-toggle-ready-btn"]')
-      expect(readyBtn.text()).toContain('Saya Siap Main!')
+      expect(readyBtn.exists()).toBe(true)
+      expect(readyBtn.text()).toContain('Ready')
+      expect(readyBtn.classes()).toContain('timbul-btn-emerald')
+      expect(wrapper.find('[data-testid="waiting-start-match-btn"]').exists()).toBe(false)
 
       await readyBtn.trigger('click')
       expect(roomStore.players[0]!.isReady).toBe(true)
+
+      // Re-mount or wait for reactivity
+      const wrapperReady = mount(LobbyWaitingRoom)
+      const cancelBtn = wrapperReady.find('[data-testid="waiting-toggle-ready-btn"]')
+      expect(cancelBtn.text()).toContain('Batal')
+      expect(cancelBtn.classes()).toContain('timbul-btn-red')
+    })
+  })
+
+  describe('GameHUD In-Game Signal Widget', () => {
+    it('renders network signal widget with green icon when ping is low', () => {
+      const roomStore = useRoomStore()
+      roomStore.latencyMs = 35
+      roomStore.roomCode = 'BNTG9'
+
+      const wrapper = mount(GameHUD)
+      const signalWidget = wrapper.find('[data-testid="hud-network-signal"]')
+      expect(signalWidget.exists()).toBe(true)
+      expect(signalWidget.text()).toContain('35 ms')
+      expect(signalWidget.text()).toContain('BNTG9')
+
+      const signalIcon = wrapper.find('[data-testid="hud-signal-icon"]')
+      expect(signalIcon.classes()).toContain('text-emerald-400')
+    })
+
+    it('renders network signal icon with red color and pulse when ping is high', () => {
+      const roomStore = useRoomStore()
+      roomStore.latencyMs = 180
+
+      const wrapper = mount(GameHUD)
+      const signalIcon = wrapper.find('[data-testid="hud-signal-icon"]')
+      expect(signalIcon.classes()).toContain('text-rose-500')
+      expect(signalIcon.classes()).toContain('animate-pulse')
     })
   })
 })

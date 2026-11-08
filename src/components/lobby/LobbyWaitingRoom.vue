@@ -237,7 +237,7 @@ const onLeave = () => {
             >
               <CheckCircle2 v-if="p.isReady" class="w-3 h-3 text-emerald-700" />
               <Clock v-else class="w-3 h-3 text-neutral-400" />
-              <span>{{ p.isReady ? 'Siap' : 'Belum' }}</span>
+              <span>{{ p.isReady ? 'Ready' : 'Belum' }}</span>
             </span>
           </div>
 
@@ -316,7 +316,7 @@ const onLeave = () => {
             >
               <CheckCircle2 v-if="p.isReady" class="w-3 h-3 text-emerald-700" />
               <Clock v-else class="w-3 h-3 text-neutral-400" />
-              <span>{{ p.isReady ? 'Siap' : 'Belum' }}</span>
+              <span>{{ p.isReady ? 'Ready' : 'Belum' }}</span>
             </span>
           </div>
 
@@ -366,21 +366,46 @@ const onLeave = () => {
       data-testid="waiting-sticky-actions"
       class="sticky bottom-0 bg-white/95 backdrop-blur-md pt-3 pb-1 border-t border-neutral-200/80 flex flex-col gap-2.5 z-20 mt-auto rounded-b-2xl"
     >
-      <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-        <!-- Ready Toggle Button for Everyone -->
+      <!-- Non-Host Layout: Keluar and Ready side-by-side horizontally -->
+      <div v-if="!roomStore.isHost" class="grid grid-cols-2 gap-2.5">
         <TactileButton
-          :variant="roomStore.isReady ? 'emerald' : 'blue'"
+          variant="neutral"
+          data-testid="waiting-leave-btn"
+          class="w-full text-xs sm:text-sm py-3 flex items-center justify-center gap-1.5"
+          @click="onLeave"
+        >
+          <ArrowLeft class="w-4 h-4 shrink-0" />
+          <span>Keluar</span>
+        </TactileButton>
+
+        <TactileButton
+          :variant="roomStore.isReady ? 'red' : 'emerald'"
           data-testid="waiting-toggle-ready-btn"
           class="w-full text-xs sm:text-sm py-3 flex items-center justify-center gap-2"
           @click="onToggleReady"
         >
-          <CheckCircle2 v-if="roomStore.isReady" class="w-4 h-4 shrink-0" />
-          <Clock v-else class="w-4 h-4 shrink-0" />
-          <span>{{ roomStore.isReady ? 'Siap! (Klik jika batal)' : 'Saya Siap Main!' }}</span>
+          <X v-if="roomStore.isReady" class="w-4 h-4 shrink-0 stroke-[2.5]" />
+          <CheckCircle2 v-else class="w-4 h-4 shrink-0 stroke-[2.5]" />
+          <span>{{ roomStore.isReady ? 'Batal' : 'Ready' }}</span>
         </TactileButton>
+      </div>
 
-        <!-- Host-only Start Match Button -->
-        <div v-if="roomStore.isHost" class="flex flex-col gap-1">
+      <!-- Host Layout: Ready and Start Match side-by-side, Leave below -->
+      <div v-else class="flex flex-col gap-2.5">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+          <!-- Ready Toggle Button for Host -->
+          <TactileButton
+            :variant="roomStore.isReady ? 'red' : 'emerald'"
+            data-testid="waiting-toggle-ready-btn"
+            class="w-full text-xs sm:text-sm py-3 flex items-center justify-center gap-2"
+            @click="onToggleReady"
+          >
+            <X v-if="roomStore.isReady" class="w-4 h-4 shrink-0 stroke-[2.5]" />
+            <CheckCircle2 v-else class="w-4 h-4 shrink-0 stroke-[2.5]" />
+            <span>{{ roomStore.isReady ? 'Batal' : 'Ready' }}</span>
+          </TactileButton>
+
+          <!-- Host-only Start Match Button -->
           <TactileButton
             variant="amber"
             data-testid="waiting-start-match-btn"
@@ -392,28 +417,28 @@ const onLeave = () => {
             <span>Mulai Permainan!</span>
           </TactileButton>
         </div>
+
+        <!-- Warning hint if cannot start -->
+        <p
+          v-if="!roomStore.startableStatus.startable"
+          data-testid="startable-reason-hint"
+          class="text-center font-sans text-xs text-amber-600 font-bold flex items-center justify-center gap-1.5"
+        >
+          <AlertCircle class="w-3.5 h-3.5 shrink-0" />
+          <span>{{ roomStore.startableStatus.reason }}</span>
+        </p>
+
+        <!-- Leave Room for Host -->
+        <button
+          type="button"
+          data-testid="waiting-leave-btn"
+          class="text-xs font-heading font-bold uppercase tracking-wider text-neutral-400 hover:text-neutral-600 transition-colors py-1 cursor-pointer self-center flex items-center gap-1.5"
+          @click="onLeave"
+        >
+          <ArrowLeft class="w-3.5 h-3.5" />
+          <span>Tutup / Keluar dari Ruangan</span>
+        </button>
       </div>
-
-      <!-- Warning hint if cannot start -->
-      <p
-        v-if="roomStore.isHost && !roomStore.startableStatus.startable"
-        data-testid="startable-reason-hint"
-        class="text-center font-sans text-xs text-amber-600 font-bold flex items-center justify-center gap-1.5"
-      >
-        <AlertCircle class="w-3.5 h-3.5 shrink-0" />
-        <span>{{ roomStore.startableStatus.reason }}</span>
-      </p>
-
-      <!-- Leave Room -->
-      <button
-        type="button"
-        data-testid="waiting-leave-btn"
-        class="text-xs font-heading font-bold uppercase tracking-wider text-neutral-400 hover:text-neutral-600 transition-colors py-1 cursor-pointer self-center flex items-center gap-1.5"
-        @click="onLeave"
-      >
-        <ArrowLeft class="w-3.5 h-3.5" />
-        <span>Keluar dari Ruangan</span>
-      </button>
     </div>
 
     <!-- Floating Toast Notifications for Lobby -->

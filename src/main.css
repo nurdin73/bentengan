@@ -118,11 +118,12 @@
 }
 
 .timbul-btn-neutral {
-  background-color: #3f3f46;
-  color: #fafafa;
-  border-color: #27272a;
-  border-bottom-color: #18181b;
+  background-color: #eeece8;
+  color: #525252;
+  border-color: #d5d2cb;
+  border-bottom-color: #aba79e;
 }
 .timbul-btn-neutral:hover:not(:disabled) {
-  background-color: #52525b;
+  background-color: #e2dfd8;
+  color: #262626;
 }
