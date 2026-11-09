@@ -639,6 +639,9 @@ export class GameEngine {
             if (input.interact) {
               entity.status = 'normal'
               entity.immunityUntil = now + GAME_CONFIG.gameplay.immunityDurationMs
+              if (entity instanceof BotController) {
+                entity.isRetreating = true
+              }
               this.callbacks.onRescue('Anda', entity.name)
               if (this.isHost && !this.isPractice) {
                 peerNetworkManager.broadcastGameEvent({
@@ -661,6 +664,9 @@ export class GameEngine {
           if (GameplayRules.canRescue(bot, target)) {
             target.status = 'normal'
             target.immunityUntil = now + GAME_CONFIG.gameplay.immunityDurationMs
+            if (target instanceof BotController) {
+              target.isRetreating = true
+            }
             const rescuerName = bot.name
             const targetName = target === this.localPlayer ? 'Anda' : target.name
             this.callbacks.onRescue(rescuerName, targetName)

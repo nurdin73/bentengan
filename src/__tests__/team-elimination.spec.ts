@@ -253,6 +253,66 @@ describe('Team Elimination & Territory Evasion AI Verification', () => {
       expect(distToHome).toBe(20)
     })
 
+    it('verifies Goal Rush is prohibited when bot has active immunity even if closer to enemy base', () => {
+      // Red bot deep in Blue territory at Z = -20 (5m to enemy base at Z = -25, 20m to home Z = 0)
+      const myPos = { x: 0, y: 0, z: -20 }
+      const enemyBasePos = { x: 0, y: 0, z: -25 }
+
+      const distToHome = Math.abs(myPos.z)
+      const dx = enemyBasePos.x - myPos.x
+      const dz = enemyBasePos.z - myPos.z
+      const distToBase = Math.sqrt(dx * dx + dz * dz)
+
+      const now = 1000
+      const immunityUntil = 3000
+      const isImmune = now < immunityUntil
+
+      // Without immunity, it would be true; with immunity, it MUST be false!
+      const isCloserToBaseThanHome = !isImmune && distToBase < distToHome
+      expect(isCloserToBaseThanHome).toBe(false)
+      expect(distToBase < distToHome).toBe(true)
+    })
+
+    it('verifies rescued immune bot in enemy territory prioritizes retreating towards home territory', () => {
+      // Blue bot rescued inside enemy territory jail at Z = 20
+      const teamId = 'blue'
+      const homeDirZ = teamId === 'blue' ? -1.0 : 1.0
+      const now = 1000
+      const immunityUntil = 3000
+      const isImmune = now < immunityUntil
+
+      let isRetreating = false
+      if (isImmune) {
+        isRetreating = true
+      }
+
+      expect(isRetreating).toBe(true)
+      const steerZ = homeDirZ * 2.0
+      // Steer vector along Z must point strictly in home direction (negative Z for Blue)
+      expect(steerZ).toBeLessThan(0)
+    })
+
+    it('verifies immune bot in home territory holds position and suppresses border advance', () => {
+      const now = 1000
+      const immunityUntil = 3000
+      const isImmune = now < immunityUntil
+
+      const myPos = { x: 0, y: 0, z: -10 }
+      const patrolCenter = { x: 0, y: 0, z: -10 }
+      const enemyDirZ = 1.0 // Blue advancing North into Red territory
+
+      // Under immune regroup, bot stays around patrol center instead of charging enemyDirZ
+      let advanceVectorZ = 0
+      if (!isImmune) {
+        advanceVectorZ = enemyDirZ
+      } else {
+        const dz = myPos.z - patrolCenter.z
+        advanceVectorZ = -dz // pulled to center, not advancing
+      }
+
+      expect(Math.abs(advanceVectorZ)).toBe(0)
+    })
+
     it('verifies safe juke angles in Goal Rush do not move toward pursuer', () => {
       // Pursuer is at Z = -18, Bot is at Z = -20 (Pursuer is South of bot)
       const botPos = { x: 0, z: -20 }

@@ -239,16 +239,23 @@ export class BotController implements GameplayEntity {
     const isSelfTrespassing = GameplayRules.isInEnemyTerritory(this)
     const homeDirZ = this.teamId === 'blue' ? -1.0 : 1.0
     const enemyDirZ = -homeDirZ
+    const isImmune = now < this.immunityUntil
     let speed = GAME_CONFIG.movement.walkSpeed * 0.75
 
     if (isSelfTrespassing) {
       // 1. IN ENEMY TERRITORY:
+      // While immune after rescue: must NOT rush enemy base, but retreat towards home territory
+      if (isImmune) {
+        this.isRetreating = true
+      }
+
       // Compare distance to enemy base vs distance to home territory
       const distToHome = Math.abs(myPos.z)
       const distToBase = this.targetObjective
         ? GameplayRules.distance2D(myPos, this.targetObjective)
         : Infinity
-      const isCloserToBaseThanHome = this.targetObjective !== null && distToBase < distToHome
+      const isCloserToBaseThanHome =
+        !isImmune && this.targetObjective !== null && distToBase < distToHome
 
       let nearestDefender: GameplayEntity | null = null
       let nearestDefenderDist = Infinity
@@ -327,8 +334,8 @@ export class BotController implements GameplayEntity {
           speed = GAME_CONFIG.movement.sprintSpeed * 0.9
         }
       } else {
-        // B. NORMAL RETREAT / INFILTRATION (Closer to home territory than to enemy base)
-        if (nearestDefender) {
+        // B. NORMAL RETREAT / INFILTRATION (Closer to home territory than to enemy base, or isImmune)
+        if (nearestDefender || isImmune) {
           this.isRetreating = true
         }
 
@@ -439,8 +446,20 @@ export class BotController implements GameplayEntity {
                 ? GAME_CONFIG.movement.sprintSpeed * 0.9
                 : GAME_CONFIG.movement.walkSpeed
           }
+        } else if (isImmune) {
+          // SUB-STATE IMMUNE REGROUP: Home is clear, but immunity is still active.
+          // Hold position in home territory and do not rush border until immunity expires
+          const dx = myPos.x - this.patrolCenter.x
+          const dz = myPos.z - this.patrolCenter.z
+          const distFromCenter = Math.sqrt(dx * dx + dz * dz)
+          if (distFromCenter > 2.0) {
+            this.patrolDirection.set(-dx, 0, -dz).normalize()
+          } else {
+            this.patrolDirection.set(Math.sin(now * 0.002), 0, Math.cos(now * 0.002)).normalize()
+          }
+          speed = GAME_CONFIG.movement.walkSpeed * 0.75
         } else {
-          // SUB-STATE ATTACKER: Home yard is completely clear! Advance across border to capture base!
+          // SUB-STATE ATTACKER: Home yard is completely clear and immunity expired! Advance across border
           if (this.targetObjective) {
             const dx = this.targetObjective.x - myPos.x
             const dz = this.targetObjective.z - myPos.z
@@ -466,6 +485,17 @@ export class BotController implements GameplayEntity {
           const tPos = dangerousEnemy.getPosition()
           this.patrolDirection.set(myPos.x - tPos.x, 0, myPos.z - tPos.z).normalize()
           speed = GAME_CONFIG.movement.sprintSpeed * 0.85
+        } else if (isImmune) {
+          // IMMUNE REGROUP: Hold position in home territory until immunity expires before launching assault
+          const dx = myPos.x - this.patrolCenter.x
+          const dz = myPos.z - this.patrolCenter.z
+          const distFromCenter = Math.sqrt(dx * dx + dz * dz)
+          if (distFromCenter > 2.0) {
+            this.patrolDirection.set(-dx, 0, -dz).normalize()
+          } else {
+            this.patrolDirection.set(Math.sin(now * 0.002), 0, Math.cos(now * 0.002)).normalize()
+          }
+          speed = GAME_CONFIG.movement.walkSpeed * 0.75
         } else {
           // Drive forward across dividing line towards enemy base objective
           if (this.targetObjective) {
