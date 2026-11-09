@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import {
   Gamepad2,
   X,
@@ -19,12 +19,26 @@ const emit = defineEmits<{
 }>()
 
 const activeTab = ref<'desktop' | 'touch'>('desktop')
+
+const handleKeyDown = (e: KeyboardEvent) => {
+  if (e.key === 'Escape') {
+    emit('close')
+  }
+}
+
+onMounted(() => {
+  window.addEventListener('keydown', handleKeyDown)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('keydown', handleKeyDown)
+})
 </script>
 
 <template>
   <div
     data-testid="game-controls-modal-backdrop"
-    class="game-controls-modal-backdrop fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/75 backdrop-blur-sm"
+    class="game-controls-modal-backdrop pointer-events-auto fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/75 backdrop-blur-sm"
     @click.self="emit('close')"
   >
     <div

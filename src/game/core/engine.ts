@@ -49,6 +49,7 @@ export interface GameEngineStateCallback {
     stunUntil: number
     immunityUntil: number
     rescueCooldownUntil: number
+    immunitySource?: 'skill' | 'rescue' | null
   }) => void
   onSkillStateChange?: (skills: SkillsStateMap) => void
   onRosterUpdate: (roster: {
@@ -449,6 +450,7 @@ export class GameEngine {
         stunUntil: this.localPlayer.stunUntil,
         immunityUntil: this.localPlayer.immunityUntil,
         rescueCooldownUntil: this.localPlayer.rescueCooldownUntil,
+        immunitySource: this.localPlayer.immunitySource,
       })
     }
 
@@ -646,6 +648,12 @@ export class GameEngine {
         this.localPlayer.rescueCooldownUntil =
           performance.now() + GAME_CONFIG.gameplay.rescueCooldownMs
       }
+      if (
+        this.localPlayer &&
+        (event.targetId === 'Anda' || event.targetId === this.localPlayer.name)
+      ) {
+        this.localPlayer.immunitySource = 'rescue'
+      }
       this.callbacks.onRescue(event.sourceId ?? '', event.targetId ?? '')
     } else if (event.event === 'match_end' && event.winner && event.reason) {
       this.endMatch(event.winner, event.reason)
@@ -701,6 +709,9 @@ export class GameEngine {
                 now + GAME_CONFIG.gameplay.rescueCooldownMs
               entity.status = 'normal'
               entity.immunityUntil = now + GAME_CONFIG.gameplay.immunityDurationMs
+              if (entity instanceof PlayerController) {
+                entity.immunitySource = 'rescue'
+              }
               if (entity instanceof BotController) {
                 entity.isRetreating = true
               }
@@ -728,6 +739,9 @@ export class GameEngine {
             rescuer.rescueCooldownUntil = now + GAME_CONFIG.gameplay.rescueCooldownMs
             target.status = 'normal'
             target.immunityUntil = now + GAME_CONFIG.gameplay.immunityDurationMs
+            if (target instanceof PlayerController) {
+              target.immunitySource = 'rescue'
+            }
             if (target instanceof BotController) {
               target.isRetreating = true
             }

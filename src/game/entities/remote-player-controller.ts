@@ -3,6 +3,7 @@ import type RAPIER from '@dimforge/rapier3d-compat'
 import type { PhysicsWorld } from '../physics/physics-world'
 import type { GameplayEntity, PlayerStatus, TeamId } from '../../types/game.types'
 import { GAME_CONFIG } from '../core/constants'
+import { EnergyShieldBubble } from './energy-shield-bubble'
 
 export interface RemotePlayerControllerOptions {
   id: string
@@ -35,8 +36,7 @@ export class RemotePlayerController implements GameplayEntity {
   // Three.js visual elements
   private readonly bodyMat: THREE.MeshStandardMaterial
   private readonly visorMat: THREE.MeshStandardMaterial
-  private readonly immunityAuraMesh: THREE.Mesh
-  private readonly immunityAuraMat: THREE.MeshBasicMaterial
+  private readonly shieldBubble: EnergyShieldBubble
   private readonly nameplateSprite: THREE.Sprite
 
   // Dizzy / Stunned visual orbit
@@ -91,17 +91,9 @@ export class RemotePlayerController implements GameplayEntity {
     visor.position.set(0, characterHeight * 0.25, characterRadius * 0.9)
     this.mesh.add(visor)
 
-    // Immunity visual aura
-    const auraGeo = new THREE.TorusGeometry(0.65, 0.05, 8, 24)
-    this.immunityAuraMat = new THREE.MeshBasicMaterial({
-      color: 0x38bdf8,
-      transparent: true,
-      opacity: 0.85,
-    })
-    this.immunityAuraMesh = new THREE.Mesh(auraGeo, this.immunityAuraMat)
-    this.immunityAuraMesh.rotation.x = Math.PI / 2
-    this.immunityAuraMesh.visible = false
-    this.mesh.add(this.immunityAuraMesh)
+    // Immunity visual energy shield bubble
+    this.shieldBubble = new EnergyShieldBubble()
+    this.mesh.add(this.shieldBubble.group)
 
     // Overhead Billboard Nameplate Sprite
     this.nameplateSprite = this.createNameplateSprite(this.name, options.teamId)
@@ -236,10 +228,7 @@ export class RemotePlayerController implements GameplayEntity {
 
     // 3. Update Visual Status Overlays
     const isImmune = now < this.immunityUntil
-    this.immunityAuraMesh.visible = isImmune
-    if (isImmune) {
-      this.immunityAuraMesh.rotation.z += dt * 3
-    }
+    this.shieldBubble.update(isImmune, now)
 
     const isStunned = this.status === 'stunned' || now < this.stunUntil
     this.stunStarsGroup.visible = isStunned
@@ -269,8 +258,7 @@ export class RemotePlayerController implements GameplayEntity {
     this.physics.world.removeRigidBody(this.body)
     this.bodyMat.dispose()
     this.visorMat.dispose()
-    this.immunityAuraMat.dispose()
-    this.immunityAuraMesh.geometry.dispose()
+    this.shieldBubble.dispose()
     this.stunStarGeo.dispose()
     this.stunStarMat.dispose()
     if (this.nameplateSprite.material.map) {

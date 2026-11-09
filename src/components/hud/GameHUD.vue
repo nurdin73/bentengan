@@ -5,15 +5,16 @@ import {
   Smartphone,
   RefreshCw,
   HeartHandshake,
-  ShieldCheck,
   ZapOff,
   Crosshair,
+  HelpCircle,
 } from 'lucide-vue-next'
 import { useGameStore } from '../../stores/game-store'
 import { useRoomStore } from '../../stores/room-store'
 import MobileTouchControls from './MobileTouchControls.vue'
 import RotateDevicePrompt from './RotateDevicePrompt.vue'
 import SkillActionBar from './SkillActionBar.vue'
+import GameControlsModal from '../guide/GameControlsModal.vue'
 import { checkIsMobileTouchDevice } from './mobile-device.utils'
 import type { VirtualMovementInput } from '../../game/input/input-manager'
 import type { SkillId } from '../../game/skills/skill-types'
@@ -57,6 +58,17 @@ const toggleMobileHUD = () => {
   }
 }
 
+const showControlsModal = ref(false)
+
+const openControlsModal = () => {
+  document.exitPointerLock?.()
+  showControlsModal.value = true
+}
+
+const closeControlsModal = () => {
+  showControlsModal.value = false
+}
+
 defineEmits<{
   (e: 'request-pointer-lock'): void
   (e: 'virtual-move', movement: VirtualMovementInput): void
@@ -94,27 +106,64 @@ defineEmits<{
           &bull; {{ roomStore.roomCode }}
         </span>
       </div>
-      <!-- Top Right: Compact Mobile HUD Testing Toggle (Desktop Only) -->
-      <button
-        v-if="!isMobile"
-        data-testid="hud-toggle-mobile-controls-btn"
-        type="button"
-        :class="[
-          'pointer-events-auto flex items-center justify-center gap-1.5 w-[76px] py-1 rounded-full border backdrop-blur-md shadow-md text-xs font-heading font-bold select-none cursor-pointer transition-all active:scale-95',
-          forceShowMobileHUD
-            ? 'bg-amber-500/25 border-amber-400/80 text-amber-300 ring-2 ring-amber-400/30'
-            : 'bg-neutral-900/80 border-neutral-700/80 text-neutral-400 hover:text-neutral-200 hover:bg-neutral-800/90',
-        ]"
-        title="Toggle Mobile HUD (Testing Mode)"
-        @click="toggleMobileHUD"
-      >
-        <Smartphone class="w-3.5 h-3.5 shrink-0" />
-        <span class="text-[11px] uppercase tracking-wider">HUD HP</span>
-      </button>
+      <!-- Top Right: Desktop Controls & HUD HP Toggle (Desktop Only) -->
+      <div v-if="!isMobile" class="flex items-center gap-2 pointer-events-auto">
+        <!-- Controls Guide Help Button (?) -->
+        <button
+          data-testid="hud-controls-help-btn"
+          type="button"
+          class="flex items-center justify-center w-8 h-8 rounded-full bg-neutral-900/80 hover:bg-neutral-800 active:scale-95 border border-neutral-700/80 backdrop-blur-md shadow-md text-neutral-300 hover:text-white transition-all cursor-pointer"
+          title="Panduan Kontrol (Keyboard & Mouse)"
+          @click="openControlsModal"
+        >
+          <HelpCircle class="w-4 h-4" />
+        </button>
+
+        <!-- Compact Mobile HUD Testing Toggle -->
+        <button
+          data-testid="hud-toggle-mobile-controls-btn"
+          type="button"
+          :class="[
+            'flex items-center justify-center gap-1.5 w-[76px] py-1 rounded-full border backdrop-blur-md shadow-md text-xs font-heading font-bold select-none cursor-pointer transition-all active:scale-95',
+            forceShowMobileHUD
+              ? 'bg-amber-500/25 border-amber-400/80 text-amber-300 ring-2 ring-amber-400/30'
+              : 'bg-neutral-900/80 border-neutral-700/80 text-neutral-400 hover:text-neutral-200 hover:bg-neutral-800/90',
+          ]"
+          title="Toggle Mobile HUD (Testing Mode)"
+          @click="toggleMobileHUD"
+        >
+          <Smartphone class="w-3.5 h-3.5 shrink-0" />
+          <span class="text-[11px] uppercase tracking-wider">HUD HP</span>
+        </button>
+      </div>
     </div>
 
-    <!-- Center Alerts (Rescue Prompt / Immunity / Stun / Reconnecting) -->
-    <div class="flex flex-col items-center justify-center gap-3 pt-4">
+    <!-- Top Alerts Area (Pointer Lock Hint / Rescue Prompt / Immunity / Stun / Reconnecting) -->
+    <div
+      data-testid="hud-top-alerts-container"
+      class="fixed top-14 sm:top-16 left-1/2 -translate-x-1/2 z-30 flex flex-col items-center gap-2 max-w-lg w-full px-4 pointer-events-none"
+    >
+      <!-- Pointer Lock Instruction Hint (Desktop only - at top) -->
+      <transition
+        enter-active-class="transition duration-150 ease-out"
+        enter-from-class="scale-90 opacity-0"
+        enter-to-class="scale-100 opacity-100"
+        leave-active-class="transition duration-100 ease-in"
+        leave-from-class="scale-100 opacity-100"
+        leave-to-class="scale-90 opacity-0"
+      >
+        <div
+          v-if="!gameStore.isPointerLocked && !isEffectiveMobile"
+          data-testid="hud-pointer-lock-prompt"
+          class="pointer-events-auto cursor-pointer timbul-card-dark bg-neutral-900/90 hover:bg-neutral-800 px-5 py-2 rounded-2xl border-b-[4px] border-neutral-950 flex items-center gap-3 transition-all shadow-xl select-none"
+          @click="$emit('request-pointer-lock')"
+        >
+          <Crosshair class="w-5 h-5 shrink-0 text-amber-400 animate-pulse" />
+          <div class="text-xs sm:text-sm font-sans font-bold text-neutral-200">
+            Klik layar untuk mengunci kursor mouse & mengarahkan kamera
+          </div>
+        </div>
+      </transition>
       <!-- Reconnecting Overlay Banner -->
       <transition
         enter-active-class="transition duration-200 ease-out"
@@ -175,27 +224,6 @@ defineEmits<{
         </div>
       </transition>
 
-      <!-- Immunity Alert -->
-      <transition
-        enter-active-class="transition duration-150 ease-out"
-        enter-from-class="scale-90 opacity-0"
-        enter-to-class="scale-100 opacity-100"
-        leave-active-class="transition duration-100 ease-in"
-        leave-from-class="scale-100 opacity-100"
-        leave-to-class="scale-90 opacity-0"
-      >
-        <div
-          v-if="gameStore.isImmune"
-          data-testid="hud-immunity-alert"
-          class="bg-amber-500/95 border-b-[5px] border-amber-700 text-amber-950 font-heading font-black px-6 py-2.5 rounded-2xl shadow-2xl flex items-center gap-3"
-        >
-          <ShieldCheck class="w-8 h-8 shrink-0 text-amber-950 drop-shadow-sm" />
-          <div>
-            <div class="text-base uppercase tracking-wider">KEBAL TANGKAP (IMMUNE)</div>
-            <div class="text-xs font-mono font-bold">Durasi: {{ gameStore.immunityRemainingSeconds }} detik</div>
-          </div>
-        </div>
-      </transition>
 
       <!-- Stunned Alert -->
       <transition
@@ -209,7 +237,7 @@ defineEmits<{
         <div
           v-if="gameStore.isStunned"
           data-testid="hud-stun-alert"
-          class="bg-red-600/95 border-b-[5px] border-red-800 text-white font-heading font-black px-6 py-3 rounded-2xl shadow-2xl flex items-center gap-3 animate-pulse"
+          class="pointer-events-auto bg-red-600/95 border-b-[5px] border-red-800 text-white font-heading font-black px-6 py-3 rounded-2xl shadow-2xl flex items-center gap-3 animate-pulse"
         >
           <ZapOff class="w-8 h-8 shrink-0 text-white drop-shadow-sm animate-pulse" />
           <div>
@@ -218,19 +246,6 @@ defineEmits<{
           </div>
         </div>
       </transition>
-
-      <!-- Pointer Lock Instruction Hint (Desktop only) -->
-      <div
-        v-if="!gameStore.isPointerLocked && !isEffectiveMobile"
-        data-testid="hud-pointer-lock-prompt"
-        class="pointer-events-auto cursor-pointer timbul-card-dark bg-neutral-900/90 hover:bg-neutral-800 px-5 py-3 rounded-2xl border-b-[4px] border-neutral-950 flex items-center gap-3 transition-all"
-        @click="$emit('request-pointer-lock')"
-      >
-        <Crosshair class="w-6 h-6 shrink-0 text-amber-400" />
-        <div class="text-sm font-sans font-bold text-neutral-200">
-          Klik layar untuk mengunci kursor mouse & mengarahkan kamera
-        </div>
-      </div>
     </div>
 
     <!-- Toast Notification Stack -->
@@ -298,5 +313,13 @@ defineEmits<{
       @virtual-interact="$emit('virtual-interact')"
       @trigger-skill="$emit('trigger-skill', $event)"
     />
+
+    <!-- Controls Guide Modal (Teleported to body to escape HUD pointer-events-none) -->
+    <Teleport to="body">
+      <GameControlsModal
+        v-if="showControlsModal"
+        @close="closeControlsModal"
+      />
+    </Teleport>
   </div>
 </template>

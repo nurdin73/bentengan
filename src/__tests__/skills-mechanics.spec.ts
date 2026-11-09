@@ -39,8 +39,8 @@ describe('Tactical Active Skills & Bot Status Simulation', () => {
       expect(GAME_CONFIG.skills.smoke.hotkey).toBe('F')
 
       expect(GAME_CONFIG.skills.adrenaline.cooldownMs).toBe(35000)
-      expect(GAME_CONFIG.skills.adrenaline.durationMs).toBe(3500)
-      expect(GAME_CONFIG.skills.adrenaline.immunityDurationMs).toBe(1500)
+      expect(GAME_CONFIG.skills.adrenaline.durationMs).toBe(4000)
+      expect(GAME_CONFIG.skills.adrenaline.immunityDurationMs).toBe(4000)
       expect(GAME_CONFIG.skills.adrenaline.hotkey).toBe('C')
     })
   })
@@ -127,7 +127,7 @@ describe('Tactical Active Skills & Bot Status Simulation', () => {
 
       const res = manager.triggerSkill('adrenaline', dummyPlayer, now)
       expect(res.success).toBe(true)
-      expect(dummyPlayer.applyAdrenaline).toHaveBeenCalledWith(3500, 1500)
+      expect(dummyPlayer.applyAdrenaline).toHaveBeenCalledWith(4000, 4000)
 
       const state = manager.getSkillState('adrenaline', now)
       expect(state.ready).toBe(false)

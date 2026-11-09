@@ -16,7 +16,7 @@ const emit = defineEmits<{
 <template>
   <div
     data-testid="game-rules-modal-backdrop"
-    class="game-rules-modal-backdrop fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/75 backdrop-blur-sm"
+    class="game-rules-modal-backdrop pointer-events-auto fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/75 backdrop-blur-sm"
     @click.self="emit('close')"
   >
     <div

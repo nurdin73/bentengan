@@ -3,6 +3,7 @@ import type RAPIER from '@dimforge/rapier3d-compat'
 import type { PhysicsWorld } from '../physics/physics-world'
 import type { GameplayEntity, MovementInput, PlayerStatus, TeamId } from '../../types/game.types'
 import { GAME_CONFIG } from '../core/constants'
+import { EnergyShieldBubble } from './energy-shield-bubble'
 
 function drawRoundedRect(
   ctx: CanvasRenderingContext2D,
@@ -50,6 +51,7 @@ export class PlayerController implements GameplayEntity {
   public isExhausted = false
   public isGrounded = false
   public immunityUntil = 0
+  public immunitySource: 'skill' | 'rescue' | null = null
   public stunUntil = 0
   public rescueCooldownUntil = 0
 
@@ -70,9 +72,8 @@ export class PlayerController implements GameplayEntity {
   private readonly bodyMat: THREE.MeshStandardMaterial
   private readonly visorMat: THREE.MeshStandardMaterial
 
-  // Immunity Aura Visual
-  private readonly immunityAuraMesh: THREE.Mesh
-  private readonly immunityAuraMat: THREE.MeshBasicMaterial
+  // Immunity Energy Shield Bubble
+  private readonly shieldBubble: EnergyShieldBubble
 
   // Dizzy / Stunned visual orbit
   public readonly stunStarsGroup: THREE.Group
@@ -133,17 +134,9 @@ export class PlayerController implements GameplayEntity {
     visor.position.set(0, characterHeight * 0.25, characterRadius * 0.9)
     this.mesh.add(visor)
 
-    // Immunity visual aura
-    const auraGeo = new THREE.TorusGeometry(0.65, 0.05, 8, 24)
-    this.immunityAuraMat = new THREE.MeshBasicMaterial({
-      color: 0x38bdf8,
-      transparent: true,
-      opacity: 0.85,
-    })
-    this.immunityAuraMesh = new THREE.Mesh(auraGeo, this.immunityAuraMat)
-    this.immunityAuraMesh.rotation.x = Math.PI / 2
-    this.immunityAuraMesh.visible = false
-    this.mesh.add(this.immunityAuraMesh)
+    // Immunity visual energy shield bubble
+    this.shieldBubble = new EnergyShieldBubble()
+    this.mesh.add(this.shieldBubble.group)
 
     // Stunned Dizzy Stars Orbit (Overhead)
     this.stunStarsGroup = new THREE.Group()
@@ -406,13 +399,11 @@ export class PlayerController implements GameplayEntity {
     const normalizedDiff = Math.atan2(Math.sin(diff), Math.cos(diff))
     this.mesh.rotation.y += normalizedDiff * 0.3
 
-    // Immunity aura visualization
-    if (this.immunityAuraMesh) {
-      const isImmune = now < this.immunityUntil
-      this.immunityAuraMesh.visible = isImmune
-      if (isImmune) {
-        this.immunityAuraMesh.rotation.z += 0.04
-      }
+    // Immunity energy shield bubble visualization
+    const isImmune = now < this.immunityUntil
+    this.shieldBubble.update(isImmune, now)
+    if (!isImmune) {
+      this.immunitySource = null
     }
 
     // Stunned dizzy stars visualization
@@ -518,6 +509,7 @@ export class PlayerController implements GameplayEntity {
     const now = performance.now()
     this.stamina = GAME_CONFIG.stamina.max
     this.adrenalineUntil = now + durationMs
+    this.immunitySource = 'skill'
     this.immunityUntil = Math.max(this.immunityUntil, now + immunityDurationMs)
   }
 
@@ -531,8 +523,7 @@ export class PlayerController implements GameplayEntity {
     }
     this.bodyMat.dispose()
     this.visorMat.dispose()
-    this.immunityAuraMat.dispose()
-    this.immunityAuraMesh.geometry.dispose()
+    this.shieldBubble.dispose()
     this.stunStarGeo.dispose()
     this.stunStarMat.dispose()
     if (this.overheadTexture) {

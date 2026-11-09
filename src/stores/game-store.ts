@@ -12,6 +12,7 @@ export const useGameStore = defineStore('game', {
     status: 'normal' as PlayerStatus,
     stunUntil: 0,
     immunityUntil: 0,
+    immunitySource: null as 'skill' | 'rescue' | null,
     rescueCooldownUntil: 0,
     isPointerLocked: false,
     isPaused: false,
@@ -93,6 +94,7 @@ export const useGameStore = defineStore('game', {
       stunUntil: number
       immunityUntil: number
       rescueCooldownUntil?: number
+      immunitySource?: 'skill' | 'rescue' | null
     }) {
       this.stamina = payload.stamina
       this.isSprinting = payload.isSprinting
@@ -101,6 +103,9 @@ export const useGameStore = defineStore('game', {
       this.immunityUntil = payload.immunityUntil
       if (payload.rescueCooldownUntil !== undefined) {
         this.rescueCooldownUntil = payload.rescueCooldownUntil
+      }
+      if (payload.immunitySource !== undefined) {
+        this.immunitySource = payload.immunitySource
       }
     },
 
@@ -152,6 +157,7 @@ export const useGameStore = defineStore('game', {
       this.status = 'normal'
       this.stunUntil = 0
       this.immunityUntil = 0
+      this.immunitySource = null
       this.rescueCooldownUntil = 0
       this.isInEnemyTerritory = false
       this.blueJailedCount = 0

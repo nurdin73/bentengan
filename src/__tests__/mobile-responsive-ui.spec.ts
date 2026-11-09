@@ -12,16 +12,16 @@ import ResultsModal from '../components/results/ResultsModal.vue'
 import { useRoomStore } from '../stores/room-store'
 import { useGameStore } from '../stores/game-store'
 
-const mockPush = vi.fn()
+const mockPush = vi.fn<(to: string) => void>()
 vi.mock('vue-router', () => ({
   useRouter: () => ({
     push: mockPush,
-    replace: vi.fn(),
+    replace: vi.fn<(to: string) => void>(),
   }),
   useRoute: () => ({
     params: { code: 'TEST99' },
   }),
-  onBeforeRouteLeave: vi.fn(),
+  onBeforeRouteLeave: vi.fn<(cb: () => void) => void>(),
 }))
 
 describe('Mobile Responsive Layout & Icon Integration', () => {
@@ -159,8 +159,9 @@ describe('Mobile Responsive Layout & Icon Integration', () => {
       const createBtn = wrapper.find('[data-testid="lobby-create-room-btn"]')
       await createBtn.trigger('click')
 
-      expect(wrapper.emitted('create-host')).toBeTruthy()
-      const emittedPayload = (wrapper.emitted('create-host')?.[0] as unknown[])[0] as {
+      const emitted = wrapper.emitted('create-host')
+      expect(emitted).toBeTruthy()
+      const emittedPayload = (emitted![0] as unknown[])[0] as {
         username: string
         team: string
         maxPlayers: number
@@ -455,6 +456,122 @@ describe('Mobile Responsive Layout & Icon Integration', () => {
       await toggleBtn.trigger('click')
       expect(sessionStorage.getItem('bentengan_force_mobile_hud')).toBe('false')
       expect(wrapper.find('[data-testid="mobile-touch-controls"]').exists()).toBe(false)
+    })
+
+    it('renders controls help button (?) exclusively on desktop', () => {
+      Object.defineProperty(navigator, 'maxTouchPoints', { value: 0, configurable: true })
+      window.matchMedia = vi.fn<() => MediaQueryList>().mockImplementation(() => ({
+        matches: false,
+        media: '(pointer: fine)',
+        onchange: null,
+        addListener: vi.fn<() => void>(),
+        removeListener: vi.fn<() => void>(),
+        addEventListener: vi.fn<() => void>(),
+        removeEventListener: vi.fn<() => void>(),
+        dispatchEvent: vi.fn<() => boolean>(),
+      }))
+
+      const wrapper = mount(GameHUD)
+      const helpBtn = wrapper.find('[data-testid="hud-controls-help-btn"]')
+      expect(helpBtn.exists()).toBe(true)
+    })
+
+    it('does not render controls help button (?) on mobile touch devices', () => {
+      Object.defineProperty(navigator, 'maxTouchPoints', { value: 5, configurable: true })
+      window.matchMedia = vi.fn<() => MediaQueryList>().mockImplementation(() => ({
+        matches: true,
+        media: '(pointer: coarse)',
+        onchange: null,
+        addListener: vi.fn<() => void>(),
+        removeListener: vi.fn<() => void>(),
+        addEventListener: vi.fn<() => void>(),
+        removeEventListener: vi.fn<() => void>(),
+        dispatchEvent: vi.fn<() => boolean>(),
+      }))
+
+      const wrapper = mount(GameHUD)
+      const helpBtn = wrapper.find('[data-testid="hud-controls-help-btn"]')
+      expect(helpBtn.exists()).toBe(false)
+
+      // Restore desktop mock
+      Object.defineProperty(navigator, 'maxTouchPoints', { value: 0, configurable: true })
+    })
+
+    it('opens and closes GameControlsModal when controls help button is clicked', async () => {
+      Object.defineProperty(navigator, 'maxTouchPoints', { value: 0, configurable: true })
+      const wrapper = mount(GameHUD)
+
+      // Modal is not visible initially
+      expect(wrapper.findComponent(GameControlsModal).exists()).toBe(false)
+
+      // Click ? button
+      const helpBtn = wrapper.find('[data-testid="hud-controls-help-btn"]')
+      await helpBtn.trigger('click')
+
+      // Modal should now be visible (teleported to body)
+      const modal = wrapper.findComponent(GameControlsModal)
+      expect(modal.exists()).toBe(true)
+      expect(document.body.querySelector('[data-testid="game-controls-modal-card"]')).toBeTruthy()
+
+      // Click close button inside modal
+      const closeBtn = modal.find('[data-testid="controls-modal-close-btn"]')
+      expect(closeBtn.exists()).toBe(true)
+      await closeBtn.trigger('click')
+
+      // Modal should be closed
+      expect(wrapper.findComponent(GameControlsModal).exists()).toBe(false)
+    })
+
+    it('closes GameControlsModal when Escape key is pressed', async () => {
+      Object.defineProperty(navigator, 'maxTouchPoints', { value: 0, configurable: true })
+      const wrapper = mount(GameHUD)
+
+      // Open modal
+      const helpBtn = wrapper.find('[data-testid="hud-controls-help-btn"]')
+      await helpBtn.trigger('click')
+      expect(wrapper.findComponent(GameControlsModal).exists()).toBe(true)
+
+      // Press Escape
+      window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }))
+      await wrapper.vm.$nextTick()
+
+      // Modal should be closed
+      expect(wrapper.findComponent(GameControlsModal).exists()).toBe(false)
+    })
+
+    it('renders pointer lock instruction hint at the top of the alerts area on desktop', () => {
+      const gameStore = useGameStore()
+      gameStore.isPointerLocked = false
+      Object.defineProperty(navigator, 'maxTouchPoints', { value: 0, configurable: true })
+
+      const wrapper = mount(GameHUD)
+      const topAlerts = wrapper.find('[data-testid="hud-top-alerts-container"]')
+      expect(topAlerts.exists()).toBe(true)
+      expect(topAlerts.classes()).toContain('fixed')
+      expect(topAlerts.classes()).toContain('top-14')
+
+      const prompt = wrapper.find('[data-testid="hud-pointer-lock-prompt"]')
+      expect(prompt.exists()).toBe(true)
+      expect(prompt.text()).toContain('Klik layar untuk mengunci kursor mouse')
+
+      // Verify prompt is positioned within the top alerts container
+      expect(topAlerts.element.contains(prompt.element)).toBe(true)
+    })
+
+    it('does not render hud-immunity-alert even when player is immune', async () => {
+      const gameStore = useGameStore()
+      Object.defineProperty(navigator, 'maxTouchPoints', { value: 0, configurable: true })
+      const wrapper = mount(GameHUD)
+
+      // When immune -> no immunity alert banner should exist in HUD (handled via 3D character aura)
+      gameStore.immunityUntil = performance.now() + 4000
+      gameStore.immunitySource = 'rescue'
+      await wrapper.vm.$nextTick()
+      expect(wrapper.find('[data-testid="hud-immunity-alert"]').exists()).toBe(false)
+
+      gameStore.immunitySource = 'skill'
+      await wrapper.vm.$nextTick()
+      expect(wrapper.find('[data-testid="hud-immunity-alert"]').exists()).toBe(false)
     })
   })
 
