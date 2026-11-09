@@ -91,20 +91,22 @@ const onConfirm = () => {
       </button>
 
       <!-- Contextual Icon Badge -->
-      <div
-        :class="[
-          'w-12 h-12 sm:w-14 sm:h-14 rounded-2xl flex items-center justify-center shrink-0 shadow-2xs',
-          type === 'danger' && 'bg-rose-100 text-rose-600 border border-rose-200',
-          type === 'confirm' && 'bg-amber-100 text-amber-700 border border-amber-200',
-          type === 'alert' && 'bg-amber-100 text-amber-600 border border-amber-200',
-          type === 'info' && 'bg-blue-100 text-blue-600 border border-blue-200',
-        ]"
-      >
-        <AlertTriangle v-if="type === 'danger'" class="w-6 h-6 sm:w-7 sm:h-7" />
-        <AlertCircle v-else-if="type === 'alert'" class="w-6 h-6 sm:w-7 sm:h-7" />
-        <Info v-else-if="type === 'info'" class="w-6 h-6 sm:w-7 sm:h-7" />
-        <HelpCircle v-else class="w-6 h-6 sm:w-7 sm:h-7" />
-      </div>
+      <slot name="icon">
+        <div
+          :class="[
+            'w-12 h-12 sm:w-14 sm:h-14 rounded-2xl flex items-center justify-center shrink-0 shadow-2xs',
+            type === 'danger' && 'bg-rose-100 text-rose-600 border border-rose-200',
+            type === 'confirm' && 'bg-amber-100 text-amber-700 border border-amber-200',
+            type === 'alert' && 'bg-amber-100 text-amber-600 border border-amber-200',
+            type === 'info' && 'bg-blue-100 text-blue-600 border border-blue-200',
+          ]"
+        >
+          <AlertTriangle v-if="type === 'danger'" class="w-6 h-6 sm:w-7 sm:h-7" />
+          <AlertCircle v-else-if="type === 'alert'" class="w-6 h-6 sm:w-7 sm:h-7" />
+          <Info v-else-if="type === 'info'" class="w-6 h-6 sm:w-7 sm:h-7" />
+          <HelpCircle v-else class="w-6 h-6 sm:w-7 sm:h-7" />
+        </div>
+      </slot>
 
       <!-- Title & Message -->
       <div class="flex flex-col gap-1 w-full">

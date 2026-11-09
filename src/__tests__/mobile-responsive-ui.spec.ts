@@ -80,6 +80,39 @@ describe('Mobile Responsive Layout & Icon Integration', () => {
       expect(wrapper.find('[data-testid="navbar-mobile-drawer"]').exists()).toBe(false)
       expect(wrapper.find('[data-testid="game-rules-modal-card"]').exists()).toBe(true)
     })
+
+    it('opens practice team picker dialog via ConfirmDialog and handles team selection', async () => {
+      const wrapper = mount(HomeView)
+
+      const practiceBtn = wrapper.find('[data-testid="navbar-practice-btn"]')
+      expect(practiceBtn.exists()).toBe(true)
+
+      // Initially closed
+      expect(wrapper.find('[data-testid="practice-picker-dialog"]').exists()).toBe(false)
+
+      // Open practice dialog
+      await practiceBtn.trigger('click')
+      expect(wrapper.find('[data-testid="practice-picker-dialog"]').exists()).toBe(true)
+      expect(wrapper.find('[data-testid="dialog-title"]').text()).toBe('Pilih Tim Latihan')
+      expect(wrapper.find('[data-testid="dialog-message"]').text()).toContain('Uji kelincahan dan taktikmu')
+
+      const blueBtn = wrapper.find('[data-testid="practice-pick-blue-btn"]')
+      const redBtn = wrapper.find('[data-testid="practice-pick-red-btn"]')
+      expect(blueBtn.exists()).toBe(true)
+      expect(redBtn.exists()).toBe(true)
+
+      // Click blue team
+      await blueBtn.trigger('click')
+      expect(mockPush).toHaveBeenCalledWith('/practice?team=blue')
+      expect(wrapper.find('[data-testid="practice-picker-dialog"]').exists()).toBe(false)
+
+      // Open again and click red team
+      await practiceBtn.trigger('click')
+      expect(wrapper.find('[data-testid="practice-picker-dialog"]').exists()).toBe(true)
+      await wrapper.find('[data-testid="practice-pick-red-btn"]').trigger('click')
+      expect(mockPush).toHaveBeenCalledWith('/practice?team=red')
+      expect(wrapper.find('[data-testid="practice-picker-dialog"]').exists()).toBe(false)
+    })
   })
 
   describe('LobbyModeSelector Mobile UX & iOS Auto-Zoom Prevention', () => {

@@ -16,6 +16,7 @@ import { useRoomStore } from '../stores/room-store'
 import LobbyModeSelector from '../components/lobby/LobbyModeSelector.vue'
 import GameRulesModal from '../components/guide/GameRulesModal.vue'
 import GameControlsModal from '../components/guide/GameControlsModal.vue'
+import ConfirmDialog from '../components/ui/ConfirmDialog.vue'
 import TactileButton from '../components/ui/TactileButton.vue'
 import IndonesiaFlag from '../components/ui/IndonesiaFlag.vue'
 import type { TeamId } from '../types/game.types'
@@ -295,37 +296,27 @@ const openPracticeFromDrawer = () => {
       @close="showControlsModal = false"
     />
 
-    <!-- Popover: Pilih Tim Latihan Solo -->
-    <div
+    <!-- Dialog: Pilih Tim Latihan Solo -->
+    <ConfirmDialog
       v-if="showPracticePicker"
-      class="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-xs overflow-y-auto"
-      @click.self="showPracticePicker = false"
+      data-testid="practice-picker-dialog"
+      title="Pilih Tim Latihan"
+      message="Uji kelincahan dan taktikmu melawan bot sebelum mabar!"
+      type="confirm"
+      @close="showPracticePicker = false"
     >
-      <div class="timbul-card w-full max-w-sm p-4 sm:p-6 flex flex-col items-center gap-3 sm:gap-4 shadow-2xl relative max-h-[92dvh] overflow-y-auto overscroll-contain animate-in fade-in zoom-in-95 duration-150">
-        <button
-          type="button"
-          class="absolute top-3.5 right-3.5 text-neutral-400 hover:text-neutral-700 font-black text-sm cursor-pointer p-1"
-          @click="showPracticePicker = false"
-        >
-          <X class="w-4 h-4" />
-        </button>
-
-        <div class="text-center flex flex-col items-center gap-1">
-          <div class="w-10 h-10 rounded-2xl bg-amber-100 flex items-center justify-center text-amber-700">
-            <Play class="w-5 h-5 fill-amber-700" />
-          </div>
-          <h3 class="font-heading font-black text-base sm:text-lg text-neutral-900 uppercase pt-1">
-            Pilih Tim Latihan
-          </h3>
-          <p class="font-sans text-xs text-neutral-500 font-medium">
-            Uji kelincahan dan taktikmu melawan bot sebelum mabar!
-          </p>
+      <template #icon>
+        <div class="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-amber-100 border border-amber-200 flex items-center justify-center text-amber-700 shadow-2xs">
+          <Play class="w-6 h-6 fill-amber-700" />
         </div>
+      </template>
 
-        <div class="grid grid-cols-2 gap-3 w-full pt-1">
+      <template #actions>
+        <div class="grid grid-cols-2 gap-2.5 w-full pt-1">
           <TactileButton
             variant="blue"
-            class="w-full text-xs py-2.5 flex items-center justify-center gap-1.5"
+            data-testid="practice-pick-blue-btn"
+            class="w-full text-xs py-2.5 sm:py-3 flex items-center justify-center gap-1.5"
             @click="handleStartPractice('blue')"
           >
             <Shield class="w-3.5 h-3.5 shrink-0" />
@@ -334,14 +325,15 @@ const openPracticeFromDrawer = () => {
 
           <TactileButton
             variant="red"
-            class="w-full text-xs py-2.5 flex items-center justify-center gap-1.5"
+            data-testid="practice-pick-red-btn"
+            class="w-full text-xs py-2.5 sm:py-3 flex items-center justify-center gap-1.5"
             @click="handleStartPractice('red')"
           >
             <Swords class="w-3.5 h-3.5 shrink-0" />
             <span>Benteng Merah</span>
           </TactileButton>
         </div>
-      </div>
-    </div>
+      </template>
+    </ConfirmDialog>
   </div>
 </template>
