@@ -65,6 +65,7 @@ export class BotController implements GameplayEntity {
   public status: PlayerStatus = 'normal'
   public stamina: number = GAME_CONFIG.stamina.max
   public isSprinting = false
+  public isExhausted = false
   public immunityUntil = 0
   public stunUntil = 0
   public rescueCooldownUntil = 0
@@ -263,6 +264,13 @@ export class BotController implements GameplayEntity {
 
   public updateFixed(dt: number, now: number, potentialTargets: GameplayEntity[] = []): void {
     if (this.status === 'stunned') {
+      this.stamina = Math.min(
+        GAME_CONFIG.stamina.max,
+        this.stamina + GAME_CONFIG.stamina.regenerationPerSecond * dt,
+      )
+      if (this.stamina >= GAME_CONFIG.stamina.minSprintThreshold) {
+        this.isExhausted = false
+      }
       if (now >= this.stunUntil) {
         this.status = 'normal'
       } else {
@@ -346,6 +354,8 @@ export class BotController implements GameplayEntity {
     const homeDirZ = this.teamId === 'blue' ? -1.0 : 1.0
     const enemyDirZ = -homeDirZ
     const isImmune = now < this.immunityUntil
+    const canSprint = this.status === 'normal' && !this.isExhausted && this.stamina > 0
+    let wantsSprint = false
     let speed = GAME_CONFIG.movement.walkSpeed * 0.75
 
     if (isConfounded) {
@@ -442,11 +452,23 @@ export class BotController implements GameplayEntity {
           }
 
           this.patrolDirection.set(steerX, 0, steerZ).normalize()
-          speed = GAME_CONFIG.movement.sprintSpeed * 0.95
+          if (canSprint && this.stamina > 15) {
+            wantsSprint = true
+            speed = GAME_CONFIG.movement.sprintSpeed * 0.95
+          } else {
+            wantsSprint = false
+            speed = GAME_CONFIG.movement.walkSpeed * 1.0
+          }
         } else {
-          // Coast is clear: sprint directly to enemy base pillar!
+          // Coast is clear: only sprint for the final dash into base (<= 5.5m) to conserve stamina
           this.patrolDirection.set(baseNormX, 0, baseNormZ).normalize()
-          speed = GAME_CONFIG.movement.sprintSpeed * 0.9
+          if (baseDist <= 5.5 && canSprint && this.stamina >= GAME_CONFIG.stamina.minSprintThreshold) {
+            wantsSprint = true
+            speed = GAME_CONFIG.movement.sprintSpeed * 0.9
+          } else {
+            wantsSprint = false
+            speed = GAME_CONFIG.movement.walkSpeed * 1.0
+          }
         }
       } else {
         // B. NORMAL RETREAT / INFILTRATION (Closer to home territory than to enemy base, or isImmune)
@@ -477,15 +499,23 @@ export class BotController implements GameplayEntity {
 
           const steerZ = homeDirZ * 2.0
           this.patrolDirection.set(steerX, 0, steerZ).normalize()
-          speed = GAME_CONFIG.movement.sprintSpeed * 0.88
+          if (nearestDefender && canSprint && this.stamina > 15) {
+            wantsSprint = true
+            speed = GAME_CONFIG.movement.sprintSpeed * 0.88
+          } else {
+            wantsSprint = false
+            speed = GAME_CONFIG.movement.walkSpeed * 1.0
+          }
         } else {
           if (this.targetObjective) {
             const dx = this.targetObjective.x - myPos.x
             const dz = this.targetObjective.z - myPos.z
             this.patrolDirection.set(dx, 0, dz).normalize()
-            speed = GAME_CONFIG.movement.walkSpeed * 1.15
+            wantsSprint = false
+            speed = GAME_CONFIG.movement.walkSpeed * 1.0
           } else {
             this.patrolDirection.set(-myPos.x * 0.1, 0, enemyDirZ).normalize()
+            wantsSprint = false
             speed = GAME_CONFIG.movement.walkSpeed * 1.0
           }
         }
@@ -501,7 +531,21 @@ export class BotController implements GameplayEntity {
         if (!isPastSafeDepth) {
           // Continue retreating deep into home territory
           this.patrolDirection.set(-myPos.x * 0.15, 0, homeDirZ).normalize()
-          speed = GAME_CONFIG.movement.sprintSpeed * 0.85
+          let hasNearbyEnemy = false
+          for (const t of potentialTargets) {
+            if (t.teamId === this.teamId || t.status === 'jailed') continue
+            if (GameplayRules.distance3D(myPos, t.getPosition()) < 3.2) {
+              hasNearbyEnemy = true
+              break
+            }
+          }
+          if (hasNearbyEnemy && canSprint && this.stamina > 15) {
+            wantsSprint = true
+            speed = GAME_CONFIG.movement.sprintSpeed * 0.85
+          } else {
+            wantsSprint = false
+            speed = GAME_CONFIG.movement.walkSpeed * 1.0
+          }
         } else {
           // Reached safe home depth! Reset retreat state and activate regroup cooldown delay (1.5 - 2.5s)
           this.isRetreating = false
@@ -525,6 +569,7 @@ export class BotController implements GameplayEntity {
           if (distFromCenter > 3.0) {
             this.patrolDirection.set(-dx, 0, -dz).normalize()
           }
+          wantsSprint = false
           speed = GAME_CONFIG.movement.walkSpeed * 0.75
         } else if (this.role === 'hybrid') {
         // DUAL ROLE (Penyerang & Penjaga Sekaligus)
@@ -552,11 +597,23 @@ export class BotController implements GameplayEntity {
           if (isIntruderImmune) {
             const tPos = intruderInHome.getPosition()
             this.patrolDirection.set(myPos.x - tPos.x, 0, myPos.z - tPos.z).normalize()
-            speed = GAME_CONFIG.movement.sprintSpeed * 0.85
+            if (canSprint && this.stamina > 15) {
+              wantsSprint = true
+              speed = GAME_CONFIG.movement.sprintSpeed * 0.85
+            } else {
+              wantsSprint = false
+              speed = GAME_CONFIG.movement.walkSpeed * 1.0
+            }
           } else {
             const tPos = intruderInHome.getPosition()
             this.patrolDirection.set(tPos.x - myPos.x, 0, tPos.z - myPos.z).normalize()
-            speed = GAME_CONFIG.movement.sprintSpeed * 1.0
+            if (canSprint && this.stamina >= 20) {
+              wantsSprint = true
+              speed = GAME_CONFIG.movement.sprintSpeed * 1.0
+            } else {
+              wantsSprint = false
+              speed = GAME_CONFIG.movement.walkSpeed * 1.0
+            }
           }
         } else if (isImmune) {
           // SUB-STATE IMMUNE REGROUP: Home is clear, but immunity is still active.
@@ -569,6 +626,7 @@ export class BotController implements GameplayEntity {
           } else {
             this.patrolDirection.set(Math.sin(now * 0.002), 0, Math.cos(now * 0.002)).normalize()
           }
+          wantsSprint = false
           speed = GAME_CONFIG.movement.walkSpeed * 0.75
         } else {
           // SUB-STATE ATTACKER: Home yard is completely clear and immunity expired! Advance across border
@@ -579,7 +637,8 @@ export class BotController implements GameplayEntity {
           } else {
             this.patrolDirection.set(-myPos.x * 0.1, 0, enemyDirZ).normalize()
           }
-          speed = GAME_CONFIG.movement.walkSpeed * 1.1
+          wantsSprint = false
+          speed = GAME_CONFIG.movement.walkSpeed * 1.0
         }
       } else if (this.role === 'attacker') {
         // Attacker prioritizes crossing the center border to attack enemy base
@@ -596,7 +655,13 @@ export class BotController implements GameplayEntity {
         if (dangerousEnemy) {
           const tPos = dangerousEnemy.getPosition()
           this.patrolDirection.set(myPos.x - tPos.x, 0, myPos.z - tPos.z).normalize()
-          speed = GAME_CONFIG.movement.sprintSpeed * 0.85
+          if (canSprint && this.stamina > 15) {
+            wantsSprint = true
+            speed = GAME_CONFIG.movement.sprintSpeed * 0.85
+          } else {
+            wantsSprint = false
+            speed = GAME_CONFIG.movement.walkSpeed * 1.0
+          }
         } else if (isImmune) {
           // IMMUNE REGROUP: Hold position in home territory until immunity expires before launching assault
           const dx = myPos.x - this.patrolCenter.x
@@ -607,6 +672,7 @@ export class BotController implements GameplayEntity {
           } else {
             this.patrolDirection.set(Math.sin(now * 0.002), 0, Math.cos(now * 0.002)).normalize()
           }
+          wantsSprint = false
           speed = GAME_CONFIG.movement.walkSpeed * 0.75
         } else {
           // Drive forward across dividing line towards enemy base objective
@@ -617,7 +683,8 @@ export class BotController implements GameplayEntity {
           } else {
             this.patrolDirection.set(-myPos.x * 0.1, 0, enemyDirZ).normalize()
           }
-          speed = GAME_CONFIG.movement.walkSpeed * 1.05
+          wantsSprint = false
+          speed = GAME_CONFIG.movement.walkSpeed * 1.0
         }
       } else {
         // Defender guards home territory and catches intruders
@@ -650,12 +717,24 @@ export class BotController implements GameplayEntity {
           // Flee away from immune opponent!
           const tPos = targetEntity.getPosition()
           this.patrolDirection.set(myPos.x - tPos.x, 0, myPos.z - tPos.z).normalize()
-          speed = GAME_CONFIG.movement.sprintSpeed * 0.85
+          if (canSprint && this.stamina > 15) {
+            wantsSprint = true
+            speed = GAME_CONFIG.movement.sprintSpeed * 0.85
+          } else {
+            wantsSprint = false
+            speed = GAME_CONFIG.movement.walkSpeed * 1.0
+          }
         } else if (targetEntity) {
           // Pursuit: Chase intruder trespassing in our home territory!
           const tPos = targetEntity.getPosition()
           this.patrolDirection.set(tPos.x - myPos.x, 0, tPos.z - myPos.z).normalize()
-          speed = GAME_CONFIG.movement.sprintSpeed * 0.88
+          if (canSprint && this.stamina >= 20) {
+            wantsSprint = true
+            speed = GAME_CONFIG.movement.sprintSpeed * 1.0
+          } else {
+            wantsSprint = false
+            speed = GAME_CONFIG.movement.walkSpeed * 1.0
+          }
         } else {
           // Normal Patrol logic
           this.patrolTimer -= dt
@@ -673,6 +752,8 @@ export class BotController implements GameplayEntity {
           if (distFromCenter > this.patrolRadius) {
             this.patrolDirection.set(-dx, 0, -dz).normalize()
           }
+          wantsSprint = false
+          speed = GAME_CONFIG.movement.walkSpeed * 0.75
         }
       }
     }
@@ -756,26 +837,29 @@ export class BotController implements GameplayEntity {
     }
 
     // Stamina & Sprint Simulation (Equal Status with Player)
-    const wantsSprint = speed > GAME_CONFIG.movement.walkSpeed * 1.05 && this.status === 'normal'
-    if (wantsSprint && this.stamina > 0) {
+    if (wantsSprint && canSprint) {
       this.isSprinting = true
       this.stamina = Math.max(0, this.stamina - GAME_CONFIG.stamina.sprintDrainPerSecond * dt)
       if (this.stamina === 0) {
         this.status = 'stunned'
         this.stunUntil = now + GAME_CONFIG.gameplay.stunDurationMs
         this.isSprinting = false
+        this.isExhausted = true
         speed = 0
       }
     } else {
       this.isSprinting = false
-      if (wantsSprint && this.stamina <= 0) {
-        // Out of stamina: cannot sprint, fallback to walk speed
+      if (wantsSprint && !canSprint) {
+        // Fallback to walk speed
         speed = Math.min(speed, GAME_CONFIG.movement.walkSpeed)
       }
       this.stamina = Math.min(
         GAME_CONFIG.stamina.max,
         this.stamina + GAME_CONFIG.stamina.regenerationPerSecond * dt,
       )
+      if (this.stamina >= GAME_CONFIG.stamina.minSprintThreshold) {
+        this.isExhausted = false
+      }
     }
 
     let velX = this.patrolDirection.x * speed

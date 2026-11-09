@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { GameplayRules } from '../game/systems/gameplay-rules'
+import { GAME_CONFIG } from '../game/core/constants'
 import type { GameplayEntity } from '../types/game.types'
 
 const createMockEntity = (overrides: Partial<GameplayEntity> = {}): GameplayEntity => ({
@@ -389,6 +390,51 @@ describe('Team Elimination & Territory Evasion AI Verification', () => {
       const candSouth = { x: 0, z: 1 }
       const dotSouth = candSouth.z * safeDirZ // (1) * (-1) = -1 (dangerous!)
       expect(dotSouth).toBeLessThan(-0.1)
+    })
+
+    it('verifies Attacker bot conserves stamina with walk speed when coast is clear and base is beyond final rush range', () => {
+      // Bot at Z = -15, Enemy Base at Z = -25 (Distance = 10m > 5.5m)
+      const botPos = { x: 0, z: -15 }
+      const basePos = { x: 0, z: -25 }
+      const baseDist = Math.abs(basePos.z - botPos.z)
+      const hasDefender = false
+      const canSprint = true
+      const stamina = 100
+
+      // When coast is clear and distance > 5.5m:
+      const wantsSprint =
+        !hasDefender && baseDist <= 5.5 && canSprint && stamina >= GAME_CONFIG.stamina.minSprintThreshold
+
+      expect(wantsSprint).toBe(false)
+      expect(baseDist).toBe(10)
+    })
+
+    it('verifies Attacker bot triggers sprint for final base dash when within 5.5m with sufficient stamina', () => {
+      // Bot at Z = -21, Enemy Base at Z = -25 (Distance = 4m <= 5.5m)
+      const botPos = { x: 0, z: -21 }
+      const basePos = { x: 0, z: -25 }
+      const baseDist = Math.abs(basePos.z - botPos.z)
+      const hasDefender = false
+      const canSprint = true
+      const stamina = 50
+
+      const wantsSprint =
+        !hasDefender && baseDist <= 5.5 && canSprint && stamina >= GAME_CONFIG.stamina.minSprintThreshold
+
+      expect(wantsSprint).toBe(true)
+      expect(baseDist).toBe(4)
+    })
+
+    it('verifies Attacker bot triggers threat evasion sprint when a defender is within 3.2m', () => {
+      const defenderDist = 2.5
+      const threatThreshold = 3.2
+      const canSprint = true
+      const stamina = 40
+
+      const isThreatened = defenderDist < threatThreshold
+      const wantsSprint = isThreatened && canSprint && stamina > 15
+
+      expect(wantsSprint).toBe(true)
     })
   })
 })

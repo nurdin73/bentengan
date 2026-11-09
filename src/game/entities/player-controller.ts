@@ -47,6 +47,7 @@ export class PlayerController implements GameplayEntity {
   public status: PlayerStatus = 'normal'
   public stamina: number = GAME_CONFIG.stamina.max
   public isSprinting = false
+  public isExhausted = false
   public isGrounded = false
   public immunityUntil = 0
   public stunUntil = 0
@@ -222,6 +223,13 @@ export class PlayerController implements GameplayEntity {
   public updateFixed(input: MovementInput, dt: number, now: number): void {
     // 1. Check & Update Timed Conditions (Stun & Immunity)
     if (this.status === 'stunned') {
+      this.stamina = Math.min(
+        GAME_CONFIG.stamina.max,
+        this.stamina + GAME_CONFIG.stamina.regenerationPerSecond * dt,
+      )
+      if (this.stamina >= GAME_CONFIG.stamina.minSprintThreshold) {
+        this.isExhausted = false
+      }
       if (now >= this.stunUntil) {
         this.status = 'normal'
       } else {
@@ -259,12 +267,14 @@ export class PlayerController implements GameplayEntity {
     const isMoving = moveX !== 0 || moveZ !== 0
 
     // 3. Sprint & Stamina Mechanics
-    const wantsSprint = (input.sprint || isDashActive) && isMoving && (this.stamina > 0 || isAdrenalineActive)
+    const canSprint = (this.stamina > 0 && !this.isExhausted) || isAdrenalineActive
+    const wantsSprint = (input.sprint || isDashActive) && isMoving && canSprint
     this.isSprinting = wantsSprint
 
     if (isAdrenalineActive) {
       // Adrenaline surge: maximum stamina, zero sprint consumption
       this.stamina = GAME_CONFIG.stamina.max
+      this.isExhausted = false
     } else if (isDashActive) {
       // Dash burst does not consume stamina
     } else if (this.isSprinting) {
@@ -273,12 +283,16 @@ export class PlayerController implements GameplayEntity {
         this.status = 'stunned'
         this.stunUntil = now + GAME_CONFIG.gameplay.stunDurationMs
         this.isSprinting = false
+        this.isExhausted = true
       }
     } else {
       this.stamina = Math.min(
         GAME_CONFIG.stamina.max,
         this.stamina + GAME_CONFIG.stamina.regenerationPerSecond * dt,
       )
+      if (this.stamina >= GAME_CONFIG.stamina.minSprintThreshold) {
+        this.isExhausted = false
+      }
     }
 
     // 4. Calculate Velocity relative to Camera Yaw

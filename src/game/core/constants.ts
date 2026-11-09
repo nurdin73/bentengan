@@ -18,6 +18,7 @@ export const GAME_CONFIG = {
     max: 100,
     sprintDrainPerSecond: 25,
     regenerationPerSecond: 18,
+    minSprintThreshold: 20,
   },
 
   gameplay: {
