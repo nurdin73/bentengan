@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useRouter } from 'vue-router'
+import { Trophy, Unplug, Swords, RotateCcw } from 'lucide-vue-next'
 import { useGameStore } from '../../stores/game-store'
 import { useRoomStore } from '../../stores/room-store'
 import TactileButton from '../ui/TactileButton.vue'
@@ -57,8 +58,10 @@ const handleLeaveToHome = () => {
     >
       <!-- Winner / Disconnect Banner -->
       <div class="flex flex-col items-center gap-2">
-        <div class="text-4xl sm:text-5xl">
-          {{ isHostDisconnect ? '🔌' : (isPlayerWinner ? '🏆' : '⚔️') }}
+        <div class="flex items-center justify-center w-16 h-16 rounded-full bg-neutral-100 shadow-inner">
+          <Unplug v-if="isHostDisconnect" class="w-9 h-9 text-rose-500" />
+          <Trophy v-else-if="isPlayerWinner" class="w-9 h-9 text-amber-500" />
+          <Swords v-else class="w-9 h-9 text-neutral-600" />
         </div>
         <h2
           data-testid="results-winner-title"
@@ -129,10 +132,11 @@ const handleLeaveToHome = () => {
           v-if="!isHostDisconnect"
           variant="amber"
           data-testid="results-restart-btn"
-          class="w-full text-base sm:text-lg"
+          class="w-full text-base sm:text-lg flex items-center justify-center gap-2"
           @click="$emit('restart')"
         >
-          {{ roomStore.roomCode === 'LOKAL' ? '🔄 Main Lagi (Latihan)' : '🔄 Kembali ke Ruang Tunggu (Main Lagi)' }}
+          <RotateCcw class="w-5 h-5 shrink-0" />
+          <span>{{ roomStore.roomCode === 'LOKAL' ? 'Main Lagi (Latihan)' : 'Kembali ke Ruang Tunggu (Main Lagi)' }}</span>
         </TactileButton>
 
         <TactileButton

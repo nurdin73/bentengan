@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ChevronsUp, Zap, HeartHandshake, Maximize2 } from 'lucide-vue-next'
 import type { VirtualMovementInput } from '../../game/input/input-manager'
 import {
   checkIsMobileTouchDevice,
@@ -9,10 +10,12 @@ import {
 
 export interface MobileTouchControlsProps {
   forceShow?: boolean
+  canRescue?: boolean
 }
 
 const props = withDefaults(defineProps<MobileTouchControlsProps>(), {
   forceShow: false,
+  canRescue: false,
 })
 
 const emit = defineEmits<{
@@ -20,6 +23,7 @@ const emit = defineEmits<{
   (e: 'virtual-sprint', sprint: boolean): void
   (e: 'virtual-jump', jump: boolean): void
   (e: 'virtual-look', delta: { deltaX: number; deltaY: number }): void
+  (e: 'virtual-interact'): void
 }>()
 
 const isDetectedMobile = ref(false)
@@ -173,7 +177,25 @@ const handleJumpEnd = (e: TouchEvent) => {
   }
 }
 
-// 4. Camera Touch Drag Zone (Right Screen Half)
+// 4. Rescue / Interact Button State
+const isRescueActive = ref(false)
+
+const handleRescueTouchStart = (e: TouchEvent) => {
+  e.preventDefault()
+  triggerAutoFullscreen()
+  isRescueActive.value = true
+  emit('virtual-interact')
+}
+
+const handleRescueTouchEnd = () => {
+  isRescueActive.value = false
+}
+
+const handleRescueClick = () => {
+  emit('virtual-interact')
+}
+
+// 5. Camera Touch Drag Zone (Right Screen Half)
 let lookTouchId: number | null = null
 let lastLookX = 0
 let lastLookY = 0
@@ -227,6 +249,7 @@ onUnmounted(() => {
   sprintTouchId = null
   jumpTouchId = null
   lookTouchId = null
+  isRescueActive.value = false
 })
 </script>
 
@@ -246,15 +269,15 @@ onUnmounted(() => {
       @touchcancel.passive="handleLookEnd"
     />
 
-    <!-- Top Right: Fullscreen Quick Toggle Button -->
+    <!-- Top Right: Fullscreen Quick Toggle Button (Positioned closely alongside HUD toggle with tight gap) -->
     <button
       data-testid="hud-fullscreen-btn"
       type="button"
-      class="pointer-events-auto absolute top-4 right-4 flex h-10 w-10 cursor-pointer items-center justify-center rounded-xl border border-neutral-700 bg-neutral-900/80 text-base font-bold text-white shadow-lg backdrop-blur-sm transition-all active:scale-95"
+      class="pointer-events-auto absolute top-3 right-[92px] sm:top-5 sm:right-[100px] flex h-7 w-7 cursor-pointer items-center justify-center rounded-full border border-neutral-700 bg-neutral-900/80 text-white shadow-lg backdrop-blur-sm transition-all active:scale-95 hover:bg-neutral-800"
       title="Toggle Fullscreen"
       @click="toggleFullscreen"
     >
-      ⛶
+      <Maximize2 class="h-3.5 w-3.5 text-neutral-200" />
     </button>
 
     <!-- Bottom Left: Virtual Analog Joystick -->
@@ -289,48 +312,85 @@ onUnmounted(() => {
       </div>
     </div>
 
-    <!-- Bottom Right Action Cluster: Jump Button -->
+    <!-- Bottom Right: Radial Action Wheel (Arc Layout matching MOBA / Action Mobile) -->
     <div
-      class="pointer-events-auto absolute right-8 bottom-28 flex flex-col items-center gap-1 touch-none"
+      data-testid="hud-action-wheel"
+      class="pointer-events-none absolute right-2 bottom-2 w-60 h-60 touch-none select-none z-30"
     >
-      <button
-        data-testid="hud-touch-jump-btn"
-        type="button"
-        :class="[
-          'timbul-btn flex h-15 w-15 cursor-pointer flex-col items-center justify-center rounded-full border-b-[5px] transition-all duration-75 select-none active:translate-y-1',
-          isJumpActive
-            ? 'border-sky-700 bg-sky-400 text-sky-950 ring-4 ring-sky-300/60 translate-y-1'
-            : 'border-sky-800 bg-sky-500 text-sky-950 shadow-2xl',
-        ]"
-        @touchstart="handleJumpStart"
-        @touchend="handleJumpEnd"
-        @touchcancel="handleJumpEnd"
+      <!-- Satellite 1 (Left-Top on Arc): Rescue Button -->
+      <div
+        class="pointer-events-auto absolute flex flex-col items-center touch-none"
+        style="left: 76px; top: 76px;"
       >
-        <span class="text-lg">🦘</span>
-        <span class="font-heading text-[10px] font-black tracking-wider uppercase">LOMPAT</span>
-      </button>
-    </div>
+        <button
+          data-testid="hud-touch-rescue-btn"
+          type="button"
+          :class="[
+            'flex h-15 w-15 aspect-square cursor-pointer flex-col items-center justify-center rounded-full border transition-all duration-75 select-none backdrop-blur-md active:scale-90',
+            isRescueActive
+              ? 'border-emerald-300 bg-emerald-500/40 text-emerald-200 ring-4 ring-emerald-300/70 scale-90'
+              : props.canRescue
+                ? 'border-emerald-300 bg-emerald-500 text-white shadow-2xl animate-pulse ring-4 ring-emerald-400/60'
+                : 'border-white/20 bg-neutral-950/75 text-neutral-300 hover:text-white shadow-xl',
+          ]"
+          @touchstart="handleRescueTouchStart"
+          @touchend="handleRescueTouchEnd"
+          @touchcancel="handleRescueTouchEnd"
+          @click="handleRescueClick"
+        >
+          <HeartHandshake class="h-6 w-6 stroke-[2.2] drop-shadow-sm" />
+          <span class="font-heading text-[8px] font-black tracking-wider uppercase mt-0.5">BEBASKAN</span>
+        </button>
+      </div>
 
-    <!-- Bottom Right Action Cluster: Sprint Button -->
-    <div
-      class="pointer-events-auto absolute right-6 bottom-8 flex flex-col items-center gap-1 touch-none"
-    >
-      <button
-        data-testid="hud-touch-sprint-btn"
-        type="button"
-        :class="[
-          'timbul-btn flex h-18 w-18 cursor-pointer flex-col items-center justify-center rounded-full border-b-[5px] transition-all duration-75 select-none active:translate-y-1',
-          isSprintActive
-            ? 'border-amber-700 bg-amber-400 text-amber-950 ring-4 ring-amber-300/60 translate-y-1'
-            : 'border-amber-800 bg-amber-500 text-amber-950 shadow-2xl',
-        ]"
-        @touchstart="handleSprintStart"
-        @touchend="handleSprintEnd"
-        @touchcancel="handleSprintEnd"
+      <!-- Satellite 2 (Top on Arc): Jump Button -->
+      <div
+        class="pointer-events-auto absolute flex flex-col items-center touch-none"
+        style="left: 140px; top: 50px;"
       >
-        <span class="text-xl">⚡</span>
-        <span class="font-heading text-[11px] font-black tracking-wider uppercase">SPRINT</span>
-      </button>
+        <button
+          data-testid="hud-touch-jump-btn"
+          type="button"
+          :class="[
+            'flex h-15 w-15 aspect-square cursor-pointer flex-col items-center justify-center rounded-full border transition-all duration-75 select-none backdrop-blur-md active:scale-90',
+            isJumpActive
+              ? 'border-sky-300 bg-sky-500/40 text-sky-200 ring-4 ring-sky-300/70 scale-90'
+              : 'border-white/20 bg-neutral-950/75 text-neutral-300 hover:text-white shadow-xl',
+          ]"
+          @touchstart="handleJumpStart"
+          @touchend="handleJumpEnd"
+          @touchcancel="handleJumpEnd"
+        >
+          <ChevronsUp class="h-6 w-6 stroke-[2.5] drop-shadow-sm" />
+          <span class="font-heading text-[8px] font-black tracking-wider uppercase mt-0.5">LOMPAT</span>
+        </button>
+      </div>
+
+      <!-- Center Anchor (Large Main Action Button): Sprint Button -->
+      <div
+        class="pointer-events-auto absolute flex items-center justify-center touch-none"
+        style="left: 130px; top: 130px;"
+      >
+        <!-- Outer Decorative Dial Ring -->
+        <div class="relative flex items-center justify-center p-1 rounded-full border border-white/10 bg-black/40 backdrop-blur-md">
+          <button
+            data-testid="hud-touch-sprint-btn"
+            type="button"
+            :class="[
+              'flex h-18 w-18 aspect-square cursor-pointer flex-col items-center justify-center rounded-full border-2 transition-all duration-75 select-none backdrop-blur-md active:scale-90',
+              isSprintActive
+                ? 'border-amber-400 bg-amber-500/40 text-amber-300 ring-4 ring-amber-300/70 scale-90'
+                : 'border-white/25 bg-neutral-950/75 text-neutral-200 hover:text-white shadow-2xl',
+            ]"
+            @touchstart="handleSprintStart"
+            @touchend="handleSprintEnd"
+            @touchcancel="handleSprintEnd"
+          >
+            <Zap class="h-7 w-7 fill-current stroke-[2] drop-shadow-sm" />
+            <span class="font-heading text-[9px] font-black tracking-wider uppercase mt-0.5">SPRINT</span>
+          </button>
+        </div>
+      </div>
     </div>
   </div>
 </template>

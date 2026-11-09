@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { RotateCcw, Lightbulb } from 'lucide-vue-next'
 import { checkIsMobileTouchDevice, requestFullscreenAndLandscape } from './mobile-device.utils'
 
 export interface RotateDevicePromptProps {
@@ -58,8 +59,8 @@ onUnmounted(() => {
       <!-- Animated Phone Rotation Icon -->
       <div class="relative flex items-center justify-center w-28 h-28 mb-6">
         <div class="absolute inset-0 rounded-full bg-blue-500/20 animate-ping" />
-        <div class="relative flex items-center justify-center text-5xl animate-bounce">
-          🔄
+        <div class="relative flex items-center justify-center animate-bounce">
+          <RotateCcw class="w-14 h-14 text-blue-400" />
         </div>
       </div>
 
@@ -71,8 +72,9 @@ onUnmounted(() => {
         Bentengan dioptimalkan untuk tampilan mendatar (<span class="text-amber-400 font-bold">Landscape</span>). Silakan putar ponsel Anda untuk mulai bermain.
       </p>
 
-      <div class="mt-6 flex items-center gap-2 text-xs font-mono font-bold text-neutral-500 bg-neutral-900 px-4 py-2 rounded-xl border border-neutral-800">
-        <span>💡 Pastikan Kunci Rotasi (Auto-Rotate) aktif</span>
+      <div class="mt-6 flex items-center gap-2 text-xs font-mono font-bold text-neutral-400 bg-neutral-900 px-4 py-2 rounded-xl border border-neutral-800">
+        <Lightbulb class="w-4 h-4 text-amber-400 shrink-0" />
+        <span>Pastikan Kunci Rotasi (Auto-Rotate) aktif</span>
       </div>
     </div>
   </transition>

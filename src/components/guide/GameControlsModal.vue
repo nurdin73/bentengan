@@ -11,6 +11,7 @@ import {
   Eye,
   Maximize2,
   Navigation,
+  HeartHandshake,
 } from 'lucide-vue-next'
 
 const emit = defineEmits<{
@@ -140,6 +141,18 @@ const activeTab = ref<'desktop' | 'touch'>('desktop')
           </div>
           <span class="font-sans text-[11px] text-neutral-500 font-medium">Arahkan sudut mata pandang</span>
         </div>
+
+        <div class="col-span-1 sm:col-span-2 p-3.5 sm:p-4 rounded-2xl bg-neutral-50 border-2 border-neutral-200 flex flex-col items-center text-center gap-1.5 shadow-2xs">
+          <span class="px-3 py-1 rounded-xl bg-white border border-neutral-300 font-mono font-black text-xs sm:text-sm text-neutral-800 shadow-2xs flex items-center gap-1.5">
+            <HeartHandshake class="w-3.5 h-3.5 text-blue-600" />
+            <span>E / Tempel Langsung</span>
+          </span>
+          <div class="flex items-center gap-1 text-neutral-800 font-sans text-xs font-black uppercase tracking-wider">
+            <HeartHandshake class="w-3.5 h-3.5 text-blue-600" />
+            <span>Bebaskan Rekan / Penyelamatan</span>
+          </div>
+          <span class="font-sans text-[11px] text-neutral-500 font-medium">Tekan tombol E atau tempel/dekati langsung rekan yang disandera di penjara</span>
+        </div>
       </div>
 
       <!-- Touch / Mobile Controls Grid -->
@@ -194,6 +207,18 @@ const activeTab = ref<'desktop' | 'touch'>('desktop')
             <span>Geser Sudut Pandang</span>
           </div>
           <span class="font-sans text-[11px] text-neutral-500 font-medium">Swipe layar kanan untuk rotasi kamera</span>
+        </div>
+
+        <div class="col-span-1 sm:col-span-2 p-3.5 sm:p-4 rounded-2xl bg-neutral-50 border-2 border-neutral-200 flex flex-col items-center text-center gap-1.5 shadow-2xs">
+          <span class="px-3 py-1 rounded-xl bg-white border border-neutral-300 font-mono font-black text-xs sm:text-sm text-neutral-800 shadow-2xs flex items-center gap-1.5">
+            <HeartHandshake class="w-3.5 h-3.5 text-blue-600" />
+            <span>Tombol Bebaskan & Tempel</span>
+          </span>
+          <div class="flex items-center gap-1 text-neutral-800 font-sans text-xs font-black uppercase tracking-wider">
+            <HeartHandshake class="w-3.5 h-3.5 text-blue-600" />
+            <span>Penyelamatan Rekan</span>
+          </div>
+          <span class="font-sans text-[11px] text-neutral-500 font-medium">Sentuh tombol Bebaskan (🤝) atau tempelkan badan langsung ke rekan yang disandera</span>
         </div>
 
         <div class="col-span-1 sm:col-span-2 p-3 rounded-2xl bg-amber-50/80 border border-amber-200 flex items-center gap-2.5">

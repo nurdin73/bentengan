@@ -350,5 +350,32 @@ describe('Mobile Responsive Layout & Icon Integration', () => {
       expect(signalIcon.classes()).toContain('text-rose-500')
       expect(signalIcon.classes()).toContain('animate-pulse')
     })
+
+    it('renders compact mobile HUD testing toggle button in top right of GameHUD', () => {
+      const wrapper = mount(GameHUD)
+      const toggleBtn = wrapper.find('[data-testid="hud-toggle-mobile-controls-btn"]')
+      expect(toggleBtn.exists()).toBe(true)
+      expect(toggleBtn.text()).toContain('HUD HP')
+    })
+
+    it('toggles mobile HUD controls and persists state in sessionStorage', async () => {
+      sessionStorage.clear()
+      const wrapper = mount(GameHUD)
+      const toggleBtn = wrapper.find('[data-testid="hud-toggle-mobile-controls-btn"]')
+
+      // Initially MobileTouchControls is not shown on desktop
+      expect(wrapper.find('[data-testid="mobile-touch-controls"]').exists()).toBe(false)
+
+      // Click to toggle ON
+      await toggleBtn.trigger('click')
+      expect(sessionStorage.getItem('bentengan_force_mobile_hud')).toBe('true')
+      expect(wrapper.find('[data-testid="mobile-touch-controls"]').exists()).toBe(true)
+      expect(toggleBtn.classes()).toContain('text-amber-300')
+
+      // Click again to toggle OFF
+      await toggleBtn.trigger('click')
+      expect(sessionStorage.getItem('bentengan_force_mobile_hud')).toBe('false')
+      expect(wrapper.find('[data-testid="mobile-touch-controls"]').exists()).toBe(false)
+    })
   })
 })

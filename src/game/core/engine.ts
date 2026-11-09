@@ -635,7 +635,7 @@ export class GameEngine {
     let canRescueAny = false
 
     // 2. Teammate Rescues
-    // A. Player rescuing allies
+    // A. Player rescuing allies (triggers on 'E' / rescue button press OR direct proximity touch / "tempel")
     if (
       this.localPlayer &&
       this.localPlayer.status !== 'jailed' &&
@@ -646,8 +646,8 @@ export class GameEngine {
           const inRescueRadius = GameplayRules.canRescue(this.localPlayer, entity)
           if (inRescueRadius) {
             canRescueAny = true
-            // Rescue triggers on pressing 'E' or direct proximity
-            if (input.interact) {
+            // Rescue triggers on pressing 'E' / rescue button OR direct proximity touch ("tempel")
+            if (input.interact || inRescueRadius) {
               entity.status = 'normal'
               entity.immunityUntil = now + GAME_CONFIG.gameplay.immunityDurationMs
               if (entity instanceof BotController) {
@@ -667,18 +667,19 @@ export class GameEngine {
       }
     }
 
-    // B. Bots rescuing allies
-    for (const bot of this.bots) {
-      if (bot.status === 'jailed' || bot.status === 'stunned') continue
+    // B. Other free entities (bots and remote players) rescuing allies via proximity touch ("tempel")
+    for (const rescuer of allEntities) {
+      if (rescuer === this.localPlayer) continue
+      if (rescuer.status === 'jailed' || rescuer.status === 'stunned') continue
       for (const target of allEntities) {
-        if (target.teamId === bot.teamId && target.status === 'jailed') {
-          if (GameplayRules.canRescue(bot, target)) {
+        if (target.teamId === rescuer.teamId && target.status === 'jailed') {
+          if (GameplayRules.canRescue(rescuer, target)) {
             target.status = 'normal'
             target.immunityUntil = now + GAME_CONFIG.gameplay.immunityDurationMs
             if (target instanceof BotController) {
               target.isRetreating = true
             }
-            const rescuerName = bot.name
+            const rescuerName = rescuer.name
             const targetName = target === this.localPlayer ? 'Anda' : target.name
             this.callbacks.onRescue(rescuerName, targetName)
             if (this.isHost && !this.isPractice) {

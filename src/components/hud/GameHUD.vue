@@ -1,6 +1,14 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
-import { Wifi } from 'lucide-vue-next'
+import {
+  Wifi,
+  Smartphone,
+  RefreshCw,
+  HeartHandshake,
+  ShieldCheck,
+  ZapOff,
+  Crosshair,
+} from 'lucide-vue-next'
 import { useGameStore } from '../../stores/game-store'
 import { useRoomStore } from '../../stores/room-store'
 import MobileTouchControls from './MobileTouchControls.vue'
@@ -12,10 +20,27 @@ const gameStore = useGameStore()
 const roomStore = useRoomStore()
 
 const isMobile = ref(false)
+const forceShowMobileHUD = ref(false)
+
+const isEffectiveMobile = computed(() => isMobile.value || forceShowMobileHUD.value)
 
 onMounted(() => {
   isMobile.value = checkIsMobileTouchDevice()
+  try {
+    forceShowMobileHUD.value = sessionStorage.getItem('bentengan_force_mobile_hud') === 'true'
+  } catch {
+    // Ignore storage errors in restricted contexts
+  }
 })
+
+const toggleMobileHUD = () => {
+  forceShowMobileHUD.value = !forceShowMobileHUD.value
+  try {
+    sessionStorage.setItem('bentengan_force_mobile_hud', String(forceShowMobileHUD.value))
+  } catch {
+    // Ignore storage errors
+  }
+}
 
 defineEmits<{
   (e: 'request-pointer-lock'): void
@@ -53,7 +78,22 @@ defineEmits<{
           &bull; {{ roomStore.roomCode }}
         </span>
       </div>
-      <div />
+      <!-- Top Right: Compact Mobile HUD Testing Toggle -->
+      <button
+        data-testid="hud-toggle-mobile-controls-btn"
+        type="button"
+        :class="[
+          'pointer-events-auto flex items-center justify-center gap-1.5 w-[76px] py-1 rounded-full border backdrop-blur-md shadow-md text-xs font-heading font-bold select-none cursor-pointer transition-all active:scale-95',
+          forceShowMobileHUD
+            ? 'bg-amber-500/25 border-amber-400/80 text-amber-300 ring-2 ring-amber-400/30'
+            : 'bg-neutral-900/80 border-neutral-700/80 text-neutral-400 hover:text-neutral-200 hover:bg-neutral-800/90',
+        ]"
+        title="Toggle Mobile HUD (Testing Mode)"
+        @click="toggleMobileHUD"
+      >
+        <Smartphone class="w-3.5 h-3.5 shrink-0" />
+        <span class="text-[11px] uppercase tracking-wider">HUD HP</span>
+      </button>
     </div>
 
     <!-- Center Alerts (Rescue Prompt / Immunity / Stun / Reconnecting) -->
@@ -72,7 +112,7 @@ defineEmits<{
           data-testid="hud-reconnecting-overlay"
           class="pointer-events-auto bg-amber-500/95 text-amber-950 border-b-[5px] border-amber-700 px-6 py-4 rounded-2xl shadow-2xl flex flex-col sm:flex-row items-center gap-4 max-w-lg mx-auto text-center sm:text-left animate-pulse"
         >
-          <span class="text-3xl">🔄</span>
+          <RefreshCw class="w-8 h-8 animate-spin shrink-0 text-amber-950" />
           <div class="flex-1">
             <div class="font-heading font-black text-base uppercase tracking-wider">
               MENYAMBUNG ULANG KONEKSI...
@@ -106,12 +146,13 @@ defineEmits<{
           data-testid="hud-rescue-prompt"
           class="pointer-events-auto cursor-pointer bg-blue-600/95 border-b-[5px] border-blue-900 text-white font-heading font-black px-6 py-3 rounded-2xl shadow-2xl flex items-center gap-3 animate-bounce active:translate-y-1"
           @click="$emit('virtual-interact')"
+          @touchstart.prevent="$emit('virtual-interact')"
         >
-          <span class="text-2xl">🤝</span>
+          <HeartHandshake class="w-8 h-8 shrink-0 text-white drop-shadow-sm" />
           <div>
             <div class="text-lg uppercase tracking-wider text-stroke-black">BEBASKAN REKAN!</div>
             <div class="text-xs font-sans text-blue-100 font-bold">
-              {{ isMobile ? 'Ketuk di sini untuk bebaskan rekan!' : 'Tekan E untuk menyelamatkan rekan satu tim!' }}
+              {{ isEffectiveMobile ? 'Ketuk di sini untuk bebaskan rekan!' : 'Tekan E untuk menyelamatkan rekan satu tim!' }}
             </div>
           </div>
         </div>
@@ -131,7 +172,7 @@ defineEmits<{
           data-testid="hud-immunity-alert"
           class="bg-amber-500/95 border-b-[5px] border-amber-700 text-amber-950 font-heading font-black px-6 py-2.5 rounded-2xl shadow-2xl flex items-center gap-3"
         >
-          <span class="text-2xl">🛡️</span>
+          <ShieldCheck class="w-8 h-8 shrink-0 text-amber-950 drop-shadow-sm" />
           <div>
             <div class="text-base uppercase tracking-wider">KEBAL TANGKAP (IMMUNE)</div>
             <div class="text-xs font-mono font-bold">Durasi: {{ gameStore.immunityRemainingSeconds }} detik</div>
@@ -153,7 +194,7 @@ defineEmits<{
           data-testid="hud-stun-alert"
           class="bg-red-600/95 border-b-[5px] border-red-800 text-white font-heading font-black px-6 py-3 rounded-2xl shadow-2xl flex items-center gap-3 animate-pulse"
         >
-          <span class="text-2xl">⚡</span>
+          <ZapOff class="w-8 h-8 shrink-0 text-white drop-shadow-sm animate-pulse" />
           <div>
             <div class="text-lg uppercase tracking-wider text-stroke-black">STUNNED!</div>
             <div class="text-xs font-sans text-red-100 font-bold">Stamina habis! Tidak bisa bergerak selama 2 detik.</div>
@@ -163,12 +204,12 @@ defineEmits<{
 
       <!-- Pointer Lock Instruction Hint (Desktop only) -->
       <div
-        v-if="!gameStore.isPointerLocked && !isMobile"
+        v-if="!gameStore.isPointerLocked && !isEffectiveMobile"
         data-testid="hud-pointer-lock-prompt"
         class="pointer-events-auto cursor-pointer timbul-card-dark bg-neutral-900/90 hover:bg-neutral-800 px-5 py-3 rounded-2xl border-b-[4px] border-neutral-950 flex items-center gap-3 transition-all"
         @click="$emit('request-pointer-lock')"
       >
-        <span class="text-xl">🎯</span>
+        <Crosshair class="w-6 h-6 shrink-0 text-amber-400" />
         <div class="text-sm font-sans font-bold text-neutral-200">
           Klik layar untuk mengunci kursor mouse & mengarahkan kamera
         </div>
@@ -217,10 +258,13 @@ defineEmits<{
 
     <!-- Mobile Virtual Joystick & Touch Controls -->
     <MobileTouchControls
+      :force-show="forceShowMobileHUD"
+      :can-rescue="gameStore.canRescueNearby"
       @virtual-move="$emit('virtual-move', $event)"
       @virtual-sprint="$emit('virtual-sprint', $event)"
       @virtual-jump="$emit('virtual-jump', $event)"
       @virtual-look="$emit('virtual-look', $event)"
+      @virtual-interact="$emit('virtual-interact')"
     />
   </div>
 </template>

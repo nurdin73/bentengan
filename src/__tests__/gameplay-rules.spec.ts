@@ -161,6 +161,36 @@ describe('GameplayRules — Milestone 2 Core Mechanics', () => {
 
       expect(GameplayRules.canRescue(jailedRescuer, jailedAlly)).toBe(false)
     })
+
+    it('should validate proximity touch / tempel when rescuer physically contacts jailed ally', () => {
+      const touchingRescuer = createMockEntity({
+        teamId: 'red',
+        getPosition: () => ({ x: -10, y: 0, z: -20 }),
+      })
+      const jailedTeammate = createMockEntity({
+        teamId: 'red',
+        status: 'jailed',
+        getPosition: () => ({ x: -10.5, y: 0, z: -20 }),
+      })
+
+      // Distance is 0.5m, within direct physical contact/touch radius
+      expect(GameplayRules.canRescue(touchingRescuer, jailedTeammate)).toBe(true)
+    })
+
+    it('should not allow a stunned player to rescue someone', () => {
+      const stunnedRescuer = createMockEntity({
+        teamId: 'blue',
+        status: 'stunned',
+        getPosition: () => ({ x: 10, y: 0, z: 20 }),
+      })
+      const jailedAlly = createMockEntity({
+        teamId: 'blue',
+        status: 'jailed',
+        getPosition: () => ({ x: 10.5, y: 0, z: 20 }),
+      })
+
+      expect(GameplayRules.canRescue(stunnedRescuer, jailedAlly)).toBe(false)
+    })
   })
 
   describe('Victory Conditions', () => {

@@ -164,6 +164,8 @@ describe('Mobile Touch Controls & Virtual Input Integration', () => {
       expect(wrapper.find('[data-testid="hud-virtual-joystick"]').exists()).toBe(true)
       expect(wrapper.find('[data-testid="hud-joystick-knob"]').exists()).toBe(true)
       expect(wrapper.find('[data-testid="hud-touch-sprint-btn"]').exists()).toBe(true)
+      expect(wrapper.find('[data-testid="hud-touch-jump-btn"]').exists()).toBe(true)
+      expect(wrapper.find('[data-testid="hud-touch-rescue-btn"]').exists()).toBe(true)
       expect(wrapper.find('[data-testid="hud-touch-look-zone"]').exists()).toBe(true)
     })
 
@@ -267,6 +269,35 @@ describe('Mobile Touch Controls & Virtual Input Integration', () => {
       })
 
       expect(wrapper.emitted('virtual-jump')?.[1]).toEqual([false])
+    })
+
+    it('dispatches virtual-interact event on rescue button touch and click', async () => {
+      const wrapper = mount(MobileTouchControls, {
+        props: { forceShow: true, canRescue: false },
+      })
+
+      const rescueBtn = wrapper.find('[data-testid="hud-touch-rescue-btn"]')
+      expect(rescueBtn.exists()).toBe(true)
+
+      // Touch start emits virtual-interact
+      await rescueBtn.trigger('touchstart', {
+        changedTouches: [{ identifier: 5, clientX: 250, clientY: 500 }],
+      })
+      expect(wrapper.emitted('virtual-interact')).toHaveLength(1)
+
+      // Click also emits virtual-interact
+      await rescueBtn.trigger('click')
+      expect(wrapper.emitted('virtual-interact')).toHaveLength(2)
+    })
+
+    it('applies pulsing emerald styling when canRescue is true', () => {
+      const wrapper = mount(MobileTouchControls, {
+        props: { forceShow: true, canRescue: true },
+      })
+
+      const rescueBtn = wrapper.find('[data-testid="hud-touch-rescue-btn"]')
+      expect(rescueBtn.classes()).toContain('animate-pulse')
+      expect(rescueBtn.classes()).toContain('bg-emerald-500')
     })
 
     it('renders fullscreen toggle button and triggers requestFullscreenAndLandscape', async () => {
