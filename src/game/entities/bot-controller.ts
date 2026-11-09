@@ -16,6 +16,8 @@ export interface BotControllerOptions {
   patrolCenter?: [number, number, number]
   patrolRadius?: number
   targetObjective?: [number, number, number]
+  enemyBasePosition?: [number, number, number]
+  allyJailPosition?: [number, number, number]
 }
 
 export class BotController implements GameplayEntity {
@@ -24,6 +26,8 @@ export class BotController implements GameplayEntity {
   public readonly teamId: TeamId
   public role: BotRole
   public targetObjective: THREE.Vector3 | null = null
+  public enemyBasePosition: THREE.Vector3 | null = null
+  public allyJailPosition: THREE.Vector3 | null = null
   public isRetreating = false
   public regroupDelayTimer = 0
   private dodgeDirection = 1
@@ -83,6 +87,22 @@ export class BotController implements GameplayEntity {
         options.targetObjective[0],
         options.targetObjective[1],
         options.targetObjective[2],
+      )
+    }
+    if (options.enemyBasePosition) {
+      this.enemyBasePosition = new THREE.Vector3(
+        options.enemyBasePosition[0],
+        options.enemyBasePosition[1],
+        options.enemyBasePosition[2],
+      )
+    } else if (this.targetObjective) {
+      this.enemyBasePosition = this.targetObjective.clone()
+    }
+    if (options.allyJailPosition) {
+      this.allyJailPosition = new THREE.Vector3(
+        options.allyJailPosition[0],
+        options.allyJailPosition[1],
+        options.allyJailPosition[2],
       )
     }
     this.physics = physics
@@ -211,6 +231,37 @@ export class BotController implements GameplayEntity {
 
     const myPos = this.body.translation()
 
+    // Dynamic Objective Arbitration (User Rule: Guarded Base -> Rescue Teammate, Unguarded Base -> Base Capture)
+    if (this.enemyBasePosition) {
+      const activeEnemies = potentialTargets.filter(
+        (t) => t.teamId !== this.teamId && t.status !== 'jailed' && t.status !== 'stunned',
+      )
+      const hasJailedTeammate = potentialTargets.some(
+        (t) => t.teamId === this.teamId && t.status === 'jailed',
+      )
+
+      const baseGuardRadius = 9.0
+      const isEnemyBaseGuarded = activeEnemies.some((enemy) => {
+        return (
+          GameplayRules.distance2D(enemy.getPosition(), this.enemyBasePosition!) <= baseGuardRadius
+        )
+      })
+
+      if (hasJailedTeammate && isEnemyBaseGuarded && this.allyJailPosition) {
+        // Base is guarded and a teammate is in jail: prioritize rescue mission!
+        if (!this.targetObjective) {
+          this.targetObjective = new THREE.Vector3()
+        }
+        this.targetObjective.copy(this.allyJailPosition)
+      } else {
+        // Base is unguarded OR no teammates need rescue: prioritize base capture to win!
+        if (!this.targetObjective) {
+          this.targetObjective = new THREE.Vector3()
+        }
+        this.targetObjective.copy(this.enemyBasePosition)
+      }
+    }
+
     // Unstuck monitoring & recovery
     if (this.unstuckTimer > 0) {
       this.unstuckTimer -= dt
@@ -263,8 +314,8 @@ export class BotController implements GameplayEntity {
       for (const t of potentialTargets) {
         if (t.teamId === this.teamId || t.status === 'jailed') continue
         const d = GameplayRules.distance3D(myPos, t.getPosition())
-        // Threat range: 5 meters
-        if (d < 5.0 && d < nearestDefenderDist) {
+        // Threat range: 3.2 meters
+        if (d < 3.2 && d < nearestDefenderDist) {
           nearestDefender = t
           nearestDefenderDist = d
         }
@@ -362,7 +413,7 @@ export class BotController implements GameplayEntity {
 
           const steerZ = homeDirZ * 2.0
           this.patrolDirection.set(steerX, 0, steerZ).normalize()
-          speed = GAME_CONFIG.movement.sprintSpeed * 0.95
+          speed = GAME_CONFIG.movement.sprintSpeed * 0.88
         } else {
           if (this.targetObjective) {
             const dx = this.targetObjective.x - myPos.x
@@ -441,10 +492,7 @@ export class BotController implements GameplayEntity {
           } else {
             const tPos = intruderInHome.getPosition()
             this.patrolDirection.set(tPos.x - myPos.x, 0, tPos.z - myPos.z).normalize()
-            speed =
-              intruderDist > 3.0
-                ? GAME_CONFIG.movement.sprintSpeed * 0.9
-                : GAME_CONFIG.movement.walkSpeed
+            speed = GAME_CONFIG.movement.sprintSpeed * 1.0
           }
         } else if (isImmune) {
           // SUB-STATE IMMUNE REGROUP: Home is clear, but immunity is still active.
@@ -543,10 +591,7 @@ export class BotController implements GameplayEntity {
           // Pursuit: Chase intruder trespassing in our home territory!
           const tPos = targetEntity.getPosition()
           this.patrolDirection.set(tPos.x - myPos.x, 0, tPos.z - myPos.z).normalize()
-          speed =
-            targetDist > 3.0
-              ? GAME_CONFIG.movement.sprintSpeed * 0.85
-              : GAME_CONFIG.movement.walkSpeed
+          speed = GAME_CONFIG.movement.sprintSpeed * 1.0
         } else {
           // Normal Patrol logic
           this.patrolTimer -= dt
@@ -677,13 +722,27 @@ export class BotController implements GameplayEntity {
     }
   }
 
-  public setRole(role: BotRole, targetObjective?: THREE.Vector3): void {
+  public setRole(
+    role: BotRole,
+    targetObjective?: THREE.Vector3,
+    allyJailPosition?: THREE.Vector3,
+  ): void {
     this.role = role
     if (targetObjective) {
       if (!this.targetObjective) {
         this.targetObjective = new THREE.Vector3()
       }
       this.targetObjective.copy(targetObjective)
+      if (!this.enemyBasePosition) {
+        this.enemyBasePosition = new THREE.Vector3()
+      }
+      this.enemyBasePosition.copy(targetObjective)
+    }
+    if (allyJailPosition) {
+      if (!this.allyJailPosition) {
+        this.allyJailPosition = new THREE.Vector3()
+      }
+      this.allyJailPosition.copy(allyJailPosition)
     }
   }
 

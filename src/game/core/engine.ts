@@ -262,6 +262,11 @@ export class GameEngine {
         ? this.arena.zones.blueBasePosition
         : this.arena.zones.redBasePosition
 
+    const enemyJailPos =
+      enemyTeam === 'blue'
+        ? this.arena.zones.blueJailPosition
+        : this.arena.zones.redJailPosition
+
     // A. Jailed Ally Bot (starts in enemy jail; when rescued, attacks enemy base)
     const allyBot = new BotController(this.scene, this.physics, {
       id: 'bot-ally-1',
@@ -270,6 +275,8 @@ export class GameEngine {
       role: 'attacker',
       initialPosition: [allyJailPos.x, 1, allyJailPos.z],
       targetObjective: [enemyBasePos.x, enemyBasePos.y, enemyBasePos.z],
+      enemyBasePosition: [enemyBasePos.x, enemyBasePos.y, enemyBasePos.z],
+      allyJailPosition: [allyJailPos.x, 1, allyJailPos.z],
     })
     allyBot.status = 'jailed'
     this.bots.push(allyBot)
@@ -284,6 +291,8 @@ export class GameEngine {
       patrolCenter: [0, 1, 0],
       patrolRadius: 10,
       targetObjective: [playerBasePos.x, playerBasePos.y, playerBasePos.z],
+      enemyBasePosition: [playerBasePos.x, playerBasePos.y, playerBasePos.z],
+      allyJailPosition: [enemyJailPos.x, 1, enemyJailPos.z],
     })
     this.bots.push(enemyBot1)
 
@@ -296,6 +305,8 @@ export class GameEngine {
       initialPosition: [5, 1, enemyBasePos.z * 0.7],
       patrolCenter: [enemyBasePos.x, 1, enemyBasePos.z * 0.7],
       patrolRadius: 8,
+      enemyBasePosition: [playerBasePos.x, playerBasePos.y, playerBasePos.z],
+      allyJailPosition: [enemyJailPos.x, 1, enemyJailPos.z],
     })
     this.bots.push(enemyBot2)
   }
@@ -747,11 +758,16 @@ export class GameEngine {
           ? this.arena.zones.redBasePosition
           : this.arena.zones.blueBasePosition
 
+      const allyJailPos =
+        team === 'blue'
+          ? this.arena.zones.blueJailPosition
+          : this.arena.zones.redJailPosition
+
       // Rule: If a team has only 1 active free member left, any surviving bot adopts the 'hybrid' dual-role!
       if (freeMembers.length === 1) {
         const survivor = freeMembers[0]
         if (survivor instanceof BotController) {
-          survivor.setRole('hybrid', targetBasePos)
+          survivor.setRole('hybrid', targetBasePos, allyJailPos)
         }
       } else if (freeMembers.length > 1) {
         // Multiple free members: maintain role balance (attacker + defender)
@@ -761,8 +777,8 @@ export class GameEngine {
           const bot1 = teamBots[0]
           const bot2 = teamBots[1]
           if (!hasAttacker && bot1 && bot2) {
-            bot1.setRole('attacker', targetBasePos)
-            bot2.setRole('defender', targetBasePos)
+            bot1.setRole('attacker', targetBasePos, allyJailPos)
+            bot2.setRole('defender', targetBasePos, allyJailPos)
           }
         }
       }

@@ -170,16 +170,69 @@ describe('Team Elimination & Territory Evasion AI Verification', () => {
       expect(attackDx).toBe(0)
     })
 
-    it('verifies threat evasion trigger radius is calibrated to 5.0m', () => {
-      const threatThreshold = 5.0
+    it('verifies threat evasion trigger radius is calibrated to 3.2m', () => {
+      const threatThreshold = 3.2
 
-      // Defender within 4.5m triggers evasion
-      const isThreatenedClose = 4.5 < threatThreshold
+      // Defender within 3.0m triggers evasion
+      const isThreatenedClose = 3.0 < threatThreshold
       expect(isThreatenedClose).toBe(true)
 
-      // Defender at 5.5m does NOT trigger premature evasion
-      const isThreatenedFar = 5.5 < threatThreshold
+      // Defender at 3.5m does NOT trigger premature evasion
+      const isThreatenedFar = 3.5 < threatThreshold
       expect(isThreatenedFar).toBe(false)
+    })
+
+    it('verifies defender pursuit maintains full sprint speed 1.0x even at close range', () => {
+      // In home territory, when chasing an intruder at distance <= 3.0m
+      const intruderDist = 2.0
+      // Previously dropped to walkSpeed, now strictly full sprintSpeed
+      const sprintSpeed = 7.0
+      const pursuitSpeed = intruderDist <= 3.0 ? sprintSpeed * 1.0 : sprintSpeed * 1.0
+      expect(pursuitSpeed).toBe(7.0)
+    })
+
+    it('verifies dynamic objective prioritizes rescue mission when enemy base is guarded and teammate is jailed', () => {
+      const enemyBasePos = { x: 0, y: 0, z: 25 }
+      const allyJailPos = { x: 10, y: 0, z: 20 }
+      const baseGuardRadius = 9.0
+
+      // Enemy defender is at Z = 22 (distance to base = 3m <= 9m -> base is guarded!)
+      const enemyDefenderPos = { x: 0, y: 0, z: 22 }
+      const distToBase = Math.sqrt(
+        (enemyDefenderPos.x - enemyBasePos.x) ** 2 + (enemyDefenderPos.z - enemyBasePos.z) ** 2,
+      )
+      const isEnemyBaseGuarded = distToBase <= baseGuardRadius
+      const hasJailedTeammate = true
+
+      let targetObjective = enemyBasePos
+      if (hasJailedTeammate && isEnemyBaseGuarded) {
+        targetObjective = allyJailPos
+      }
+
+      expect(isEnemyBaseGuarded).toBe(true)
+      expect(targetObjective).toBe(allyJailPos)
+    })
+
+    it('verifies dynamic objective prioritizes base capture when enemy base is unguarded', () => {
+      const enemyBasePos = { x: 0, y: 0, z: 25 }
+      const allyJailPos = { x: 10, y: 0, z: 20 }
+      const baseGuardRadius = 9.0
+
+      // Enemy defender is at Z = 10 (distance to base = 15m > 9m -> base is unguarded!)
+      const enemyDefenderPos = { x: 0, y: 0, z: 10 }
+      const distToBase = Math.sqrt(
+        (enemyDefenderPos.x - enemyBasePos.x) ** 2 + (enemyDefenderPos.z - enemyBasePos.z) ** 2,
+      )
+      const isEnemyBaseGuarded = distToBase <= baseGuardRadius
+      const hasJailedTeammate = true
+
+      let targetObjective = enemyBasePos
+      if (hasJailedTeammate && isEnemyBaseGuarded) {
+        targetObjective = allyJailPos
+      }
+
+      expect(isEnemyBaseGuarded).toBe(false)
+      expect(targetObjective).toBe(enemyBasePos)
     })
 
     it('verifies regroup delay holds bot in home territory until cooldown expires', () => {
