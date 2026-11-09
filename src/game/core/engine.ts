@@ -9,6 +9,13 @@ import { RemotePlayerController } from '../entities/remote-player-controller'
 import { GameplayRules } from '../systems/gameplay-rules'
 import { GAME_CONFIG } from './constants'
 import { peerNetworkManager } from '../network/peer-network-manager'
+import { SkillManager } from '../skills/skill-manager'
+import type {
+  SkillId,
+  SkillsStateMap,
+  SkillActivationResult,
+  SmokeEventPayload,
+} from '../skills/skill-types'
 import type {
   PlayerNetworkState,
   PlayerUpdateMessage,
@@ -43,6 +50,7 @@ export interface GameEngineStateCallback {
     immunityUntil: number
     rescueCooldownUntil: number
   }) => void
+  onSkillStateChange?: (skills: SkillsStateMap) => void
   onRosterUpdate: (roster: {
     blueJailed: number
     blueTotal: number
@@ -82,6 +90,7 @@ export class GameEngine {
   public readonly bots: BotController[] = []
   public readonly remotePlayers = new Map<string, RemotePlayerController>()
   public roomPlayers: RoomPlayer[] = []
+  public skillManager!: SkillManager
 
   // Network & Multiplayer State
   public isHost = false
@@ -173,6 +182,16 @@ export class GameEngine {
 
     // 2. Create Symmetrical Arena
     this.arena = new ArenaGreybox(this.scene, this.physics)
+
+    // 3. Initialize Tactical Skill Manager
+    this.skillManager = new SkillManager(this.scene, {
+      onSkillStateChange: (skills) => {
+        this.callbacks.onSkillStateChange?.(skills)
+      },
+      onSmokeTriggered: (payload) => {
+        this.handleSmokeTriggered(payload)
+      },
+    })
 
     // Clear any lingering remote players
     for (const remote of this.remotePlayers.values()) {
@@ -331,6 +350,15 @@ export class GameEngine {
 
     const mouseDelta = this.isPaused ? { deltaX: 0, deltaY: 0 } : this.input.consumeMouseDelta()
     const now = performance.now()
+
+    if (this.localPlayer && !this.isPaused && this.skillManager) {
+      const triggeredSkills = this.input.consumePendingSkills()
+      for (const skillId of triggeredSkills) {
+        this.skillManager.triggerSkill(skillId, this.localPlayer, now)
+      }
+      this.skillManager.update(frameTime, now)
+      this.callbacks.onSkillStateChange?.(this.skillManager.getAllSkillsState(now))
+    }
 
     // Fixed timestep physics update (60 Hz)
     while (this.accumulator >= this.fixedDt) {
@@ -881,6 +909,25 @@ export class GameEngine {
     }
   }
 
+  private handleSmokeTriggered(payload: SmokeEventPayload): void {
+    const smokePos = { x: payload.x, y: payload.y, z: payload.z }
+    for (const bot of this.bots) {
+      if (bot.teamId !== payload.sourceTeamId && bot.status !== 'jailed') {
+        const d = GameplayRules.distance3D(smokePos, bot.getPosition())
+        if (d <= payload.radius) {
+          bot.applySmokeConfound(payload.durationMs)
+        }
+      }
+    }
+  }
+
+  public triggerSkill(skillId: SkillId): SkillActivationResult {
+    if (!this.localPlayer || !this.skillManager) {
+      return { success: false, reason: 'jailed' }
+    }
+    return this.skillManager.triggerSkill(skillId, this.localPlayer, performance.now())
+  }
+
   public getIsPaused(): boolean {
     return this.isPaused
   }
@@ -900,6 +947,9 @@ export class GameEngine {
     window.removeEventListener('resize', this.onResizeBound)
 
     this.input.dispose()
+    if (this.skillManager) {
+      this.skillManager.dispose()
+    }
     if (this.localPlayer) {
       this.localPlayer.dispose()
     }

@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import type { PlayerStatus, TeamId, MatchResult } from '../types/game.types'
+import type { SkillId, SkillsStateMap } from '../game/skills/skill-types'
 import { GAME_CONFIG } from '../game/core/constants'
 
 export const useGameStore = defineStore('game', {
@@ -29,6 +30,43 @@ export const useGameStore = defineStore('game', {
     redTotalCount: 2,
 
     matchResult: null as MatchResult | null,
+
+    // Tactical Active Skills State
+    skills: {
+      dash: {
+        id: 'dash' as SkillId,
+        name: 'Kilat',
+        hotkey: 'Q',
+        ready: true,
+        cooldownUntil: 0,
+        cooldownRemainingSec: 0,
+        cooldownProgress: 0,
+        activeUntil: 0,
+        isActive: false,
+      },
+      smoke: {
+        id: 'smoke' as SkillId,
+        name: 'Asap',
+        hotkey: 'F',
+        ready: true,
+        cooldownUntil: 0,
+        cooldownRemainingSec: 0,
+        cooldownProgress: 0,
+        activeUntil: 0,
+        isActive: false,
+      },
+      adrenaline: {
+        id: 'adrenaline' as SkillId,
+        name: 'Adrenalin',
+        hotkey: 'C',
+        ready: true,
+        cooldownUntil: 0,
+        cooldownRemainingSec: 0,
+        cooldownProgress: 0,
+        activeUntil: 0,
+        isActive: false,
+      },
+    } as SkillsStateMap,
   }),
 
   getters: {
@@ -82,6 +120,10 @@ export const useGameStore = defineStore('game', {
       this.isInEnemyTerritory = payload.isInEnemyTerritory
     },
 
+    updateSkillsState(skills: SkillsStateMap) {
+      this.skills = skills
+    },
+
     recordCapture() {
       this.capturesCount++
     },
@@ -118,6 +160,41 @@ export const useGameStore = defineStore('game', {
       this.redTotalCount = 2
       this.gameTimeSeconds = 0
       this.isPaused = false
+      this.skills = {
+        dash: {
+          id: 'dash',
+          name: 'Kilat',
+          hotkey: 'Q',
+          ready: true,
+          cooldownUntil: 0,
+          cooldownRemainingSec: 0,
+          cooldownProgress: 0,
+          activeUntil: 0,
+          isActive: false,
+        },
+        smoke: {
+          id: 'smoke',
+          name: 'Asap',
+          hotkey: 'F',
+          ready: true,
+          cooldownUntil: 0,
+          cooldownRemainingSec: 0,
+          cooldownProgress: 0,
+          activeUntil: 0,
+          isActive: false,
+        },
+        adrenaline: {
+          id: 'adrenaline',
+          name: 'Adrenalin',
+          hotkey: 'C',
+          ready: true,
+          cooldownUntil: 0,
+          cooldownRemainingSec: 0,
+          cooldownProgress: 0,
+          activeUntil: 0,
+          isActive: false,
+        },
+      }
     },
 
     setPaused(paused: boolean) {

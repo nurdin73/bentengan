@@ -13,8 +13,10 @@ import { useGameStore } from '../../stores/game-store'
 import { useRoomStore } from '../../stores/room-store'
 import MobileTouchControls from './MobileTouchControls.vue'
 import RotateDevicePrompt from './RotateDevicePrompt.vue'
+import SkillActionBar from './SkillActionBar.vue'
 import { checkIsMobileTouchDevice } from './mobile-device.utils'
 import type { VirtualMovementInput } from '../../game/input/input-manager'
+import type { SkillId } from '../../game/skills/skill-types'
 
 const gameStore = useGameStore()
 const roomStore = useRoomStore()
@@ -62,6 +64,7 @@ defineEmits<{
   (e: 'virtual-jump', jump: boolean): void
   (e: 'virtual-look', delta: { deltaX: number; deltaY: number }): void
   (e: 'virtual-interact'): void
+  (e: 'trigger-skill', skillId: SkillId): void
 }>()
 </script>
 
@@ -270,6 +273,18 @@ defineEmits<{
     <!-- Rotate Device Prompt (Mobile Portrait Warning) -->
     <RotateDevicePrompt :force-mobile="forceShowMobileHUD" />
 
+    <!-- Tactical Skills Action Bar (Desktop only, mobile uses ActionSkillArc in MobileTouchControls) -->
+    <div
+      v-if="!isEffectiveMobile"
+      data-testid="hud-skills-container"
+      class="fixed bottom-3 sm:bottom-6 left-1/2 -translate-x-1/2 z-30"
+    >
+      <SkillActionBar
+        :is-mobile="false"
+        @trigger-skill="$emit('trigger-skill', $event)"
+      />
+    </div>
+
     <!-- Mobile Virtual Joystick & Touch Controls -->
     <MobileTouchControls
       :force-show="forceShowMobileHUD"
@@ -281,6 +296,7 @@ defineEmits<{
       @virtual-jump="$emit('virtual-jump', $event)"
       @virtual-look="$emit('virtual-look', $event)"
       @virtual-interact="$emit('virtual-interact')"
+      @trigger-skill="$emit('trigger-skill', $event)"
     />
   </div>
 </template>

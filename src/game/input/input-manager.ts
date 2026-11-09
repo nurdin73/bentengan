@@ -1,4 +1,5 @@
 import type { MovementInput } from '../../types/game.types'
+import type { SkillId } from '../skills/skill-types'
 
 export interface VirtualMovementInput {
   forward: boolean
@@ -21,6 +22,9 @@ export class InputManager {
     ShiftRight: false,
     Space: false,
     KeyE: false,
+    KeyQ: false,
+    KeyF: false,
+    KeyC: false,
   }
 
   private virtualMovement: VirtualMovementInput = {
@@ -32,6 +36,7 @@ export class InputManager {
   private isVirtualSprint = false
   private isVirtualJump = false
   private isVirtualInteract = false
+  private readonly pendingSkills = new Set<SkillId>()
 
   private mouseDeltaX = 0
   private mouseDeltaY = 0
@@ -79,6 +84,13 @@ export class InputManager {
     if (e.code in this.keys) {
       this.keys[e.code] = true
     }
+    if (e.code === 'KeyQ') {
+      this.pendingSkills.add('dash')
+    } else if (e.code === 'KeyF') {
+      this.pendingSkills.add('smoke')
+    } else if (e.code === 'KeyC') {
+      this.pendingSkills.add('adrenaline')
+    }
   }
 
   private onKeyUp(e: KeyboardEvent): void {
@@ -123,6 +135,17 @@ export class InputManager {
     this.isVirtualInteract = true
   }
 
+  public triggerVirtualSkill(skillId: SkillId): void {
+    this.pendingSkills.add(skillId)
+  }
+
+  public consumePendingSkills(): SkillId[] {
+    if (this.pendingSkills.size === 0) return []
+    const triggered = Array.from(this.pendingSkills)
+    this.pendingSkills.clear()
+    return triggered
+  }
+
   public injectTouchDelta(deltaX: number, deltaY: number): void {
     this.mouseDeltaX += deltaX
     this.mouseDeltaY += deltaY
@@ -157,6 +180,7 @@ export class InputManager {
     this.isVirtualSprint = false
     this.isVirtualJump = false
     this.isVirtualInteract = false
+    this.pendingSkills.clear()
     this.mouseDeltaX = 0
     this.mouseDeltaY = 0
   }

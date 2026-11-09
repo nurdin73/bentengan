@@ -10,6 +10,7 @@ import GameCanvas from '../components/game/GameCanvas.vue'
 import GameHUD from '../components/hud/GameHUD.vue'
 import ResultsModal from '../components/results/ResultsModal.vue'
 import type { VirtualMovementInput } from '../game/input/input-manager'
+import type { SkillId } from '../game/skills/skill-types'
 
 const route = useRoute()
 const router = useRouter()
@@ -87,6 +88,10 @@ const handleVirtualInteract = () => {
   gameCanvasRef.value?.triggerVirtualInteract()
 }
 
+const handleTriggerSkill = (skillId: SkillId) => {
+  gameCanvasRef.value?.triggerSkill(skillId)
+}
+
 const handleRestart = () => {
   gameStore.resetStats()
   roomStore.returnToLobbyForRematch()
@@ -115,6 +120,7 @@ const handleLeaveToHome = () => {
       @virtual-jump="handleVirtualJump"
       @virtual-look="handleVirtualLook"
       @virtual-interact="handleVirtualInteract"
+      @trigger-skill="handleTriggerSkill"
     />
 
     <!-- Results Modal on Finish -->

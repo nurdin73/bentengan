@@ -29,6 +29,36 @@ export const GAME_CONFIG = {
     baseCaptureRadius: 2.6,
   },
 
+  skills: {
+    dash: {
+      id: 'dash',
+      name: 'Kilat',
+      hotkey: 'Q',
+      cooldownMs: 8000,
+      durationMs: 350,
+      speedMultiplier: 2.2,
+      description: 'Impulsi maju kencang untuk manuver menghindar',
+    },
+    smoke: {
+      id: 'smoke',
+      name: 'Asap',
+      hotkey: 'F',
+      cooldownMs: 18000,
+      durationMs: 3000,
+      radius: 7.0,
+      description: 'Mengaburkan pandangan lawan & memutus kejaran',
+    },
+    adrenaline: {
+      id: 'adrenaline',
+      name: 'Adrenalin',
+      hotkey: 'C',
+      cooldownMs: 35000,
+      durationMs: 3500,
+      immunityDurationMs: 1500,
+      description: 'Isi penuh stamina & bebas drain stamina untuk eksekusi krusial',
+    },
+  },
+
   camera: {
     distance: 4.5,
     minDistance: 1.0,

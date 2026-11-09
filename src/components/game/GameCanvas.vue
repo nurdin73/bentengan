@@ -2,6 +2,7 @@
 import { ref, watch, onMounted, onUnmounted } from 'vue'
 import { GameEngine } from '../../game/core/engine'
 import type { VirtualMovementInput } from '../../game/input/input-manager'
+import type { SkillId } from '../../game/skills/skill-types'
 import { useGameStore } from '../../stores/game-store'
 import { useRoomStore } from '../../stores/room-store'
 import { peerNetworkManager } from '../../game/network/peer-network-manager'
@@ -25,6 +26,9 @@ onMounted(async () => {
   engine = new GameEngine(containerRef.value, {
     onPlayerStateChange: (state) => {
       gameStore.updateLocalPlayerState(state)
+    },
+    onSkillStateChange: (skills) => {
+      gameStore.updateSkillsState(skills)
     },
     onRosterUpdate: (roster) => {
       gameStore.updateRosterCounts(roster)
@@ -129,6 +133,10 @@ const triggerVirtualInteract = () => {
   engine?.input.triggerVirtualInteract()
 }
 
+const triggerSkill = (skillId: SkillId) => {
+  engine?.input.triggerVirtualSkill(skillId)
+}
+
 defineExpose({
   requestPointerLock,
   setVirtualMovement,
@@ -136,6 +144,7 @@ defineExpose({
   setVirtualJump,
   injectTouchDelta,
   triggerVirtualInteract,
+  triggerSkill,
   setPaused: (paused: boolean) => engine?.setPaused(paused),
 })
 </script>

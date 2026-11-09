@@ -150,6 +150,10 @@ describe('Mobile Touch Controls & Virtual Input Integration', () => {
   })
 
   describe('MobileTouchControls Component', () => {
+    beforeEach(() => {
+      setActivePinia(createPinia())
+    })
+
     it('does not render controls when not on mobile and forceShow is false', () => {
       const wrapper = mount(MobileTouchControls, {
         props: { forceShow: false },
@@ -269,15 +273,15 @@ describe('Mobile Touch Controls & Virtual Input Integration', () => {
       // Moderate stamina (40%): changes to orange
       await wrapper.setProps({ staminaPercentage: 40 })
       expect(progressCircle.classes()).toContain('stroke-orange-500')
-      // dashoffset should be approx 251.33 * (1 - 0.4) = 150.798
-      expect(Number(progressCircle.attributes('stroke-dashoffset'))).toBeCloseTo(150.8, 1)
+      // dashoffset should be approx 289.03 * (1 - 0.4) = 173.42
+      expect(Number(progressCircle.attributes('stroke-dashoffset'))).toBeCloseTo(173.4, 1)
 
       // Low stamina (10%): changes to red and triggers pulse alert
       await wrapper.setProps({ staminaPercentage: 10 })
       expect(progressCircle.classes()).toContain('stroke-rose-500')
       expect(progressCircle.classes()).toContain('animate-pulse')
-      // dashoffset should be approx 251.33 * (1 - 0.1) = 226.2
-      expect(Number(progressCircle.attributes('stroke-dashoffset'))).toBeCloseTo(226.2, 1)
+      // dashoffset should be approx 289.03 * (1 - 0.1) = 260.13
+      expect(Number(progressCircle.attributes('stroke-dashoffset'))).toBeCloseTo(260.1, 1)
     })
 
     it('dispatches virtual-jump events on jump button touch interaction', async () => {

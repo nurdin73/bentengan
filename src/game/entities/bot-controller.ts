@@ -5,6 +5,28 @@ import type { GameplayEntity, PlayerStatus, TeamId } from '../../types/game.type
 import { GameplayRules } from '../systems/gameplay-rules'
 import { GAME_CONFIG } from '../core/constants'
 
+function drawRoundedRect(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  r: number,
+): void {
+  const radius = Math.min(r, w / 2, h / 2)
+  ctx.beginPath()
+  ctx.moveTo(x + radius, y)
+  ctx.lineTo(x + w - radius, y)
+  ctx.quadraticCurveTo(x + w, y, x + w, y + radius)
+  ctx.lineTo(x + w, y + h - radius)
+  ctx.quadraticCurveTo(x + w, y + h, x + w - radius, y + h)
+  ctx.lineTo(x + radius, y + h)
+  ctx.quadraticCurveTo(x, y + h, x, y + h - radius)
+  ctx.lineTo(x, y + radius)
+  ctx.quadraticCurveTo(x, y, x + radius, y)
+  ctx.closePath()
+}
+
 export type BotRole = 'attacker' | 'defender' | 'hybrid'
 
 export interface BotControllerOptions {
@@ -41,14 +63,26 @@ export class BotController implements GameplayEntity {
 
   // Gameplay state
   public status: PlayerStatus = 'normal'
+  public stamina: number = GAME_CONFIG.stamina.max
+  public isSprinting = false
   public immunityUntil = 0
   public stunUntil = 0
   public rescueCooldownUntil = 0
+  public confoundedUntil = 0
 
   // Visual interpolation transforms
   public readonly previousPosition = new THREE.Vector3()
   public readonly currentPosition = new THREE.Vector3()
   private targetRotationY = 0
+
+  // Overhead 3D Bot Name & Stamina Bar Sprite
+  private readonly overheadCanvas: HTMLCanvasElement | null = null
+  private readonly overheadCtx: CanvasRenderingContext2D | null = null
+  private readonly overheadTexture: THREE.CanvasTexture | null = null
+  public readonly overheadSprite: THREE.Sprite
+  private lastRenderedStamina = -1
+  private lastRenderedStatus: PlayerStatus = 'normal'
+  private lastRenderedSprinting = false
 
   // Patrol / AI state
   private patrolCenter: THREE.Vector3
@@ -174,6 +208,24 @@ export class BotController implements GameplayEntity {
     }
     this.mesh.add(this.stunStarsGroup)
 
+    // Overhead 3D Bot Nameplate & Dynamic Stamina Bar
+    this.overheadCanvas = document.createElement('canvas')
+    this.overheadCanvas.width = 256
+    this.overheadCanvas.height = 60
+    this.overheadCtx = this.overheadCanvas.getContext('2d')
+
+    this.overheadTexture = new THREE.CanvasTexture(this.overheadCanvas)
+    const spriteMat = new THREE.SpriteMaterial({
+      map: this.overheadTexture,
+      transparent: true,
+      depthTest: false,
+    })
+    this.overheadSprite = new THREE.Sprite(spriteMat)
+    this.overheadSprite.scale.set(1.7, 0.42, 1.0)
+    this.overheadSprite.position.set(0, characterHeight * 0.5 + 0.35, 0)
+    this.mesh.add(this.overheadSprite)
+    this.updateOverheadDisplay()
+
     scene.add(this.mesh)
 
     // 2. Rapier 3D dynamic body with CCD and zero friction
@@ -289,13 +341,23 @@ export class BotController implements GameplayEntity {
       }
     }
 
+    const isConfounded = now < this.confoundedUntil
     const isSelfTrespassing = GameplayRules.isInEnemyTerritory(this)
     const homeDirZ = this.teamId === 'blue' ? -1.0 : 1.0
     const enemyDirZ = -homeDirZ
     const isImmune = now < this.immunityUntil
     let speed = GAME_CONFIG.movement.walkSpeed * 0.75
 
-    if (isSelfTrespassing) {
+    if (isConfounded) {
+      // Disoriented by smoke: wanders randomly at half walk speed, cannot acquire targets
+      this.patrolTimer -= dt
+      if (this.patrolTimer <= 0) {
+        this.patrolTimer = 0.8 + Math.random() * 0.8
+        const angle = Math.random() * Math.PI * 2
+        this.patrolDirection.set(Math.sin(angle), 0, Math.cos(angle)).normalize()
+      }
+      speed = GAME_CONFIG.movement.walkSpeed * 0.5
+    } else if (isSelfTrespassing) {
       // 1. IN ENEMY TERRITORY:
       // While immune after rescue: must NOT rush enemy base, but retreat towards home territory
       if (isImmune) {
@@ -593,7 +655,7 @@ export class BotController implements GameplayEntity {
           // Pursuit: Chase intruder trespassing in our home territory!
           const tPos = targetEntity.getPosition()
           this.patrolDirection.set(tPos.x - myPos.x, 0, tPos.z - myPos.z).normalize()
-          speed = GAME_CONFIG.movement.sprintSpeed * 1.0
+          speed = GAME_CONFIG.movement.sprintSpeed * 0.88
         } else {
           // Normal Patrol logic
           this.patrolTimer -= dt
@@ -693,6 +755,29 @@ export class BotController implements GameplayEntity {
       }
     }
 
+    // Stamina & Sprint Simulation (Equal Status with Player)
+    const wantsSprint = speed > GAME_CONFIG.movement.walkSpeed * 1.05 && this.status === 'normal'
+    if (wantsSprint && this.stamina > 0) {
+      this.isSprinting = true
+      this.stamina = Math.max(0, this.stamina - GAME_CONFIG.stamina.sprintDrainPerSecond * dt)
+      if (this.stamina === 0) {
+        this.status = 'stunned'
+        this.stunUntil = now + GAME_CONFIG.gameplay.stunDurationMs
+        this.isSprinting = false
+        speed = 0
+      }
+    } else {
+      this.isSprinting = false
+      if (wantsSprint && this.stamina <= 0) {
+        // Out of stamina: cannot sprint, fallback to walk speed
+        speed = Math.min(speed, GAME_CONFIG.movement.walkSpeed)
+      }
+      this.stamina = Math.min(
+        GAME_CONFIG.stamina.max,
+        this.stamina + GAME_CONFIG.stamina.regenerationPerSecond * dt,
+      )
+    }
+
     let velX = this.patrolDirection.x * speed
     let velZ = this.patrolDirection.z * speed
 
@@ -779,6 +864,97 @@ export class BotController implements GameplayEntity {
     if (isStunned) {
       this.stunStarsGroup.rotation.y += 0.08
     }
+
+    // Overhead 3D nameplate & stamina bar update
+    this.updateOverheadDisplay()
+  }
+
+  public updateOverheadDisplay(): void {
+    if (!this.overheadCtx) return
+
+    const staminaInt = Math.round(this.stamina)
+    if (
+      staminaInt === this.lastRenderedStamina &&
+      this.status === this.lastRenderedStatus &&
+      this.isSprinting === this.lastRenderedSprinting
+    ) {
+      return
+    }
+
+    this.lastRenderedStamina = staminaInt
+    this.lastRenderedStatus = this.status
+    this.lastRenderedSprinting = this.isSprinting
+
+    const ctx = this.overheadCtx
+    ctx.clearRect(0, 0, 256, 60)
+
+    // 1. Top Row: Nameplate with High-Contrast Drop Outline
+    const truncated = this.name.length > 14 ? this.name.substring(0, 13) + '…' : this.name
+    ctx.font = 'bold 20px system-ui, -apple-system, sans-serif'
+    ctx.textAlign = 'center'
+    ctx.textBaseline = 'middle'
+
+    ctx.strokeStyle = 'rgba(2, 6, 23, 0.95)'
+    ctx.lineWidth = 3.5
+    ctx.lineJoin = 'round'
+    ctx.strokeText(truncated, 128, 20)
+
+    ctx.fillStyle = this.teamId === 'blue' ? '#93c5fd' : '#fca5a5'
+    ctx.fillText(truncated, 128, 20)
+
+    // 2. Bottom Row: Sleek Minimal Stamina Strip
+    const barW = 130
+    const barH = 6
+    const barX = (256 - barW) / 2
+    const barY = 36
+    const barR = 3
+
+    // Background Track
+    ctx.fillStyle = 'rgba(2, 6, 23, 0.85)'
+    ctx.strokeStyle = 'rgba(51, 65, 85, 0.8)'
+    ctx.lineWidth = 1.5
+    drawRoundedRect(ctx, barX, barY, barW, barH, barR)
+    ctx.fill()
+    ctx.stroke()
+
+    // Dynamic Fill
+    const ratio = Math.max(0, Math.min(1, this.stamina / GAME_CONFIG.stamina.max))
+    const fillW = Math.max(0, (barW - 2) * ratio)
+
+    if (fillW > 0) {
+      if (this.status === 'stunned') {
+        ctx.fillStyle = '#ef4444'
+      } else if (ratio > 0.5) {
+        ctx.fillStyle = '#10b981'
+      } else if (ratio > 0.25) {
+        ctx.fillStyle = '#f59e0b'
+      } else {
+        ctx.fillStyle = '#f43f5e'
+      }
+
+      drawRoundedRect(ctx, barX + 1, barY + 1, fillW, barH - 2, Math.max(1, barR - 1))
+      ctx.fill()
+    }
+
+    if (this.overheadTexture) {
+      this.overheadTexture.needsUpdate = true
+    }
+  }
+
+  public setVisualOpacity(opacity: number): void {
+    const isTransparent = opacity < 0.99
+    this.bodyMat.transparent = isTransparent
+    this.bodyMat.opacity = opacity
+    this.visorMat.transparent = isTransparent
+    this.visorMat.opacity = opacity
+    if (this.overheadSprite && this.overheadSprite.material) {
+      this.overheadSprite.material.opacity = opacity
+    }
+  }
+
+  public applySmokeConfound(durationMs: number): void {
+    const now = performance.now()
+    this.confoundedUntil = Math.max(this.confoundedUntil, now + durationMs)
   }
 
   public getPosition(): { x: number; y: number; z: number } {
@@ -795,6 +971,12 @@ export class BotController implements GameplayEntity {
     this.immunityAuraMesh.geometry.dispose()
     this.stunStarGeo.dispose()
     this.stunStarMat.dispose()
+    if (this.overheadTexture) {
+      this.overheadTexture.dispose()
+    }
+    if (this.overheadSprite && this.overheadSprite.material) {
+      this.overheadSprite.material.dispose()
+    }
     this.physics.world.removeCollider(this.collider, false)
     this.physics.world.removeRigidBody(this.body)
   }

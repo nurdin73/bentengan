@@ -52,6 +52,11 @@ export class PlayerController implements GameplayEntity {
   public stunUntil = 0
   public rescueCooldownUntil = 0
 
+  // Skill effects state
+  public dashUntil = 0
+  public dashSpeedMultiplier = 2.2
+  public adrenalineUntil = 0
+
   // Single jump state tracking
   private wasJumpPressed = false
 
@@ -234,6 +239,9 @@ export class PlayerController implements GameplayEntity {
       return
     }
 
+    const isDashActive = now < this.dashUntil
+    const isAdrenalineActive = now < this.adrenalineUntil
+
     // 2. Evaluate Movement Vector from Input
     let moveX = 0
     let moveZ = 0
@@ -243,13 +251,23 @@ export class PlayerController implements GameplayEntity {
     if (input.left) moveX -= 1
     if (input.right) moveX += 1
 
+    // If dash is active without directional keys, auto-dash forward along camera yaw
+    if (isDashActive && moveX === 0 && moveZ === 0) {
+      moveZ = -1
+    }
+
     const isMoving = moveX !== 0 || moveZ !== 0
 
     // 3. Sprint & Stamina Mechanics
-    const wantsSprint = input.sprint && isMoving && this.stamina > 0
+    const wantsSprint = (input.sprint || isDashActive) && isMoving && (this.stamina > 0 || isAdrenalineActive)
     this.isSprinting = wantsSprint
 
-    if (this.isSprinting) {
+    if (isAdrenalineActive) {
+      // Adrenaline surge: maximum stamina, zero sprint consumption
+      this.stamina = GAME_CONFIG.stamina.max
+    } else if (isDashActive) {
+      // Dash burst does not consume stamina
+    } else if (this.isSprinting) {
       this.stamina = Math.max(0, this.stamina - GAME_CONFIG.stamina.sprintDrainPerSecond * dt)
       if (this.stamina === 0) {
         this.status = 'stunned'
@@ -264,9 +282,13 @@ export class PlayerController implements GameplayEntity {
     }
 
     // 4. Calculate Velocity relative to Camera Yaw
-    const currentSpeed = this.isSprinting
+    let currentSpeed = this.isSprinting
       ? GAME_CONFIG.movement.sprintSpeed
       : GAME_CONFIG.movement.walkSpeed
+
+    if (isDashActive) {
+      currentSpeed = GAME_CONFIG.movement.walkSpeed * this.dashSpeedMultiplier
+    }
 
     if (isMoving) {
       this.scratchMove.set(moveX, 0, moveZ).normalize()
@@ -470,6 +492,19 @@ export class PlayerController implements GameplayEntity {
     if (this.overheadSprite.material) {
       this.overheadSprite.material.opacity = opacity
     }
+  }
+
+  public applyDash(durationMs: number, speedMultiplier: number): void {
+    const now = performance.now()
+    this.dashUntil = now + durationMs
+    this.dashSpeedMultiplier = speedMultiplier
+  }
+
+  public applyAdrenaline(durationMs: number, immunityDurationMs: number): void {
+    const now = performance.now()
+    this.stamina = GAME_CONFIG.stamina.max
+    this.adrenalineUntil = now + durationMs
+    this.immunityUntil = Math.max(this.immunityUntil, now + immunityDurationMs)
   }
 
   public getPosition(): THREE.Vector3 {
