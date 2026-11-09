@@ -15,6 +15,7 @@ import MobileTouchControls from './MobileTouchControls.vue'
 import RotateDevicePrompt from './RotateDevicePrompt.vue'
 import SkillActionBar from './SkillActionBar.vue'
 import GameControlsModal from '../guide/GameControlsModal.vue'
+import DevDebugPanel from '../dev/DevDebugPanel.vue'
 import { checkIsMobileTouchDevice } from './mobile-device.utils'
 import type { VirtualMovementInput } from '../../game/input/input-manager'
 import type { SkillId } from '../../game/skills/skill-types'
@@ -124,7 +125,7 @@ defineEmits<{
           data-testid="hud-toggle-mobile-controls-btn"
           type="button"
           :class="[
-            'flex items-center justify-center gap-1.5 w-[76px] py-1 rounded-full border backdrop-blur-md shadow-md text-xs font-heading font-bold select-none cursor-pointer transition-all active:scale-95',
+            'flex items-center justify-center gap-1.5 h-8 px-2.5 rounded-full border backdrop-blur-md shadow-md text-xs font-heading font-bold select-none cursor-pointer transition-all active:scale-95',
             forceShowMobileHUD
               ? 'bg-amber-500/25 border-amber-400/80 text-amber-300 ring-2 ring-amber-400/30'
               : 'bg-neutral-900/80 border-neutral-700/80 text-neutral-400 hover:text-neutral-200 hover:bg-neutral-800/90',
@@ -135,6 +136,12 @@ defineEmits<{
           <Smartphone class="w-3.5 h-3.5 shrink-0" />
           <span class="text-[11px] uppercase tracking-wider">HUD HP</span>
         </button>
+
+        <!-- Developer Mode Toggle Button (Aligned side-by-side with Help and HUD HP) -->
+        <DevDebugPanel />
+      </div>
+      <div v-else class="pointer-events-auto">
+        <DevDebugPanel />
       </div>
     </div>
 

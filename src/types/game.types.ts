@@ -20,6 +20,8 @@ export interface GameplayEntity {
   status: PlayerStatus
   immunityUntil: number
   rescueCooldownUntil?: number
+  isGodMode?: boolean
+  isFrozen?: boolean
   getPosition(): { x: number; y: number; z: number }
   teleportTo(x: number, y: number, z: number): void
 }

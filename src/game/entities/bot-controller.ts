@@ -71,6 +71,7 @@ export class BotController implements GameplayEntity {
   public stunUntil = 0
   public rescueCooldownUntil = 0
   public confoundedUntil = 0
+  public isFrozen = false
 
   // Visual interpolation transforms
   public readonly previousPosition = new THREE.Vector3()
@@ -255,6 +256,12 @@ export class BotController implements GameplayEntity {
   }
 
   public updateFixed(dt: number, now: number, potentialTargets: GameplayEntity[] = []): void {
+    if (this.isFrozen) {
+      const vel = this.body.linvel()
+      this.body.setLinvel({ x: 0, y: vel.y, z: 0 }, true)
+      return
+    }
+
     if (this.status === 'stunned') {
       this.stamina = Math.min(
         GAME_CONFIG.stamina.max,

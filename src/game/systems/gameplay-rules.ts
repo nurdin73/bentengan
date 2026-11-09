@@ -46,7 +46,8 @@ export class GameplayRules {
     // 3. Target cannot be already jailed
     if (target.status === 'jailed') return false
 
-    // 4. Target cannot have active immunity
+    // 4. Target cannot have active immunity or god mode
+    if (target.isGodMode) return false
     if (now < target.immunityUntil) return false
 
     // 5. Traditional Bentengan Territory Rule: Target can ONLY be captured when inside enemy territory

@@ -60,6 +60,10 @@ export class PlayerController implements GameplayEntity {
   public dashSpeedMultiplier = 2.2
   public adrenalineUntil = 0
 
+  // Dev & God Mode state
+  public isGodMode = false
+  public speedMultiplier = 1.0
+
   // Single jump state tracking
   private wasJumpPressed = false
 
@@ -260,11 +264,15 @@ export class PlayerController implements GameplayEntity {
     const isMoving = moveX !== 0 || moveZ !== 0
 
     // 3. Sprint & Stamina Mechanics
-    const canSprint = (this.stamina > 0 && !this.isExhausted) || isAdrenalineActive
+    const canSprint = (this.stamina > 0 && !this.isExhausted) || isAdrenalineActive || this.isGodMode
     const wantsSprint = (input.sprint || isDashActive) && isMoving && canSprint
     this.isSprinting = wantsSprint
 
-    if (isAdrenalineActive) {
+    if (this.isGodMode) {
+      // God mode: infinite stamina, zero sprint consumption, no exhaustion
+      this.stamina = GAME_CONFIG.stamina.max
+      this.isExhausted = false
+    } else if (isAdrenalineActive) {
       // Adrenaline surge: maximum stamina, zero sprint consumption
       this.stamina = GAME_CONFIG.stamina.max
       this.isExhausted = false
@@ -295,6 +303,10 @@ export class PlayerController implements GameplayEntity {
 
     if (isDashActive) {
       currentSpeed = GAME_CONFIG.movement.walkSpeed * this.dashSpeedMultiplier
+    }
+
+    if (this.speedMultiplier > 0 && this.speedMultiplier !== 1.0) {
+      currentSpeed *= this.speedMultiplier
     }
 
     if (isMoving) {

@@ -2,7 +2,6 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import {
-  Castle,
   ScrollText,
   Gamepad2,
   Play,

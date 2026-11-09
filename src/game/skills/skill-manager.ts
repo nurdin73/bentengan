@@ -136,7 +136,7 @@ export class SkillManager {
     return { success: true }
   }
 
-  public resetAllCooldowns(): void {
+  public resetAllCooldowns(now: number = performance.now()): void {
     this.cooldowns.dash = 0
     this.cooldowns.smoke = 0
     this.cooldowns.adrenaline = 0
@@ -144,6 +144,7 @@ export class SkillManager {
     this.activeUntil.smoke = 0
     this.activeUntil.adrenaline = 0
     this.clearAllSmokeVisuals()
+    this.callbacks.onSkillStateChange?.(this.getAllSkillsState(now))
   }
 
   private spawnSmokeVisual(x: number, y: number, z: number, durationMs: number): void {

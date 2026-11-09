@@ -10,6 +10,7 @@ import { GameplayRules } from '../systems/gameplay-rules'
 import { GAME_CONFIG } from './constants'
 import { peerNetworkManager } from '../network/peer-network-manager'
 import { SkillManager } from '../skills/skill-manager'
+import { useDevStore, type TeleportTarget } from '../../stores/dev-store'
 import type {
   SkillId,
   SkillsStateMap,
@@ -363,6 +364,8 @@ export class GameEngine {
 
     // Fixed timestep physics update (60 Hz)
     while (this.accumulator >= this.fixedDt) {
+      this.applyDevModifiers(now)
+
       const allEntities: GameplayEntity[] = [
         ...(this.localPlayer ? [this.localPlayer] : []),
         ...this.remotePlayers.values(),
@@ -665,6 +668,84 @@ export class GameEngine {
     if (remote) {
       remote.dispose(this.scene)
       this.remotePlayers.delete(playerId)
+    }
+  }
+
+  private getDevStore(): ReturnType<typeof useDevStore> | null {
+    try {
+      return useDevStore()
+    } catch {
+      return null
+    }
+  }
+
+  public teleportPlayerTo(target: TeleportTarget): void {
+    if (!this.localPlayer || !this.arena) return
+    const enemyTeam: TeamId = this.playerTeam === 'blue' ? 'red' : 'blue'
+    let dest = { x: 0, y: 1, z: 0 }
+    if (target === 'enemy_base') {
+      const basePos =
+        enemyTeam === 'blue'
+          ? this.arena.zones.blueBasePosition
+          : this.arena.zones.redBasePosition
+      dest = { x: basePos.x, y: 1, z: basePos.z }
+    } else if (target === 'own_base') {
+      const basePos =
+        this.playerTeam === 'blue'
+          ? this.arena.zones.blueBasePosition
+          : this.arena.zones.redBasePosition
+      dest = { x: basePos.x, y: 1, z: basePos.z }
+    } else if (target === 'enemy_jail') {
+      const jailPos =
+        enemyTeam === 'blue'
+          ? this.arena.zones.blueJailPosition
+          : this.arena.zones.redJailPosition
+      dest = { x: jailPos.x, y: 1, z: jailPos.z }
+    } else if (target === 'own_jail') {
+      const jailPos =
+        this.playerTeam === 'blue'
+          ? this.arena.zones.blueJailPosition
+          : this.arena.zones.redJailPosition
+      dest = { x: jailPos.x, y: 1, z: jailPos.z }
+    }
+    this.localPlayer.teleportTo(dest.x, dest.y, dest.z)
+  }
+
+  private applyDevModifiers(now: number): void {
+    const dev = this.getDevStore()
+    if (!dev || !dev.isUnlocked) return
+
+    // 1. Bot freezing
+    const freezeEnemy = dev.freezeEnemyBots
+    const freezeAll = dev.freezeAllBots
+    for (const bot of this.bots) {
+      bot.isFrozen = freezeAll || (freezeEnemy && bot.teamId !== this.playerTeam)
+    }
+
+    // 2. God mode & Speed
+    if (this.localPlayer) {
+      this.localPlayer.isGodMode = dev.godMode
+      this.localPlayer.speedMultiplier = dev.speedMultiplier
+      if (dev.infiniteStamina) {
+        this.localPlayer.stamina = GAME_CONFIG.stamina.max
+        this.localPlayer.isExhausted = false
+      }
+    }
+
+    // 3. Zero Cooldowns
+    if (dev.zeroCooldowns && this.skillManager) {
+      this.skillManager.resetAllCooldowns(now)
+    }
+
+    // 4. Pending Teleport
+    const teleportTarget = dev.consumeTeleportRequest()
+    if (teleportTarget) {
+      this.teleportPlayerTo(teleportTarget)
+    }
+
+    // 5. Pending Instant Win
+    if (dev.consumeInstantWinRequest() && !this.isMatchFinished) {
+      this.endMatch(this.playerTeam, 'base_capture')
     }
   }
 
