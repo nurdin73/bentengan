@@ -43,6 +43,7 @@ export class BotController implements GameplayEntity {
   public status: PlayerStatus = 'normal'
   public immunityUntil = 0
   public stunUntil = 0
+  public rescueCooldownUntil = 0
 
   // Visual interpolation transforms
   public readonly previousPosition = new THREE.Vector3()
@@ -247,8 +248,9 @@ export class BotController implements GameplayEntity {
         )
       })
 
-      if (hasJailedTeammate && isEnemyBaseGuarded && this.allyJailPosition) {
-        // Base is guarded and a teammate is in jail: prioritize rescue mission!
+      const canRescue = !this.rescueCooldownUntil || now >= this.rescueCooldownUntil
+      if (hasJailedTeammate && isEnemyBaseGuarded && this.allyJailPosition && canRescue) {
+        // Base is guarded and a teammate is in jail (and bot is not on rescue cooldown): prioritize rescue mission!
         if (!this.targetObjective) {
           this.targetObjective = new THREE.Vector3()
         }

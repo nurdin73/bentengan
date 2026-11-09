@@ -60,6 +60,7 @@ export class GameplayRules {
   public static canRescue(
     rescuer: GameplayEntity,
     target: GameplayEntity,
+    now?: number,
     radius = GAME_CONFIG.gameplay.rescueRadius,
   ): boolean {
     // 1. Rescuer and target must be on the same team
@@ -68,10 +69,15 @@ export class GameplayRules {
     // 2. Rescuer must be active (not jailed, not stunned)
     if (rescuer.status === 'jailed' || rescuer.status === 'stunned') return false
 
-    // 3. Target must currently be in jail
+    // 3. Rescuer cannot be on rescue cooldown
+    if (now !== undefined && rescuer.rescueCooldownUntil && now < rescuer.rescueCooldownUntil) {
+      return false
+    }
+
+    // 4. Target must currently be in jail
     if (target.status !== 'jailed') return false
 
-    // 4. Distance check
+    // 5. Distance check
     const dist = GameplayRules.distance3D(rescuer.getPosition(), target.getPosition())
     return dist <= radius
   }

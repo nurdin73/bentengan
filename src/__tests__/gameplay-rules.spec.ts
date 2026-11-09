@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { GameplayRules } from '../game/systems/gameplay-rules'
+import { GAME_CONFIG } from '../game/core/constants'
 import type { GameplayEntity } from '../types/game.types'
 
 const createMockEntity = (overrides: Partial<GameplayEntity> = {}): GameplayEntity => ({
@@ -190,6 +191,32 @@ describe('GameplayRules — Milestone 2 Core Mechanics', () => {
       })
 
       expect(GameplayRules.canRescue(stunnedRescuer, jailedAlly)).toBe(false)
+    })
+
+    it('should enforce rescue cooldown so a player can only rescue 1x in 30 seconds', () => {
+      const rescuer = createMockEntity({
+        teamId: 'blue',
+        getPosition: () => ({ x: 10, y: 0, z: 20 }),
+      })
+      const jailedAlly = createMockEntity({
+        teamId: 'blue',
+        status: 'jailed',
+        getPosition: () => ({ x: 10.5, y: 0, z: 20 }),
+      })
+
+      const now = 100000
+      // 1. Initial rescue allowed
+      expect(GameplayRules.canRescue(rescuer, jailedAlly, now)).toBe(true)
+
+      // 2. Set cooldown for 30 seconds (30000ms)
+      rescuer.rescueCooldownUntil = now + GAME_CONFIG.gameplay.rescueCooldownMs
+
+      // 3. During cooldown (e.g. after 15s), rescue is blocked
+      expect(GameplayRules.canRescue(rescuer, jailedAlly, now + 15000)).toBe(false)
+
+      // 4. Exactly at or after cooldown expires (30s), rescue is permitted again
+      expect(GameplayRules.canRescue(rescuer, jailedAlly, now + 30000)).toBe(true)
+      expect(GameplayRules.canRescue(rescuer, jailedAlly, now + 35000)).toBe(true)
     })
   })
 

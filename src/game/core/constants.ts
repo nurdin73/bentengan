@@ -23,6 +23,7 @@ export const GAME_CONFIG = {
   gameplay: {
     captureRadius: 1.5,
     rescueRadius: 1.5,
+    rescueCooldownMs: 30000,
     immunityDurationMs: 2000,
     stunDurationMs: 2000,
     baseCaptureRadius: 2.6,

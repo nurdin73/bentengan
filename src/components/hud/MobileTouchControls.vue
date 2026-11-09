@@ -11,11 +11,15 @@ import {
 export interface MobileTouchControlsProps {
   forceShow?: boolean
   canRescue?: boolean
+  staminaPercentage?: number
+  rescueCooldownSeconds?: number
 }
 
 const props = withDefaults(defineProps<MobileTouchControlsProps>(), {
   forceShow: false,
   canRescue: false,
+  staminaPercentage: 100,
+  rescueCooldownSeconds: 0,
 })
 
 const emit = defineEmits<{
@@ -117,9 +121,23 @@ function updateJoystickFromTouch(clientX: number, clientY: number): void {
   })
 }
 
-// 2. Sprint Button State
+// 2. Sprint Button State & Circular Stamina Bar Computations
 const isSprintActive = ref(false)
 let sprintTouchId: number | null = null
+
+const circumference = 251.33 // 2 * Math.PI * 40
+const strokeDashoffset = computed(() => {
+  const clamped = Math.max(0, Math.min(100, props.staminaPercentage))
+  return circumference * (1 - clamped / 100)
+})
+
+const staminaRingColor = computed(() => {
+  if (props.staminaPercentage > 50) return 'stroke-amber-400'
+  if (props.staminaPercentage > 25) return 'stroke-orange-500'
+  return 'stroke-rose-500'
+})
+
+const isLowStamina = computed(() => props.staminaPercentage < 25)
 
 const handleSprintStart = (e: TouchEvent) => {
   e.preventDefault()
@@ -183,6 +201,7 @@ const isRescueActive = ref(false)
 const handleRescueTouchStart = (e: TouchEvent) => {
   e.preventDefault()
   triggerAutoFullscreen()
+  if (props.rescueCooldownSeconds > 0) return
   isRescueActive.value = true
   emit('virtual-interact')
 }
@@ -192,6 +211,7 @@ const handleRescueTouchEnd = () => {
 }
 
 const handleRescueClick = () => {
+  if (props.rescueCooldownSeconds > 0) return
   emit('virtual-interact')
 }
 
@@ -325,21 +345,37 @@ onUnmounted(() => {
         <button
           data-testid="hud-touch-rescue-btn"
           type="button"
+          :disabled="props.rescueCooldownSeconds > 0"
           :class="[
-            'flex h-15 w-15 aspect-square cursor-pointer flex-col items-center justify-center rounded-full border transition-all duration-75 select-none backdrop-blur-md active:scale-90',
-            isRescueActive
-              ? 'border-emerald-300 bg-emerald-500/40 text-emerald-200 ring-4 ring-emerald-300/70 scale-90'
-              : props.canRescue
-                ? 'border-emerald-300 bg-emerald-500 text-white shadow-2xl animate-pulse ring-4 ring-emerald-400/60'
-                : 'border-white/20 bg-neutral-950/75 text-neutral-300 hover:text-white shadow-xl',
+            'flex h-15 w-15 aspect-square flex-col items-center justify-center rounded-full border transition-all duration-75 select-none backdrop-blur-md active:scale-90',
+            props.rescueCooldownSeconds > 0
+              ? 'border-amber-500/40 bg-neutral-950/85 text-amber-300 opacity-80 cursor-not-allowed'
+              : isRescueActive
+                ? 'cursor-pointer border-emerald-300 bg-emerald-500/40 text-emerald-200 ring-4 ring-emerald-300/70 scale-90'
+                : props.canRescue
+                  ? 'cursor-pointer border-emerald-300 bg-emerald-500 text-white shadow-2xl animate-pulse ring-4 ring-emerald-400/60'
+                  : 'cursor-pointer border-white/20 bg-neutral-950/75 text-neutral-300 hover:text-white shadow-xl',
           ]"
           @touchstart="handleRescueTouchStart"
           @touchend="handleRescueTouchEnd"
           @touchcancel="handleRescueTouchEnd"
           @click="handleRescueClick"
         >
-          <HeartHandshake class="h-6 w-6 stroke-[2.2] drop-shadow-sm" />
-          <span class="font-heading text-[8px] font-black tracking-wider uppercase mt-0.5">BEBASKAN</span>
+          <template v-if="props.rescueCooldownSeconds > 0">
+            <span
+              data-testid="hud-rescue-cooldown-badge"
+              class="font-mono text-base font-black text-amber-300 drop-shadow-md leading-none"
+            >
+              {{ props.rescueCooldownSeconds }}
+            </span>
+            <span class="font-heading text-[7px] font-black tracking-widest text-neutral-400 uppercase mt-0.5">
+              COOLDOWN
+            </span>
+          </template>
+          <template v-else>
+            <HeartHandshake class="h-6 w-6 stroke-[2.2] drop-shadow-sm" />
+            <span class="font-heading text-[8px] font-black tracking-wider uppercase mt-0.5">BEBASKAN</span>
+          </template>
         </button>
       </div>
 
@@ -366,18 +402,54 @@ onUnmounted(() => {
         </button>
       </div>
 
-      <!-- Center Anchor (Large Main Action Button): Sprint Button -->
+      <!-- Center Anchor (Large Main Action Button): Sprint Button with Circular Stamina Bar -->
       <div
         class="pointer-events-auto absolute flex items-center justify-center touch-none"
         style="left: 130px; top: 130px;"
       >
-        <!-- Outer Decorative Dial Ring -->
-        <div class="relative flex items-center justify-center p-1 rounded-full border border-white/10 bg-black/40 backdrop-blur-md">
+        <div class="relative flex h-22 w-22 items-center justify-center select-none">
+          <!-- Circular Stamina SVG Gauge (Halo Ring around Sprint Button) -->
+          <svg
+            data-testid="hud-sprint-circular-bar"
+            class="pointer-events-none absolute inset-0 -rotate-90 transform drop-shadow-[0_0_8px_rgba(0,0,0,0.8)]"
+            viewBox="0 0 88 88"
+            width="88"
+            height="88"
+          >
+            <!-- Background Track -->
+            <circle
+              cx="44"
+              cy="44"
+              r="40"
+              class="stroke-neutral-800/80"
+              stroke-width="3.5"
+              fill="rgba(10, 10, 10, 0.4)"
+            />
+            <!-- Dynamic Progress Meter -->
+            <circle
+              data-testid="hud-sprint-circular-progress"
+              cx="44"
+              cy="44"
+              r="40"
+              stroke-linecap="round"
+              stroke-width="3.5"
+              fill="transparent"
+              :class="[
+                'transition-[stroke-dashoffset,stroke] duration-100 ease-out',
+                staminaRingColor,
+                isLowStamina ? 'animate-pulse' : '',
+              ]"
+              :stroke-dasharray="circumference"
+              :stroke-dashoffset="strokeDashoffset"
+            />
+          </svg>
+
+          <!-- Core Sprint Button -->
           <button
             data-testid="hud-touch-sprint-btn"
             type="button"
             :class="[
-              'flex h-18 w-18 aspect-square cursor-pointer flex-col items-center justify-center rounded-full border-2 transition-all duration-75 select-none backdrop-blur-md active:scale-90',
+              'z-10 flex h-18 w-18 aspect-square cursor-pointer flex-col items-center justify-center rounded-full border-2 transition-all duration-75 select-none backdrop-blur-md active:scale-90',
               isSprintActive
                 ? 'border-amber-400 bg-amber-500/40 text-amber-300 ring-4 ring-amber-300/70 scale-90'
                 : 'border-white/25 bg-neutral-950/75 text-neutral-200 hover:text-white shadow-2xl',

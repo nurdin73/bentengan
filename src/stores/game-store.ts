@@ -11,6 +11,7 @@ export const useGameStore = defineStore('game', {
     status: 'normal' as PlayerStatus,
     stunUntil: 0,
     immunityUntil: 0,
+    rescueCooldownUntil: 0,
     isPointerLocked: false,
     isPaused: false,
     gameTimeSeconds: 0,
@@ -39,6 +40,11 @@ export const useGameStore = defineStore('game', {
       const remainingMs = Math.max(0, state.immunityUntil - performance.now())
       return (remainingMs / 1000).toFixed(1)
     },
+    isRescueOnCooldown: (state) => performance.now() < state.rescueCooldownUntil,
+    rescueCooldownRemainingSeconds: (state) => {
+      const remainingMs = Math.max(0, state.rescueCooldownUntil - performance.now())
+      return Math.ceil(remainingMs / 1000)
+    },
   },
 
   actions: {
@@ -48,12 +54,16 @@ export const useGameStore = defineStore('game', {
       status: PlayerStatus
       stunUntil: number
       immunityUntil: number
+      rescueCooldownUntil?: number
     }) {
       this.stamina = payload.stamina
       this.isSprinting = payload.isSprinting
       this.status = payload.status
       this.stunUntil = payload.stunUntil
       this.immunityUntil = payload.immunityUntil
+      if (payload.rescueCooldownUntil !== undefined) {
+        this.rescueCooldownUntil = payload.rescueCooldownUntil
+      }
     },
 
     updateRosterCounts(payload: {
@@ -78,6 +88,7 @@ export const useGameStore = defineStore('game', {
 
     recordRescue() {
       this.rescuesCount++
+      this.rescueCooldownUntil = performance.now() + GAME_CONFIG.gameplay.rescueCooldownMs
     },
 
     recordTimesCaptured() {
@@ -99,6 +110,7 @@ export const useGameStore = defineStore('game', {
       this.status = 'normal'
       this.stunUntil = 0
       this.immunityUntil = 0
+      this.rescueCooldownUntil = 0
       this.isInEnemyTerritory = false
       this.blueJailedCount = 0
       this.redJailedCount = 0

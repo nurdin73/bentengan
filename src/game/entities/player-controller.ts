@@ -50,6 +50,7 @@ export class PlayerController implements GameplayEntity {
   public isGrounded = false
   public immunityUntil = 0
   public stunUntil = 0
+  public rescueCooldownUntil = 0
 
   // Single jump state tracking
   private wasJumpPressed = false

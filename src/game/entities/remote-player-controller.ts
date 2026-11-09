@@ -25,6 +25,7 @@ export class RemotePlayerController implements GameplayEntity {
   public status: PlayerStatus = 'normal'
   public immunityUntil = 0
   public stunUntil = 0
+  public rescueCooldownUntil = 0
   public isSprinting = false
 
   // Smooth network interpolation target transforms

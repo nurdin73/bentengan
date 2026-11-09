@@ -15,6 +15,7 @@ describe('Game Configuration & Baseline Rules', () => {
     expect(GAME_CONFIG.stamina.regenerationPerSecond).toBe(18)
     expect(GAME_CONFIG.gameplay.stunDurationMs).toBe(2000)
     expect(GAME_CONFIG.gameplay.immunityDurationMs).toBe(2000)
+    expect(GAME_CONFIG.gameplay.rescueCooldownMs).toBe(30000)
   })
 
   it('should configure 60Hz fixed simulation timestep', () => {

@@ -41,6 +41,7 @@ export interface GameEngineStateCallback {
     status: PlayerStatus
     stunUntil: number
     immunityUntil: number
+    rescueCooldownUntil: number
   }) => void
   onRosterUpdate: (roster: {
     blueJailed: number
@@ -419,6 +420,7 @@ export class GameEngine {
         status: this.localPlayer.status,
         stunUntil: this.localPlayer.stunUntil,
         immunityUntil: this.localPlayer.immunityUntil,
+        rescueCooldownUntil: this.localPlayer.rescueCooldownUntil,
       })
     }
 
@@ -609,6 +611,13 @@ export class GameEngine {
     if (event.event === 'capture') {
       this.callbacks.onCapture(event.sourceId ?? '', event.targetId ?? '')
     } else if (event.event === 'rescue') {
+      if (
+        this.localPlayer &&
+        (event.sourceId === 'Anda' || event.sourceId === this.localPlayer.name)
+      ) {
+        this.localPlayer.rescueCooldownUntil =
+          performance.now() + GAME_CONFIG.gameplay.rescueCooldownMs
+      }
       this.callbacks.onRescue(event.sourceId ?? '', event.targetId ?? '')
     } else if (event.event === 'match_end' && event.winner && event.reason) {
       this.endMatch(event.winner, event.reason)
@@ -655,11 +664,13 @@ export class GameEngine {
     ) {
       for (const entity of allEntities) {
         if (entity.teamId === this.playerTeam && entity.status === 'jailed') {
-          const inRescueRadius = GameplayRules.canRescue(this.localPlayer, entity)
+          const inRescueRadius = GameplayRules.canRescue(this.localPlayer, entity, now)
           if (inRescueRadius) {
             canRescueAny = true
             // Rescue triggers on pressing 'E' / rescue button OR direct proximity touch ("tempel")
             if (input.interact || inRescueRadius) {
+              this.localPlayer.rescueCooldownUntil =
+                now + GAME_CONFIG.gameplay.rescueCooldownMs
               entity.status = 'normal'
               entity.immunityUntil = now + GAME_CONFIG.gameplay.immunityDurationMs
               if (entity instanceof BotController) {
@@ -685,7 +696,8 @@ export class GameEngine {
       if (rescuer.status === 'jailed' || rescuer.status === 'stunned') continue
       for (const target of allEntities) {
         if (target.teamId === rescuer.teamId && target.status === 'jailed') {
-          if (GameplayRules.canRescue(rescuer, target)) {
+          if (GameplayRules.canRescue(rescuer, target, now)) {
+            rescuer.rescueCooldownUntil = now + GAME_CONFIG.gameplay.rescueCooldownMs
             target.status = 'normal'
             target.immunityUntil = now + GAME_CONFIG.gameplay.immunityDurationMs
             if (target instanceof BotController) {

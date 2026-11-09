@@ -252,6 +252,34 @@ describe('Mobile Touch Controls & Virtual Input Integration', () => {
       expect(wrapper.emitted('virtual-sprint')?.[1]).toEqual([false])
     })
 
+    it('renders circular stamina bar on sprint button and adapts to stamina percentage', async () => {
+      const wrapper = mount(MobileTouchControls, {
+        props: { forceShow: true, staminaPercentage: 100 },
+      })
+
+      const gauge = wrapper.find('[data-testid="hud-sprint-circular-bar"]')
+      const progressCircle = wrapper.find('[data-testid="hud-sprint-circular-progress"]')
+
+      expect(gauge.exists()).toBe(true)
+      expect(progressCircle.exists()).toBe(true)
+      expect(progressCircle.classes()).toContain('stroke-amber-400')
+      expect(progressCircle.classes()).not.toContain('animate-pulse')
+      expect(Number(progressCircle.attributes('stroke-dashoffset'))).toBeCloseTo(0, 1)
+
+      // Moderate stamina (40%): changes to orange
+      await wrapper.setProps({ staminaPercentage: 40 })
+      expect(progressCircle.classes()).toContain('stroke-orange-500')
+      // dashoffset should be approx 251.33 * (1 - 0.4) = 150.798
+      expect(Number(progressCircle.attributes('stroke-dashoffset'))).toBeCloseTo(150.8, 1)
+
+      // Low stamina (10%): changes to red and triggers pulse alert
+      await wrapper.setProps({ staminaPercentage: 10 })
+      expect(progressCircle.classes()).toContain('stroke-rose-500')
+      expect(progressCircle.classes()).toContain('animate-pulse')
+      // dashoffset should be approx 251.33 * (1 - 0.1) = 226.2
+      expect(Number(progressCircle.attributes('stroke-dashoffset'))).toBeCloseTo(226.2, 1)
+    })
+
     it('dispatches virtual-jump events on jump button touch interaction', async () => {
       const wrapper = mount(MobileTouchControls, {
         props: { forceShow: true },
@@ -300,6 +328,30 @@ describe('Mobile Touch Controls & Virtual Input Integration', () => {
       const rescueBtn = wrapper.find('[data-testid="hud-touch-rescue-btn"]')
       expect(rescueBtn.classes()).toContain('animate-pulse')
       expect(rescueBtn.classes()).toContain('bg-emerald-500')
+    })
+
+    it('displays numeric-only countdown on rescue button when on cooldown and blocks interact events', async () => {
+      const wrapper = mount(MobileTouchControls, {
+        props: { forceShow: true, canRescue: true, rescueCooldownSeconds: 28 },
+      })
+
+      const rescueBtn = wrapper.find('[data-testid="hud-touch-rescue-btn"]')
+      const cooldownBadge = wrapper.find('[data-testid="hud-rescue-cooldown-badge"]')
+
+      expect(cooldownBadge.exists()).toBe(true)
+      expect(cooldownBadge.text()).toBe('28') // Must be purely numeric, NO 's'
+      expect(cooldownBadge.text()).not.toContain('s')
+      expect(rescueBtn.attributes('disabled')).toBeDefined()
+      expect(rescueBtn.classes()).toContain('cursor-not-allowed')
+
+      // Touching while on cooldown must NOT emit virtual-interact
+      await rescueBtn.trigger('touchstart', {
+        changedTouches: [{ identifier: 5, clientX: 250, clientY: 500 }],
+      })
+      expect(wrapper.emitted('virtual-interact')).toBeUndefined()
+
+      await rescueBtn.trigger('click')
+      expect(wrapper.emitted('virtual-interact')).toBeUndefined()
     })
 
     it('renders fullscreen toggle button and triggers requestFullscreenAndLandscape', async () => {

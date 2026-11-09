@@ -19,6 +19,7 @@ export interface GameplayEntity {
   teamId: TeamId
   status: PlayerStatus
   immunityUntil: number
+  rescueCooldownUntil?: number
   getPosition(): { x: number; y: number; z: number }
   teleportTo(x: number, y: number, z: number): void
 }
@@ -47,6 +48,7 @@ export interface PlayerState {
 
   immunityUntil: number
   stunUntil: number
+  rescueCooldownUntil?: number
 
   capturedBy: string | null
 }
