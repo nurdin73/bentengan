@@ -72,7 +72,19 @@ const getStrokeDashoffset = (progress: number): number => {
 }
 
 const handleSkillTrigger = (id: SkillId) => {
+  const skill =
+    id === 'dash'
+      ? dashSkill.value
+      : id === 'smoke'
+        ? smokeSkill.value
+        : adrenalineSkill.value
+  if (!skill.ready) return
   emit('trigger-skill', id)
+}
+
+const handleSkillTouchStart = (e: TouchEvent, id: SkillId) => {
+  e.preventDefault()
+  handleSkillTrigger(id)
 }
 
 const handleJumpStart = (e: TouchEvent) => {
@@ -130,6 +142,7 @@ const handleJumpClick = () => {
               : 'border-white/10 bg-neutral-900/85 text-neutral-400 cursor-not-allowed opacity-80',
         ]"
         title="Kilat (Q) - Dash Cepat"
+        @touchstart.prevent="handleSkillTouchStart($event, 'dash')"
         @click="handleSkillTrigger('dash')"
       >
         <!-- Cooldown Radial SVG -->
@@ -184,6 +197,7 @@ const handleJumpClick = () => {
               : 'border-white/10 bg-neutral-900/85 text-neutral-400 cursor-not-allowed opacity-80',
         ]"
         title="Asap (F) - Tabir Asap Pengabur"
+        @touchstart.prevent="handleSkillTouchStart($event, 'smoke')"
         @click="handleSkillTrigger('smoke')"
       >
         <svg
@@ -237,6 +251,7 @@ const handleJumpClick = () => {
               : 'border-white/10 bg-neutral-900/85 text-neutral-400 cursor-not-allowed opacity-80',
         ]"
         title="Adrenalin (C) - Stamina Penuh & Mini-Immunity"
+        @touchstart.prevent="handleSkillTouchStart($event, 'adrenaline')"
         @click="handleSkillTrigger('adrenaline')"
       >
         <svg

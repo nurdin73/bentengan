@@ -99,6 +99,21 @@ describe('Modular Action Cluster Components Decomposition', () => {
       expect(wrapper.emitted('trigger-skill')?.[2]).toEqual(['adrenaline'])
     })
 
+    it('emits trigger-skill event on immediate touchstart for multi-touch concurrency', async () => {
+      const wrapper = mount(ActionSkillArc, {
+        props: { isMobile: true },
+      })
+
+      await wrapper.find('[data-testid="hud-skill-btn-dash"]').trigger('touchstart')
+      expect(wrapper.emitted('trigger-skill')?.[0]).toEqual(['dash'])
+
+      await wrapper.find('[data-testid="hud-skill-btn-smoke"]').trigger('touchstart')
+      expect(wrapper.emitted('trigger-skill')?.[1]).toEqual(['smoke'])
+
+      await wrapper.find('[data-testid="hud-skill-btn-adrenaline"]').trigger('touchstart')
+      expect(wrapper.emitted('trigger-skill')?.[2]).toEqual(['adrenaline'])
+    })
+
     it('emits virtual-jump event when lompat button is clicked', async () => {
       const wrapper = mount(ActionSkillArc, {
         props: { isMobile: true },

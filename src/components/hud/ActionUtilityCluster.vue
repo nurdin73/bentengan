@@ -40,6 +40,17 @@ const handleRescueClick = () => {
   emit('virtual-interact')
 }
 
+const handleRestoreTouchStart = (e: TouchEvent) => {
+  e.preventDefault()
+  isRestoreActive.value = true
+  emit('trigger-restore')
+}
+
+const handleRestoreTouchEnd = (e: TouchEvent) => {
+  e.preventDefault()
+  isRestoreActive.value = false
+}
+
 const handleRestoreClick = () => {
   emit('trigger-restore')
 }
@@ -62,6 +73,9 @@ const handleRestoreClick = () => {
             : 'border-white/20 bg-neutral-950/80 text-neutral-300 hover:text-white shadow-lg',
         ]"
         title="Restore (Pulang / Pulihkan)"
+        @touchstart.prevent="handleRestoreTouchStart"
+        @touchend="handleRestoreTouchEnd"
+        @touchcancel="handleRestoreTouchEnd"
         @click="handleRestoreClick"
       >
         <RotateCcw class="h-5 w-5 stroke-[2.2] drop-shadow-sm" />
