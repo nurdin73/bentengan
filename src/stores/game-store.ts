@@ -93,6 +93,17 @@ export const useGameStore = defineStore('game', {
       this.timesCapturedCount = 0
       this.matchResult = null
       this.canRescueNearby = false
+      this.stamina = GAME_CONFIG.stamina.max
+      this.isSprinting = false
+      this.status = 'normal'
+      this.stunUntil = 0
+      this.immunityUntil = 0
+      this.isInEnemyTerritory = false
+      this.blueJailedCount = 0
+      this.redJailedCount = 0
+      this.blueTotalCount = 2
+      this.redTotalCount = 2
+      this.gameTimeSeconds = 0
     },
 
     setPointerLocked(locked: boolean) {

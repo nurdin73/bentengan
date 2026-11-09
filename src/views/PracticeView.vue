@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { useRoute, useRouter, onBeforeRouteLeave } from 'vue-router'
 import { useRoomStore } from '../stores/room-store'
 import { useGameStore } from '../stores/game-store'
 import GameCanvas from '../components/game/GameCanvas.vue'
@@ -14,12 +14,17 @@ const router = useRouter()
 const roomStore = useRoomStore()
 const gameStore = useGameStore()
 const gameCanvasRef = ref<InstanceType<typeof GameCanvas> | null>(null)
+const practiceSessionKey = ref(0)
 
 onMounted(() => {
   const chosenTeam: TeamId = route.query.team === 'red' ? 'red' : 'blue'
   gameStore.resetStats()
   roomStore.initLocalPractice(chosenTeam)
   roomStore.setMatchStatus('playing')
+})
+
+onBeforeRouteLeave(() => {
+  roomStore.leaveRoom()
 })
 
 const handleRequestPointerLock = () => {
@@ -47,6 +52,7 @@ const handleVirtualInteract = () => {
 }
 
 const handleRestart = () => {
+  practiceSessionKey.value++
   gameStore.resetStats()
   const chosenTeam: TeamId = route.query.team === 'red' ? 'red' : 'blue'
   roomStore.initLocalPractice(chosenTeam)
@@ -64,6 +70,7 @@ const handleExitToHome = () => {
     <!-- 3D Arena Canvas -->
     <GameCanvas
       v-if="roomStore.status === 'playing' || roomStore.status === 'finished'"
+      :key="practiceSessionKey"
       ref="gameCanvasRef"
     />
 
