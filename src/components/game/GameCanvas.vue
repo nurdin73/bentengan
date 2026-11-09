@@ -33,11 +33,18 @@ onMounted(async () => {
     onRosterUpdate: (roster) => {
       gameStore.updateRosterCounts(roster)
     },
-    onCapture: () => {
-      gameStore.recordCapture()
+    onCapture: (hunterName: string, targetName: string) => {
+      if (hunterName === 'Anda' || hunterName === roomStore.myUsername) {
+        gameStore.recordCapture()
+      }
+      if (targetName === 'Anda' || targetName === roomStore.myUsername) {
+        gameStore.recordTimesCaptured()
+      }
     },
-    onRescue: () => {
-      gameStore.recordRescue()
+    onRescue: (rescuerName: string) => {
+      if (rescuerName === 'Anda' || rescuerName === roomStore.myUsername) {
+        gameStore.recordRescue()
+      }
     },
     onMatchEnd: (result) => {
       result.players[0]!.captures = gameStore.capturesCount

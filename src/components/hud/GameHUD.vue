@@ -8,6 +8,7 @@ import {
   ZapOff,
   Crosshair,
   HelpCircle,
+  Timer,
 } from 'lucide-vue-next'
 import { useGameStore } from '../../stores/game-store'
 import { useRoomStore } from '../../stores/room-store'
@@ -226,6 +227,30 @@ defineEmits<{
             <div class="text-lg uppercase tracking-wider text-stroke-black">BEBASKAN REKAN!</div>
             <div class="text-xs font-sans text-blue-100 font-bold">
               {{ isEffectiveMobile ? 'Ketuk di sini untuk bebaskan rekan!' : 'Tekan E untuk menyelamatkan rekan satu tim!' }}
+            </div>
+          </div>
+        </div>
+      </transition>
+
+      <!-- Rescue Cooldown Prompt (When near jailed ally but on cooldown) -->
+      <transition
+        enter-active-class="transition duration-150 ease-out"
+        enter-from-class="scale-90 opacity-0"
+        enter-to-class="scale-100 opacity-100"
+        leave-active-class="transition duration-100 ease-in"
+        leave-from-class="scale-100 opacity-100"
+        leave-to-class="scale-90 opacity-0"
+      >
+        <div
+          v-if="!gameStore.canRescueNearby && gameStore.isNearJailedAlly && gameStore.rescueCooldownRemainingSeconds > 0"
+          data-testid="hud-rescue-cooldown-prompt"
+          class="pointer-events-auto bg-amber-950/90 border-b-[5px] border-amber-600 text-amber-200 font-heading font-black px-6 py-3 rounded-2xl shadow-2xl flex items-center gap-3 animate-pulse"
+        >
+          <Timer class="w-8 h-8 shrink-0 text-amber-400 drop-shadow-sm" />
+          <div>
+            <div class="text-lg uppercase tracking-wider text-amber-300">COOLDOWN RESCUE ({{ gameStore.rescueCooldownRemainingSeconds }}s)</div>
+            <div class="text-xs font-sans text-amber-200/90 font-bold">
+              Tunggu hingga cooldown selesai untuk menyelamatkan kawan!
             </div>
           </div>
         </div>

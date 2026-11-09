@@ -14,12 +14,14 @@ export const useGameStore = defineStore('game', {
     immunityUntil: 0,
     immunitySource: null as 'skill' | 'rescue' | null,
     rescueCooldownUntil: 0,
+    rescueCooldownRemainingSeconds: 0,
     isPointerLocked: false,
     isPaused: false,
     gameTimeSeconds: 0,
 
     // Milestone 2 Core Gameplay State
     canRescueNearby: false,
+    isNearJailedAlly: false,
     isInEnemyTerritory: false,
     capturesCount: 0,
     rescuesCount: 0,
@@ -79,11 +81,8 @@ export const useGameStore = defineStore('game', {
       const remainingMs = Math.max(0, state.immunityUntil - performance.now())
       return (remainingMs / 1000).toFixed(1)
     },
-    isRescueOnCooldown: (state) => performance.now() < state.rescueCooldownUntil,
-    rescueCooldownRemainingSeconds: (state) => {
-      const remainingMs = Math.max(0, state.rescueCooldownUntil - performance.now())
-      return Math.ceil(remainingMs / 1000)
-    },
+    isRescueOnCooldown: (state) =>
+      state.rescueCooldownRemainingSeconds > 0 || performance.now() < state.rescueCooldownUntil,
   },
 
   actions: {
@@ -94,6 +93,7 @@ export const useGameStore = defineStore('game', {
       stunUntil: number
       immunityUntil: number
       rescueCooldownUntil?: number
+      rescueCooldownRemainingSeconds?: number
       immunitySource?: 'skill' | 'rescue' | null
     }) {
       this.stamina = payload.stamina
@@ -103,6 +103,9 @@ export const useGameStore = defineStore('game', {
       this.immunityUntil = payload.immunityUntil
       if (payload.rescueCooldownUntil !== undefined) {
         this.rescueCooldownUntil = payload.rescueCooldownUntil
+      }
+      if (payload.rescueCooldownRemainingSeconds !== undefined) {
+        this.rescueCooldownRemainingSeconds = payload.rescueCooldownRemainingSeconds
       }
       if (payload.immunitySource !== undefined) {
         this.immunitySource = payload.immunitySource
@@ -116,6 +119,7 @@ export const useGameStore = defineStore('game', {
       redTotal: number
       canRescue: boolean
       isInEnemyTerritory: boolean
+      isNearJailedAlly?: boolean
     }) {
       this.blueJailedCount = payload.blueJailed
       this.blueTotalCount = payload.blueTotal
@@ -123,6 +127,9 @@ export const useGameStore = defineStore('game', {
       this.redTotalCount = payload.redTotal
       this.canRescueNearby = payload.canRescue
       this.isInEnemyTerritory = payload.isInEnemyTerritory
+      if (payload.isNearJailedAlly !== undefined) {
+        this.isNearJailedAlly = payload.isNearJailedAlly
+      }
     },
 
     updateSkillsState(skills: SkillsStateMap) {
@@ -136,6 +143,7 @@ export const useGameStore = defineStore('game', {
     recordRescue() {
       this.rescuesCount++
       this.rescueCooldownUntil = performance.now() + GAME_CONFIG.gameplay.rescueCooldownMs
+      this.rescueCooldownRemainingSeconds = Math.ceil(GAME_CONFIG.gameplay.rescueCooldownMs / 1000)
     },
 
     recordTimesCaptured() {
@@ -152,6 +160,7 @@ export const useGameStore = defineStore('game', {
       this.timesCapturedCount = 0
       this.matchResult = null
       this.canRescueNearby = false
+      this.isNearJailedAlly = false
       this.stamina = GAME_CONFIG.stamina.max
       this.isSprinting = false
       this.status = 'normal'
@@ -159,6 +168,7 @@ export const useGameStore = defineStore('game', {
       this.immunityUntil = 0
       this.immunitySource = null
       this.rescueCooldownUntil = 0
+      this.rescueCooldownRemainingSeconds = 0
       this.isInEnemyTerritory = false
       this.blueJailedCount = 0
       this.redJailedCount = 0

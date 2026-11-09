@@ -50,6 +50,7 @@ export interface GameEngineStateCallback {
     stunUntil: number
     immunityUntil: number
     rescueCooldownUntil: number
+    rescueCooldownRemainingSeconds?: number
     immunitySource?: 'skill' | 'rescue' | null
   }) => void
   onSkillStateChange?: (skills: SkillsStateMap) => void
@@ -60,6 +61,7 @@ export interface GameEngineStateCallback {
     redTotal: number
     canRescue: boolean
     isInEnemyTerritory: boolean
+    isNearJailedAlly?: boolean
   }) => void
   onCapture: (hunterName: string, targetName: string) => void
   onRescue: (rescuerName: string, targetName: string) => void
@@ -445,6 +447,12 @@ export class GameEngine {
         this.localPlayer.setVisualOpacity(1.0)
       }
 
+      if (this.localPlayer.rescueCooldownUntil > 0 && now >= this.localPlayer.rescueCooldownUntil) {
+        this.localPlayer.rescueCooldownUntil = 0
+      }
+      const remainingRescueMs = Math.max(0, this.localPlayer.rescueCooldownUntil - now)
+      const rescueCooldownRemainingSeconds = Math.ceil(remainingRescueMs / 1000)
+
       // Emit player state to Pinia
       this.callbacks.onPlayerStateChange({
         stamina: this.localPlayer.stamina,
@@ -453,6 +461,7 @@ export class GameEngine {
         stunUntil: this.localPlayer.stunUntil,
         immunityUntil: this.localPlayer.immunityUntil,
         rescueCooldownUntil: this.localPlayer.rescueCooldownUntil,
+        rescueCooldownRemainingSeconds,
         immunitySource: this.localPlayer.immunitySource,
       })
     }
@@ -733,8 +742,13 @@ export class GameEngine {
     }
 
     // 3. Zero Cooldowns
-    if (dev.zeroCooldowns && this.skillManager) {
-      this.skillManager.resetAllCooldowns(now)
+    if (dev.zeroCooldowns) {
+      if (this.skillManager) {
+        this.skillManager.resetAllCooldowns(now)
+      }
+      if (this.localPlayer) {
+        this.localPlayer.rescueCooldownUntil = 0
+      }
     }
 
     // 4. Pending Teleport
@@ -771,6 +785,7 @@ export class GameEngine {
     }
 
     let canRescueAny = false
+    let isNearJailedAlly = false
 
     // 2. Teammate Rescues
     // A. Player rescuing allies (triggers on 'E' / rescue button press OR direct proximity touch / "tempel")
@@ -781,6 +796,10 @@ export class GameEngine {
     ) {
       for (const entity of allEntities) {
         if (entity.teamId === this.playerTeam && entity.status === 'jailed') {
+          const dist = GameplayRules.distance3D(this.localPlayer.getPosition(), entity.getPosition())
+          if (dist <= GAME_CONFIG.gameplay.rescueRadius) {
+            isNearJailedAlly = true
+          }
           const inRescueRadius = GameplayRules.canRescue(this.localPlayer, entity, now)
           if (inRescueRadius) {
             canRescueAny = true
@@ -893,6 +912,7 @@ export class GameEngine {
       isInEnemyTerritory: this.localPlayer
         ? GameplayRules.isInEnemyTerritory(this.localPlayer)
         : false,
+      isNearJailedAlly,
     })
   }
 
