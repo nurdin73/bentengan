@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, watch, onMounted, onUnmounted } from 'vue'
 import { GameEngine } from '../../game/core/engine'
 import type { VirtualMovementInput } from '../../game/input/input-manager'
 import { useGameStore } from '../../stores/game-store'
@@ -76,8 +76,19 @@ onMounted(async () => {
     isHost: roomStore.isHost,
   })
 
+  if (gameStore.isPaused) {
+    engine.setPaused(true)
+  }
+
   document.addEventListener('pointerlockchange', onPointerLockChange)
 })
+
+watch(
+  () => gameStore.isPaused,
+  (paused) => {
+    engine?.setPaused(paused)
+  },
+)
 
 onUnmounted(() => {
   document.removeEventListener('pointerlockchange', onPointerLockChange)
@@ -125,6 +136,7 @@ defineExpose({
   setVirtualJump,
   injectTouchDelta,
   triggerVirtualInteract,
+  setPaused: (paused: boolean) => engine?.setPaused(paused),
 })
 </script>
 

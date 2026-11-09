@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import {
   Wifi,
   Smartphone,
@@ -24,13 +24,26 @@ const forceShowMobileHUD = ref(false)
 
 const isEffectiveMobile = computed(() => isMobile.value || forceShowMobileHUD.value)
 
-onMounted(() => {
+const updateDeviceDetection = () => {
   isMobile.value = checkIsMobileTouchDevice()
+}
+
+updateDeviceDetection()
+
+onMounted(() => {
+  updateDeviceDetection()
+  window.addEventListener('resize', updateDeviceDetection)
+  window.addEventListener('orientationchange', updateDeviceDetection)
   try {
     forceShowMobileHUD.value = sessionStorage.getItem('bentengan_force_mobile_hud') === 'true'
   } catch {
     // Ignore storage errors in restricted contexts
   }
+})
+
+onUnmounted(() => {
+  window.removeEventListener('resize', updateDeviceDetection)
+  window.removeEventListener('orientationchange', updateDeviceDetection)
 })
 
 const toggleMobileHUD = () => {
@@ -78,8 +91,9 @@ defineEmits<{
           &bull; {{ roomStore.roomCode }}
         </span>
       </div>
-      <!-- Top Right: Compact Mobile HUD Testing Toggle -->
+      <!-- Top Right: Compact Mobile HUD Testing Toggle (Desktop Only) -->
       <button
+        v-if="!isMobile"
         data-testid="hud-toggle-mobile-controls-btn"
         type="button"
         :class="[
@@ -254,7 +268,7 @@ defineEmits<{
     </div>
 
     <!-- Rotate Device Prompt (Mobile Portrait Warning) -->
-    <RotateDevicePrompt />
+    <RotateDevicePrompt :force-mobile="forceShowMobileHUD" />
 
     <!-- Mobile Virtual Joystick & Touch Controls -->
     <MobileTouchControls

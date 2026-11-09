@@ -1,9 +1,11 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { mount } from '@vue/test-utils'
+import { createPinia, setActivePinia } from 'pinia'
 import { InputManager } from '../game/input/input-manager'
 import MobileTouchControls from '../components/hud/MobileTouchControls.vue'
 import RotateDevicePrompt from '../components/hud/RotateDevicePrompt.vue'
 import { checkIsMobileTouchDevice } from '../components/hud/mobile-device.utils'
+import { useGameStore } from '../stores/game-store'
 
 describe('Mobile Touch Controls & Virtual Input Integration', () => {
   describe('InputManager Virtual Inputs', () => {
@@ -335,14 +337,21 @@ describe('Mobile Touch Controls & Virtual Input Integration', () => {
   })
 
   describe('RotateDevicePrompt Component', () => {
+    beforeEach(() => {
+      setActivePinia(createPinia())
+    })
+
     it('does not render prompt when not in portrait and forceShow is false', () => {
+      const gameStore = useGameStore()
       const wrapper = mount(RotateDevicePrompt, {
         props: { forceShow: false },
       })
       expect(wrapper.find('[data-testid="rotate-device-prompt"]').exists()).toBe(false)
+      expect(gameStore.isPaused).toBe(false)
     })
 
-    it('renders rotation instructions overlay when forceShow is true', () => {
+    it('renders rotation instructions overlay when forceShow is true and pauses game', () => {
+      const gameStore = useGameStore()
       const wrapper = mount(RotateDevicePrompt, {
         props: { forceShow: true },
       })
@@ -350,6 +359,41 @@ describe('Mobile Touch Controls & Virtual Input Integration', () => {
       const overlay = wrapper.find('[data-testid="rotate-device-prompt"]')
       expect(overlay.exists()).toBe(true)
       expect(overlay.text()).toContain('Miringkan Layar Anda')
+      expect(gameStore.isPaused).toBe(true)
+      expect(wrapper.emitted('update:active')?.[0]).toEqual([true])
+    })
+
+    it('unpauses game when unmounted after being shown', () => {
+      const gameStore = useGameStore()
+      const wrapper = mount(RotateDevicePrompt, {
+        props: { forceShow: true },
+      })
+
+      expect(gameStore.isPaused).toBe(true)
+      wrapper.unmount()
+      expect(gameStore.isPaused).toBe(false)
+    })
+
+    it('triggers pause and displays overlay when forceMobile is true and in portrait orientation', async () => {
+      const gameStore = useGameStore()
+      const originalInnerWidth = window.innerWidth
+      const originalInnerHeight = window.innerHeight
+
+      // Simulate portrait dimensions in JSDOM
+      Object.defineProperty(window, 'innerWidth', { writable: true, configurable: true, value: 360 })
+      Object.defineProperty(window, 'innerHeight', { writable: true, configurable: true, value: 800 })
+
+      const wrapper = mount(RotateDevicePrompt, {
+        props: { forceMobile: true },
+      })
+      await wrapper.vm.$nextTick()
+
+      expect(wrapper.find('[data-testid="rotate-device-prompt"]').exists()).toBe(true)
+      expect(gameStore.isPaused).toBe(true)
+
+      // Restore dimensions
+      Object.defineProperty(window, 'innerWidth', { writable: true, configurable: true, value: originalInnerWidth })
+      Object.defineProperty(window, 'innerHeight', { writable: true, configurable: true, value: originalInnerHeight })
     })
   })
 })

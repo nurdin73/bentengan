@@ -12,6 +12,7 @@ export const useGameStore = defineStore('game', {
     stunUntil: 0,
     immunityUntil: 0,
     isPointerLocked: false,
+    isPaused: false,
     gameTimeSeconds: 0,
 
     // Milestone 2 Core Gameplay State
@@ -104,6 +105,11 @@ export const useGameStore = defineStore('game', {
       this.blueTotalCount = 2
       this.redTotalCount = 2
       this.gameTimeSeconds = 0
+      this.isPaused = false
+    },
+
+    setPaused(paused: boolean) {
+      this.isPaused = paused
     },
 
     setPointerLocked(locked: boolean) {

@@ -239,4 +239,19 @@ describe('Practice Mode Restart & Reset Mechanics', () => {
     expect(roomStore.roomCode).toBe('')
     expect(roomStore.status).toBe('waiting')
   })
+
+  it('handles pause state transitions and clears isPaused on resetStats', () => {
+    const gameStore = useGameStore()
+    expect(gameStore.isPaused).toBe(false)
+
+    gameStore.setPaused(true)
+    expect(gameStore.isPaused).toBe(true)
+
+    gameStore.setPaused(false)
+    expect(gameStore.isPaused).toBe(false)
+
+    gameStore.setPaused(true)
+    gameStore.resetStats()
+    expect(gameStore.isPaused).toBe(false)
+  })
 })

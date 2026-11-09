@@ -28,6 +28,17 @@ describe('Mobile Responsive Layout & Icon Integration', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
     vi.clearAllMocks()
+    Object.defineProperty(navigator, 'maxTouchPoints', { value: 0, configurable: true })
+    window.matchMedia = vi.fn<() => MediaQueryList>().mockImplementation(() => ({
+      matches: false,
+      media: '',
+      onchange: null,
+      addListener: vi.fn<() => void>(),
+      removeListener: vi.fn<() => void>(),
+      addEventListener: vi.fn<() => void>(),
+      removeEventListener: vi.fn<() => void>(),
+      dispatchEvent: vi.fn<() => boolean>(),
+    }))
   })
 
   describe('HomeView Responsive Adaptation', () => {
@@ -386,11 +397,44 @@ describe('Mobile Responsive Layout & Icon Integration', () => {
       expect(signalIcon.classes()).toContain('animate-pulse')
     })
 
-    it('renders compact mobile HUD testing toggle button in top right of GameHUD', () => {
+    it('renders compact mobile HUD testing toggle button in top right of GameHUD on desktop', () => {
+      Object.defineProperty(navigator, 'maxTouchPoints', { value: 0, configurable: true })
+      window.matchMedia = vi.fn<() => MediaQueryList>().mockImplementation(() => ({
+        matches: false,
+        media: '(pointer: coarse)',
+        onchange: null,
+        addListener: vi.fn<() => void>(),
+        removeListener: vi.fn<() => void>(),
+        addEventListener: vi.fn<() => void>(),
+        removeEventListener: vi.fn<() => void>(),
+        dispatchEvent: vi.fn<() => boolean>(),
+      }))
+
       const wrapper = mount(GameHUD)
       const toggleBtn = wrapper.find('[data-testid="hud-toggle-mobile-controls-btn"]')
       expect(toggleBtn.exists()).toBe(true)
       expect(toggleBtn.text()).toContain('HUD HP')
+    })
+
+    it('does not render mobile HUD toggle button on mobile touch devices', () => {
+      Object.defineProperty(navigator, 'maxTouchPoints', { value: 5, configurable: true })
+      window.matchMedia = vi.fn<() => MediaQueryList>().mockImplementation(() => ({
+        matches: true,
+        media: '(pointer: coarse)',
+        onchange: null,
+        addListener: vi.fn<() => void>(),
+        removeListener: vi.fn<() => void>(),
+        addEventListener: vi.fn<() => void>(),
+        removeEventListener: vi.fn<() => void>(),
+        dispatchEvent: vi.fn<() => boolean>(),
+      }))
+
+      const wrapper = mount(GameHUD)
+      const toggleBtn = wrapper.find('[data-testid="hud-toggle-mobile-controls-btn"]')
+      expect(toggleBtn.exists()).toBe(false)
+
+      // Restore desktop mock
+      Object.defineProperty(navigator, 'maxTouchPoints', { value: 0, configurable: true })
     })
 
     it('toggles mobile HUD controls and persists state in sessionStorage', async () => {

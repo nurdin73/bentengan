@@ -92,6 +92,8 @@ export class GameEngine {
 
   // Fixed timestep accumulator
   private isRunning = false
+  private isPaused = false
+  private pausedAt = 0
   private isMatchFinished = false
   private animationFrameId = 0
   private lastTime = 0
@@ -314,11 +316,19 @@ export class GameEngine {
   private loop(currentTime: number): void {
     if (!this.isRunning) return
 
+    if (this.isPractice && this.isPaused) {
+      this.lastTime = currentTime
+      this.accumulator = 0
+      this.renderer.render(this.scene, this.camera)
+      this.animationFrameId = requestAnimationFrame((t) => this.loop(t))
+      return
+    }
+
     const frameTime = Math.min((currentTime - this.lastTime) / 1000, 0.1)
     this.lastTime = currentTime
     this.accumulator += frameTime
 
-    const mouseDelta = this.input.consumeMouseDelta()
+    const mouseDelta = this.isPaused ? { deltaX: 0, deltaY: 0 } : this.input.consumeMouseDelta()
     const now = performance.now()
 
     // Fixed timestep physics update (60 Hz)
@@ -342,7 +352,9 @@ export class GameEngine {
 
       if (this.localPlayer) {
         this.localPlayer.recordPreviousPosition()
-        input = this.input.getMovementInput(this.cameraController.getYaw())
+        if (!this.isPaused) {
+          input = this.input.getMovementInput(this.cameraController.getYaw())
+        }
         this.localPlayer.updateFixed(input, this.fixedDt, now)
       }
 
@@ -817,6 +829,48 @@ export class GameEngine {
     }
 
     this.callbacks.onMatchEnd(result)
+  }
+
+  public setPaused(paused: boolean): void {
+    if (this.isPaused === paused) return
+    this.isPaused = paused
+
+    if (paused) {
+      this.pausedAt = performance.now()
+      this.input.reset()
+      if (document.pointerLockElement) {
+        document.exitPointerLock?.()
+      }
+    } else {
+      const pausedDuration = performance.now() - this.pausedAt
+      this.matchStartTime += pausedDuration
+      this.lastTime = performance.now()
+      this.accumulator = 0
+      this.input.reset()
+
+      if (this.isPractice) {
+        if (this.localPlayer) {
+          if (this.localPlayer.stunUntil > this.pausedAt) {
+            this.localPlayer.stunUntil += pausedDuration
+          }
+          if (this.localPlayer.immunityUntil > this.pausedAt) {
+            this.localPlayer.immunityUntil += pausedDuration
+          }
+        }
+        for (const bot of this.bots) {
+          if (bot.stunUntil > this.pausedAt) {
+            bot.stunUntil += pausedDuration
+          }
+          if (bot.immunityUntil > this.pausedAt) {
+            bot.immunityUntil += pausedDuration
+          }
+        }
+      }
+    }
+  }
+
+  public getIsPaused(): boolean {
+    return this.isPaused
   }
 
   private onResize(): void {

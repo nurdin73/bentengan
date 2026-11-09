@@ -1,29 +1,50 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { RotateCcw, Lightbulb } from 'lucide-vue-next'
 import { checkIsMobileTouchDevice, requestFullscreenAndLandscape } from './mobile-device.utils'
+import { useGameStore } from '../../stores/game-store'
 
 export interface RotateDevicePromptProps {
   forceShow?: boolean
+  forceMobile?: boolean
 }
 
 const props = withDefaults(defineProps<RotateDevicePromptProps>(), {
   forceShow: false,
+  forceMobile: false,
 })
+
+const emit = defineEmits<{
+  (e: 'update:active', active: boolean): void
+}>()
+
+const gameStore = useGameStore()
 
 const isMobile = ref(false)
 const isPortrait = ref(false)
 
 const shouldDisplay = computed(() => {
   if (props.forceShow) return true
-  return isMobile.value && isPortrait.value
+  const effectiveMobile = isMobile.value || props.forceMobile
+  return effectiveMobile && isPortrait.value
 })
+
+watch(
+  shouldDisplay,
+  (active) => {
+    gameStore.setPaused(active)
+    emit('update:active', active)
+  },
+  { immediate: true },
+)
 
 const updateOrientation = () => {
   if (typeof window === 'undefined') return
   isMobile.value = checkIsMobileTouchDevice()
   isPortrait.value = window.innerHeight > window.innerWidth
 }
+
+updateOrientation()
 
 const handleDismissOrRotate = () => {
   requestFullscreenAndLandscape()
@@ -33,11 +54,17 @@ onMounted(() => {
   updateOrientation()
   window.addEventListener('resize', updateOrientation)
   window.addEventListener('orientationchange', updateOrientation)
+  screen.orientation?.addEventListener?.('change', updateOrientation)
 })
 
 onUnmounted(() => {
   window.removeEventListener('resize', updateOrientation)
   window.removeEventListener('orientationchange', updateOrientation)
+  screen.orientation?.removeEventListener?.('change', updateOrientation)
+  if (shouldDisplay.value) {
+    gameStore.setPaused(false)
+    emit('update:active', false)
+  }
 })
 </script>
 
