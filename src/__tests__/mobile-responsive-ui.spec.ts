@@ -8,7 +8,9 @@ import GameRulesModal from '../components/guide/GameRulesModal.vue'
 import LobbyWaitingRoom from '../components/lobby/LobbyWaitingRoom.vue'
 import GameHUD from '../components/hud/GameHUD.vue'
 import ConfirmDialog from '../components/ui/ConfirmDialog.vue'
+import ResultsModal from '../components/results/ResultsModal.vue'
 import { useRoomStore } from '../stores/room-store'
+import { useGameStore } from '../stores/game-store'
 
 const mockPush = vi.fn()
 vi.mock('vue-router', () => ({
@@ -376,6 +378,94 @@ describe('Mobile Responsive Layout & Icon Integration', () => {
       await toggleBtn.trigger('click')
       expect(sessionStorage.getItem('bentengan_force_mobile_hud')).toBe('false')
       expect(wrapper.find('[data-testid="mobile-touch-controls"]').exists()).toBe(false)
+    })
+  })
+
+  describe('ResultsModal Mobile Landscape & Fullscreen Responsiveness', () => {
+    it('renders with overflow containment and 2-column landscape structure', () => {
+      const gameStore = useGameStore()
+      const roomStore = useRoomStore()
+
+      roomStore.myTeam = 'blue'
+      roomStore.roomCode = 'LOKAL'
+      gameStore.matchResult = {
+        matchId: 'match-1',
+        winner: 'blue',
+        reason: 'base_capture',
+        duration: 45,
+        players: [],
+      }
+      gameStore.capturesCount = 3
+      gameStore.rescuesCount = 1
+
+      const wrapper = mount(ResultsModal)
+
+      const backdrop = wrapper.find('[data-testid="results-modal-backdrop"]')
+      const card = wrapper.find('[data-testid="results-modal-card"]')
+
+      expect(backdrop.exists()).toBe(true)
+      expect(card.exists()).toBe(true)
+
+      // Verified overflow containment for mobile landscape
+      expect(card.classes()).toContain('max-h-[92dvh]')
+      expect(card.classes()).toContain('overflow-y-auto')
+      expect(card.classes()).toContain('overscroll-contain')
+
+      // Verified 2-column structure exists
+      expect(wrapper.find('.results-landscape-col-left').exists()).toBe(true)
+      expect(wrapper.find('.results-landscape-col-right').exists()).toBe(true)
+
+      // Verified content
+      expect(wrapper.find('[data-testid="results-winner-title"]').text()).toBe('KEMENANGAN!')
+      expect(wrapper.find('[data-testid="results-team-label"]').text()).toContain('Tim Benteng Biru Menang')
+      expect(wrapper.find('[data-testid="results-win-reason"]').text()).toContain('Base Capture')
+      expect(wrapper.find('[data-testid="results-stat-duration"]').text()).toBe('45s')
+      expect(wrapper.find('[data-testid="results-stat-captures"]').text()).toBe('3')
+      expect(wrapper.find('[data-testid="results-stat-rescues"]').text()).toBe('1')
+    })
+
+    it('emits restart event when restart button is clicked', async () => {
+      const gameStore = useGameStore()
+      const roomStore = useRoomStore()
+
+      roomStore.myTeam = 'blue'
+      roomStore.roomCode = 'LOKAL'
+      gameStore.matchResult = {
+        matchId: 'match-2',
+        winner: 'blue',
+        reason: 'base_capture',
+        duration: 30,
+        players: [],
+      }
+
+      const wrapper = mount(ResultsModal)
+      const restartBtn = wrapper.find('[data-testid="results-restart-btn"]')
+      expect(restartBtn.exists()).toBe(true)
+
+      await restartBtn.trigger('click')
+      expect(wrapper.emitted('restart')).toBeTruthy()
+    })
+
+    it('handles leave room to home when leave button is clicked', async () => {
+      const gameStore = useGameStore()
+      const roomStore = useRoomStore()
+
+      roomStore.myTeam = 'blue'
+      roomStore.roomCode = 'TEST88'
+      gameStore.matchResult = {
+        matchId: 'match-3',
+        winner: 'blue',
+        reason: 'base_capture',
+        duration: 30,
+        players: [],
+      }
+
+      const wrapper = mount(ResultsModal)
+      const leaveBtn = wrapper.find('[data-testid="results-leave-home-btn"]')
+      expect(leaveBtn.exists()).toBe(true)
+
+      await leaveBtn.trigger('click')
+      expect(mockPush).toHaveBeenCalledWith('/')
     })
   })
 })

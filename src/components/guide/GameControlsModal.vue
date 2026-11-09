@@ -24,12 +24,12 @@ const activeTab = ref<'desktop' | 'touch'>('desktop')
 <template>
   <div
     data-testid="game-controls-modal-backdrop"
-    class="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/75 backdrop-blur-sm"
+    class="game-controls-modal-backdrop fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/75 backdrop-blur-sm"
     @click.self="emit('close')"
   >
     <div
       data-testid="game-controls-modal-card"
-      class="timbul-card w-full max-w-xl p-4 sm:p-7 flex flex-col gap-4 sm:gap-5 max-h-[92dvh] overflow-y-auto relative shadow-2xl"
+      class="game-controls-modal-card timbul-card w-full max-w-xl p-4 sm:p-7 flex flex-col gap-4 sm:gap-5 max-h-[92dvh] overflow-y-auto overscroll-contain relative shadow-2xl"
     >
       <!-- Close Button -->
       <button
@@ -233,3 +233,22 @@ const activeTab = ref<'desktop' | 'touch'>('desktop')
     </div>
   </div>
 </template>
+
+<style scoped>
+@media (orientation: landscape) and (max-height: 520px) {
+  .game-controls-modal-backdrop {
+    padding: 0 !important;
+  }
+
+  .game-controls-modal-card {
+    width: 100vw !important;
+    height: 100vh !important;
+    max-width: 100vw !important;
+    max-height: 100vh !important;
+    border-radius: 0 !important;
+    border: none !important;
+    box-shadow: none !important;
+    padding: 1rem 1.5rem !important;
+  }
+}
+</style>

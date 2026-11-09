@@ -298,13 +298,13 @@ const openPracticeFromDrawer = () => {
     <!-- Popover: Pilih Tim Latihan Solo -->
     <div
       v-if="showPracticePicker"
-      class="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-xs"
+      class="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-xs overflow-y-auto"
       @click.self="showPracticePicker = false"
     >
-      <div class="timbul-card w-full max-w-sm p-5 sm:p-6 flex flex-col items-center gap-4 shadow-2xl relative">
+      <div class="timbul-card w-full max-w-sm p-4 sm:p-6 flex flex-col items-center gap-3 sm:gap-4 shadow-2xl relative max-h-[92dvh] overflow-y-auto overscroll-contain animate-in fade-in zoom-in-95 duration-150">
         <button
           type="button"
-          class="absolute top-4 right-4 text-neutral-400 hover:text-neutral-700 font-black text-sm cursor-pointer p-1"
+          class="absolute top-3.5 right-3.5 text-neutral-400 hover:text-neutral-700 font-black text-sm cursor-pointer p-1"
           @click="showPracticePicker = false"
         >
           <X class="w-4 h-4" />

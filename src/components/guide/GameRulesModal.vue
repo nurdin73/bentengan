@@ -16,12 +16,12 @@ const emit = defineEmits<{
 <template>
   <div
     data-testid="game-rules-modal-backdrop"
-    class="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/75 backdrop-blur-sm"
+    class="game-rules-modal-backdrop fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/75 backdrop-blur-sm"
     @click.self="emit('close')"
   >
     <div
       data-testid="game-rules-modal-card"
-      class="timbul-card w-full max-w-2xl p-4 sm:p-7 flex flex-col gap-4 sm:gap-5 max-h-[92dvh] overflow-y-auto relative shadow-2xl"
+      class="game-rules-modal-card timbul-card w-full max-w-2xl p-4 sm:p-7 flex flex-col gap-4 sm:gap-5 max-h-[92dvh] overflow-y-auto overscroll-contain relative shadow-2xl"
     >
       <!-- Close Button -->
       <button
@@ -105,3 +105,22 @@ const emit = defineEmits<{
     </div>
   </div>
 </template>
+
+<style scoped>
+@media (orientation: landscape) and (max-height: 520px) {
+  .game-rules-modal-backdrop {
+    padding: 0 !important;
+  }
+
+  .game-rules-modal-card {
+    width: 100vw !important;
+    height: 100vh !important;
+    max-width: 100vw !important;
+    max-height: 100vh !important;
+    border-radius: 0 !important;
+    border: none !important;
+    box-shadow: none !important;
+    padding: 1rem 1.5rem !important;
+  }
+}
+</style>
