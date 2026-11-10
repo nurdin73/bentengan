@@ -374,16 +374,24 @@ export class PeerNetworkManager {
   }
 
   /**
-   * Host broadcasts a discrete gameplay event (capture, rescue, base capture, match end) to all clients.
+   * Broadcasts a discrete gameplay event (capture, rescue, base capture, match end, smoke) across the network.
+   * If called on Host, broadcasts to all peers. If called on Client, sends to Host to relay.
    */
   public broadcastGameEvent(event: Omit<GameEventMessage, 'type' | 'timestamp'>): void {
-    if (!this.isHost) return
     const msg: NetworkMessage = {
       type: 'GAME_EVENT',
       ...event,
       timestamp: Date.now(),
     }
-    this.broadcastMessage(msg)
+    if (this.isHost) {
+      this.broadcastMessage(msg)
+    } else if (this.hostConnection?.open) {
+      try {
+        this.hostConnection.send(msg)
+      } catch {
+        // Transient send failure
+      }
+    }
   }
 
   /**
@@ -680,6 +688,13 @@ export class PeerNetworkManager {
           this.events.onPlayerUpdate?.(msg)
           break
         }
+
+        case 'GAME_EVENT': {
+          // Relay game event from client to all other connected peers, and process locally on host
+          this.broadcastMessage(msg, conn.peer)
+          this.events.onGameEvent?.(msg)
+          break
+        }
       }
     })
 
@@ -730,8 +745,9 @@ export class PeerNetworkManager {
     this.events.onRoomStateUpdated?.(this.currentRoom)
   }
 
-  private broadcastMessage(msg: NetworkMessage): void {
+  private broadcastMessage(msg: NetworkMessage, excludePeerId?: string): void {
     for (const [peerId, conn] of this.clientConnections.entries()) {
+      if (excludePeerId && peerId === excludePeerId) continue
       try {
         if (conn.open) {
           conn.send(msg)

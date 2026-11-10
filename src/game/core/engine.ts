@@ -439,9 +439,9 @@ export class GameEngine {
 
     // Sync visuals with sub-frame interpolation
     if (this.localPlayer) {
-      this.localPlayer.syncVisuals(alpha, now)
+      this.localPlayer.syncVisuals(alpha, frameTime, now)
       this.cameraController.update(
-        this.localPlayer.getPosition(),
+        this.localPlayer.mesh.position,
         mouseDelta.deltaX,
         mouseDelta.deltaY,
         frameTime,
@@ -483,7 +483,7 @@ export class GameEngine {
     }
 
     for (const bot of this.bots) {
-      bot.syncVisuals(alpha, now)
+      bot.syncVisuals(alpha, frameTime, now)
     }
 
     for (const remote of this.remotePlayers.values()) {
@@ -504,6 +504,18 @@ export class GameEngine {
     if (this.localPlayer && this.localPlayer.isSprinting && this.localPlayer.isGrounded) {
       this.vfx.spawnSprintDust(this.localPlayer.mesh.position)
     }
+    // Remote opponent sprint dust
+    for (const remote of this.remotePlayers.values()) {
+      if (remote.isSprinting && remote.status === 'normal') {
+        this.vfx.spawnSprintDust(remote.mesh.position)
+      }
+    }
+    // Bot sprint dust
+    for (const bot of this.bots) {
+      if (bot.isSprinting && bot.status === 'normal') {
+        this.vfx.spawnSprintDust(bot.getPosition())
+      }
+    }
 
     // Render frame
     this.renderer.render(this.scene, this.camera)
@@ -514,15 +526,19 @@ export class GameEngine {
   private syncNetworkTick(): void {
     if (!this.localPlayer) return
 
+    const now = performance.now()
     const localPos = this.localPlayer.getPosition()
+    const localRemainingImmunity = Math.max(0, this.localPlayer.immunityUntil - now)
+    const localRemainingStun = Math.max(0, this.localPlayer.stunUntil - now)
+
     const localState: PlayerNetworkState = {
       id: this.localPlayerId,
       position: [localPos.x, localPos.y, localPos.z],
       rotationY: this.localPlayer.mesh.rotation.y,
       status: this.localPlayer.status,
       isSprinting: this.localPlayer.isSprinting,
-      immunityUntil: this.localPlayer.immunityUntil,
-      stunUntil: this.localPlayer.stunUntil,
+      immunityUntil: localRemainingImmunity,
+      stunUntil: localRemainingStun,
     }
 
     if (this.isHost) {
@@ -535,14 +551,17 @@ export class GameEngine {
         seenIds.add(id)
 
         const rPos = remote.getPosition()
+        const rRemainingImmunity = Math.max(0, remote.immunityUntil - now)
+        const rRemainingStun = Math.max(0, remote.stunUntil - now)
+
         allStates.push({
           id,
           position: [rPos.x, rPos.y, rPos.z],
           rotationY: remote.mesh.rotation.y,
           status: remote.status,
           isSprinting: remote.isSprinting,
-          immunityUntil: remote.immunityUntil,
-          stunUntil: remote.stunUntil,
+          immunityUntil: rRemainingImmunity,
+          stunUntil: rRemainingStun,
         })
       }
       peerNetworkManager.broadcastWorldSnapshot(this.worldTick++, allStates)
@@ -609,6 +628,7 @@ export class GameEngine {
   public onPlayerUpdate(update: PlayerUpdateMessage): void {
     if (update.playerId === this.localPlayerId) return
 
+    const now = performance.now()
     let remote = this.remotePlayers.get(update.playerId)
     if (!remote && this.isHost) {
       const playerInfo = this.roomPlayers.find((p) => p.id === update.playerId)
@@ -617,19 +637,22 @@ export class GameEngine {
       }
     }
     if (remote) {
+      const targetImmunityUntil = update.state.immunityUntil > 0 ? now + update.state.immunityUntil : 0
+      const targetStunUntil = update.state.stunUntil > 0 ? now + update.state.stunUntil : 0
       remote.setTargetTransform(
         update.state.position,
         update.state.rotationY,
         update.state.status,
         update.state.isSprinting,
-        update.state.immunityUntil,
-        update.state.stunUntil,
+        targetImmunityUntil,
+        targetStunUntil,
       )
     }
   }
 
   public onWorldSnapshot(snapshot: WorldSnapshotMessage): void {
     const seenPlayerIds = new Set<string>()
+    const now = performance.now()
 
     for (const pState of snapshot.players) {
       if (!pState.id || pState.id === this.localPlayerId || seenPlayerIds.has(pState.id)) {
@@ -664,13 +687,15 @@ export class GameEngine {
         }
       }
       if (remote) {
+        const targetImmunityUntil = pState.immunityUntil > 0 ? now + pState.immunityUntil : 0
+        const targetStunUntil = pState.stunUntil > 0 ? now + pState.stunUntil : 0
         remote.setTargetTransform(
           pState.position,
           pState.rotationY,
           pState.status,
           pState.isSprinting,
-          pState.immunityUntil,
-          pState.stunUntil,
+          targetImmunityUntil,
+          targetStunUntil,
         )
       }
     }
@@ -698,6 +723,25 @@ export class GameEngine {
       this.callbacks.onRescue(event.sourceId ?? '', event.targetId ?? '')
     } else if (event.event === 'match_end' && event.winner && event.reason) {
       this.endMatch(event.winner, event.reason)
+    } else if (event.event === 'smoke' && event.position) {
+      const [sx, sy, sz] = event.position
+      const duration = event.durationMs ?? GAME_CONFIG.skills.smoke.durationMs
+      // Replicate 3D visual smoke volume if event originated from a remote player/opponent
+      if (event.sourceId !== this.localPlayerId) {
+        this.skillManager?.spawnSmokeVisual(sx, sy, sz, duration)
+      }
+      // If host, confound enemy bots within smoke radius
+      if (this.isHost) {
+        const radius = event.radius ?? GAME_CONFIG.skills.smoke.radius
+        for (const bot of this.bots) {
+          if (bot.status !== 'jailed') {
+            const d = GameplayRules.distance3D({ x: sx, y: sy, z: sz }, bot.getPosition())
+            if (d <= radius) {
+              bot.applySmokeConfound(duration)
+            }
+          }
+        }
+      }
     }
   }
 
@@ -1083,6 +1127,16 @@ export class GameEngine {
           bot.applySmokeConfound(payload.durationMs)
         }
       }
+    }
+
+    if (!this.isPractice) {
+      peerNetworkManager.broadcastGameEvent({
+        event: 'smoke',
+        sourceId: this.localPlayerId,
+        position: [payload.x, payload.y, payload.z],
+        radius: payload.radius,
+        durationMs: payload.durationMs,
+      })
     }
   }
 

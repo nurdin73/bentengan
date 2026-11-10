@@ -150,6 +150,16 @@ describe('Tactical Active Skills & Bot Status Simulation', () => {
       expect(manager.getSkillState('smoke', now).ready).toBe(true)
       manager.dispose()
     })
+
+    it('spawns external smoke visual when triggered from network event', () => {
+      const manager = new SkillManager(scene)
+      const initialSceneChildrenCount = scene.children.length
+
+      manager.spawnSmokeVisual(10, 0, 15, 3000)
+
+      expect(scene.children.length).toBeGreaterThan(initialSceneChildrenCount)
+      manager.dispose()
+    })
   })
 
   describe('SkillActionBar Vue Component Presentation', () => {

@@ -106,11 +106,14 @@ export const WorldSnapshotMessageSchema = z.object({
 
 export const GameEventMessageSchema = z.object({
   type: z.literal('GAME_EVENT'),
-  event: z.enum(['capture', 'rescue', 'base_capture', 'match_end']),
+  event: z.enum(['capture', 'rescue', 'base_capture', 'match_end', 'smoke']),
   winner: TeamIdSchema.optional(),
   reason: z.enum(['base_capture', 'team_elimination', 'host_disconnect']).optional(),
   sourceId: z.string().optional(),
   targetId: z.string().optional(),
+  position: z.tuple([z.number(), z.number(), z.number()]).optional(),
+  radius: z.number().optional(),
+  durationMs: z.number().optional(),
   timestamp: z.number(),
 })
 

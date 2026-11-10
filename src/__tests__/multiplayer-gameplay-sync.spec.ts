@@ -200,4 +200,77 @@ describe('Multiplayer Gameplay Real-Time Synchronization', () => {
 
     remote.dispose(scene)
   })
+
+  it('correctly parses and serializes network smoke game events with coordinates', () => {
+    const rawSmokeEvent: GameEventMessage = {
+      type: 'GAME_EVENT',
+      event: 'smoke',
+      sourceId: 'remote-player-123',
+      position: [8.5, 0.5, -12.0],
+      radius: 7.0,
+      durationMs: 3000,
+      timestamp: Date.now(),
+    }
+
+    const parsed = parseNetworkMessage(rawSmokeEvent)
+    expect(parsed).not.toBeNull()
+    expect(parsed?.type).toBe('GAME_EVENT')
+    const event = parsed as GameEventMessage
+    expect(event.event).toBe('smoke')
+    expect(event.sourceId).toBe('remote-player-123')
+    expect(event.position).toEqual([8.5, 0.5, -12.0])
+    expect(event.radius).toBe(7.0)
+    expect(event.durationMs).toBe(3000)
+  })
+
+  it('synchronizes immunity duration across peers with different epoch timestamps', () => {
+    const remote = new RemotePlayerController(scene, physics, {
+      id: 'remote-immune-test',
+      name: 'Charlie',
+      teamId: 'blue',
+      initialPosition: [0, 1, 0],
+    })
+
+    // Peer A had 3000ms remaining immunity and sent it over the network
+    const remainingImmunityMs = 3000
+    // Peer B has an arbitrary local performance.now() of 150000ms
+    const peerBLocalNow = 150000
+
+    // Receiver reconstructs local immunity timestamp: localNow + remaining
+    const reconstructedImmunityUntil = peerBLocalNow + remainingImmunityMs
+    remote.setTargetTransform([0, 1, 0], 0, 'normal', false, reconstructedImmunityUntil)
+
+    // At peerBLocalNow + 1000 (2000ms left), player is immune
+    remote.updateInterpolation(0.016, peerBLocalNow + 1000)
+    expect(peerBLocalNow + 1000 < remote.immunityUntil).toBe(true)
+
+    // At peerBLocalNow + 3500, immunity has expired
+    remote.updateInterpolation(0.016, peerBLocalNow + 3500)
+    expect(peerBLocalNow + 3500 < remote.immunityUntil).toBe(false)
+
+    remote.dispose(scene)
+  })
+
+  it('applies procedural forward tilt when remote player is sprinting and moving', () => {
+    const remote = new RemotePlayerController(scene, physics, {
+      id: 'remote-sprint-tilt',
+      name: 'Diana',
+      teamId: 'red',
+      initialPosition: [0, 1, 0],
+    })
+
+    // Target is moving forward and sprinting
+    remote.setTargetTransform([0, 1, 10], 0, 'normal', true)
+    remote.updateInterpolation(0.1, 1000)
+
+    // Find body mesh child to verify tilt
+    const bodyMesh = remote.mesh.children.find(
+      (c) => c instanceof THREE.Mesh && c.geometry.type === 'CapsuleGeometry',
+    ) as THREE.Mesh | undefined
+
+    expect(bodyMesh).toBeDefined()
+    expect(bodyMesh?.rotation.x).toBeGreaterThan(0.05)
+
+    remote.dispose(scene)
+  })
 })

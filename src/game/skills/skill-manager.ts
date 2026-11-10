@@ -147,7 +147,7 @@ export class SkillManager {
     this.callbacks.onSkillStateChange?.(this.getAllSkillsState(now))
   }
 
-  private spawnSmokeVisual(x: number, y: number, z: number, durationMs: number): void {
+  public spawnSmokeVisual(x: number, y: number, z: number, durationMs: number): void {
     const group = new THREE.Group()
     group.position.set(x, y + 0.3, z)
 

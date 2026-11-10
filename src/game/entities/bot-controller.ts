@@ -57,6 +57,7 @@ export class BotController implements GameplayEntity {
   private dodgeTimer = 0
   private readonly jukeVector = new THREE.Vector3()
   public readonly mesh: THREE.Group
+  public readonly bodyMesh: THREE.Mesh
   public readonly body: RAPIER.RigidBody
   public readonly collider: RAPIER.Collider
 
@@ -77,6 +78,8 @@ export class BotController implements GameplayEntity {
   public readonly previousPosition = new THREE.Vector3()
   public readonly currentPosition = new THREE.Vector3()
   private targetRotationY = 0
+  private runAnimCycle = 0
+  private readonly normalScale = new THREE.Vector3(1, 1, 1)
 
   // Overhead 3D Bot Name & Stamina Bar Sprite
   private readonly overheadCanvas: HTMLCanvasElement | null = null
@@ -169,9 +172,9 @@ export class BotController implements GameplayEntity {
     )
     const color = options.teamId === 'blue' ? 0x2563eb : 0xdc2626
     this.bodyMat = new THREE.MeshStandardMaterial({ color, roughness: 0.5 })
-    const bodyMesh = new THREE.Mesh(bodyGeo, this.bodyMat)
-    bodyMesh.castShadow = true
-    this.mesh.add(bodyMesh)
+    this.bodyMesh = new THREE.Mesh(bodyGeo, this.bodyMat)
+    this.bodyMesh.castShadow = true
+    this.mesh.add(this.bodyMesh)
 
     // Visor
     const visorGeo = new THREE.BoxGeometry(0.35, 0.15, 0.2)
@@ -933,12 +936,50 @@ export class BotController implements GameplayEntity {
     this.mesh.position.set(x, targetY, z)
   }
 
-  public syncVisuals(alpha = 1.0, now = performance.now()): void {
+  public syncVisuals(alpha = 1.0, dt = 0.016, now = performance.now()): void {
+    // Sub-frame linear interpolation to eliminate 60Hz/144Hz refresh-rate jitter
     this.mesh.position.lerpVectors(this.previousPosition, this.currentPosition, alpha)
 
+    // Smooth rotational turning with frame-rate independent exponential damping
     const diff = this.targetRotationY - this.mesh.rotation.y
     const normalizedDiff = Math.atan2(Math.sin(diff), Math.cos(diff))
-    this.mesh.rotation.y += normalizedDiff * 0.2
+    const rotDamping = 1 - Math.exp(-22 * dt)
+    this.mesh.rotation.y += normalizedDiff * rotDamping
+
+    // Procedural animation: Smooth forward tilt & cute subtle chibi waddle matching player
+    const currentLinVel = this.body.linvel()
+    const horizSpeed = Math.sqrt(currentLinVel.x * currentLinVel.x + currentLinVel.z * currentLinVel.z)
+    const isMoving = horizSpeed > 0.4 && this.status === 'normal'
+
+    if (isMoving) {
+      const animSpeed = this.isSprinting ? 14 : 8.5
+      this.runAnimCycle += dt * animSpeed
+      const targetForwardTilt = this.isSprinting ? 0.14 : 0.07
+      const tiltDamping = 1 - Math.exp(-14 * dt)
+      this.bodyMesh.rotation.x = THREE.MathUtils.lerp(this.bodyMesh.rotation.x, targetForwardTilt, tiltDamping)
+
+      const waddleAmp = this.isSprinting ? 0.05 : 0.03
+      this.bodyMesh.rotation.z = Math.sin(this.runAnimCycle) * waddleAmp
+    } else {
+      const returnDamping = 1 - Math.exp(-12 * dt)
+      this.bodyMesh.rotation.x = THREE.MathUtils.lerp(this.bodyMesh.rotation.x, 0, returnDamping)
+      this.bodyMesh.rotation.z = THREE.MathUtils.lerp(this.bodyMesh.rotation.z, 0, returnDamping)
+    }
+
+    // Keep bodyMesh anchored cleanly
+    this.bodyMesh.position.set(0, 0, 0)
+
+    // Procedural Jump/Fall Squash & Stretch
+    if (Math.abs(currentLinVel.y) > 0.4) {
+      if (currentLinVel.y > 0.4) {
+        this.bodyMesh.scale.set(0.93, 1.1, 0.93)
+      } else {
+        this.bodyMesh.scale.set(0.96, 1.04, 0.96)
+      }
+    } else {
+      const scaleDamping = 1 - Math.exp(-15 * dt)
+      this.bodyMesh.scale.lerp(this.normalScale, scaleDamping)
+    }
 
     // Immunity energy shield bubble visualization
     const isImmune = now < this.immunityUntil
@@ -948,7 +989,8 @@ export class BotController implements GameplayEntity {
     const isStunned = this.status === 'stunned' || now < this.stunUntil
     this.stunStarsGroup.visible = isStunned
     if (isStunned) {
-      this.stunStarsGroup.rotation.y += 0.08
+      this.stunStarsGroup.rotation.y += dt * 4.5
+      this.bodyMesh.rotation.z = Math.sin(now * 0.008) * 0.12
     }
 
     // Overhead 3D nameplate & stamina bar update

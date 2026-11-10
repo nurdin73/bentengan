@@ -442,41 +442,52 @@ export class PlayerController implements GameplayEntity {
     soundManager.stopStun()
   }
 
-  public syncVisuals(alpha = 1.0, now = performance.now()): void {
+  public syncVisuals(alpha = 1.0, dt = 0.016, now = performance.now()): void {
     // Sub-frame linear interpolation to eliminate 60Hz/144Hz refresh-rate jitter
     this.mesh.position.lerpVectors(this.previousPosition, this.currentPosition, alpha)
 
-    // Smooth rotational turning
+    // Smooth rotational turning with frame-rate independent exponential damping
     const diff = this.targetRotationY - this.mesh.rotation.y
     const normalizedDiff = Math.atan2(Math.sin(diff), Math.cos(diff))
-    this.mesh.rotation.y += normalizedDiff * 0.3
+    const rotDamping = 1 - Math.exp(-22 * dt)
+    this.mesh.rotation.y += normalizedDiff * rotDamping
 
-    // Procedural animation: Running bobbing & tilt
+    // Procedural animation: Smooth forward tilt & cute subtle chibi waddle
     const currentLinVel = this.body.linvel()
     const horizSpeed = Math.sqrt(currentLinVel.x * currentLinVel.x + currentLinVel.z * currentLinVel.z)
+    const isMovingGrounded = horizSpeed > 0.4 && this.isGrounded
 
-    if (horizSpeed > 0.5 && this.isGrounded) {
-      this.runAnimCycle += 0.25
-      const tiltAngle = this.isSprinting ? 0.12 : 0.06
-      this.bodyMesh.rotation.x = Math.sin(this.runAnimCycle) * 0.05 + tiltAngle
-      this.bodyMesh.position.y = Math.abs(Math.sin(this.runAnimCycle * 2)) * 0.08
+    if (isMovingGrounded) {
+      const animSpeed = this.isSprinting ? 14 : 8.5
+      this.runAnimCycle += dt * animSpeed
+      const targetForwardTilt = this.isSprinting ? 0.14 : 0.07
+      const tiltDamping = 1 - Math.exp(-14 * dt)
+      this.bodyMesh.rotation.x = THREE.MathUtils.lerp(this.bodyMesh.rotation.x, targetForwardTilt, tiltDamping)
+      
+      const waddleAmp = this.isSprinting ? 0.05 : 0.03
+      this.bodyMesh.rotation.z = Math.sin(this.runAnimCycle) * waddleAmp
     } else {
-      this.bodyMesh.rotation.x *= 0.8
-      this.bodyMesh.position.y *= 0.8
+      const returnDamping = 1 - Math.exp(-12 * dt)
+      this.bodyMesh.rotation.x = THREE.MathUtils.lerp(this.bodyMesh.rotation.x, 0, returnDamping)
+      this.bodyMesh.rotation.z = THREE.MathUtils.lerp(this.bodyMesh.rotation.z, 0, returnDamping)
     }
+
+    // Keep bodyMesh anchored cleanly without vertical displacement jitter
+    this.bodyMesh.position.set(0, 0, 0)
 
     // Procedural Jump Squash & Stretch
     if (!this.isGrounded) {
-      if (currentLinVel.y > 0.5) {
+      if (currentLinVel.y > 0.4) {
         // Ascending stretch
-        this.bodyMesh.scale.set(0.92, 1.12, 0.92)
-      } else if (currentLinVel.y < -0.5) {
+        this.bodyMesh.scale.set(0.93, 1.1, 0.93)
+      } else if (currentLinVel.y < -0.4) {
         // Descending stretch
-        this.bodyMesh.scale.set(0.95, 1.05, 0.95)
+        this.bodyMesh.scale.set(0.96, 1.04, 0.96)
       }
     } else {
       // Smoothly return scale to 1 (zero allocation)
-      this.bodyMesh.scale.lerp(this.normalScale, 0.25)
+      const scaleDamping = 1 - Math.exp(-15 * dt)
+      this.bodyMesh.scale.lerp(this.normalScale, scaleDamping)
     }
 
     // Immunity energy shield bubble visualization
@@ -490,10 +501,8 @@ export class PlayerController implements GameplayEntity {
     const isStunned = this.status === 'stunned' || now < this.stunUntil
     this.stunStarsGroup.visible = isStunned
     if (isStunned) {
-      this.stunStarsGroup.rotation.y += 0.08
-      this.bodyMesh.rotation.z = Math.sin(now * 0.01) * 0.1
-    } else {
-      this.bodyMesh.rotation.z = 0
+      this.stunStarsGroup.rotation.y += dt * 4.5
+      this.bodyMesh.rotation.z = Math.sin(now * 0.008) * 0.12
     }
 
     // Overhead 3D nameplate & stamina bar update

@@ -34,6 +34,8 @@ export class RemotePlayerController implements GameplayEntity {
   private targetRotationY = 0
 
   // Three.js visual elements
+  private readonly bodyMesh: THREE.Mesh
+  private readonly bodyGeo: THREE.CapsuleGeometry
   private readonly bodyMat: THREE.MeshStandardMaterial
   private readonly visorMat: THREE.MeshStandardMaterial
   private readonly shieldBubble: EnergyShieldBubble
@@ -61,7 +63,7 @@ export class RemotePlayerController implements GameplayEntity {
     this.mesh.position.copy(this.targetPosition)
 
     // Capsule Chibi Body
-    const bodyGeo = new THREE.CapsuleGeometry(
+    this.bodyGeo = new THREE.CapsuleGeometry(
       characterRadius,
       characterHeight - characterRadius * 2,
       8,
@@ -75,9 +77,9 @@ export class RemotePlayerController implements GameplayEntity {
       transparent: true,
       opacity: 1.0,
     })
-    const bodyMesh = new THREE.Mesh(bodyGeo, this.bodyMat)
-    bodyMesh.castShadow = true
-    this.mesh.add(bodyMesh)
+    this.bodyMesh = new THREE.Mesh(this.bodyGeo, this.bodyMat)
+    this.bodyMesh.castShadow = true
+    this.mesh.add(this.bodyMesh)
 
     // Direction Visor
     const visorGeo = new THREE.BoxGeometry(0.35, 0.15, 0.2)
@@ -209,6 +211,9 @@ export class RemotePlayerController implements GameplayEntity {
   }
 
   public updateInterpolation(dt: number, now: number): void {
+    const isMoving =
+      this.mesh.position.distanceToSquared(this.targetPosition) > 0.001 || this.isSprinting
+
     // 1. Smoothly interpolate position towards target (lerp)
     const lerpFactor = Math.min(1.0, dt * 18) // 18 Hz responsive smoothing
     this.mesh.position.lerp(this.targetPosition, lerpFactor)
@@ -246,6 +251,16 @@ export class RemotePlayerController implements GameplayEntity {
       this.bodyMat.opacity = 1.0
       this.visorMat.opacity = 1.0
     }
+
+    // 4. Procedural running forward tilt & subtle chibi waddle
+    if (isMoving && !isStunned && this.status !== 'jailed') {
+      const targetTilt = this.isSprinting ? 0.22 : 0.12
+      this.bodyMesh.rotation.x = THREE.MathUtils.lerp(this.bodyMesh.rotation.x, targetTilt, 12 * dt)
+      this.bodyMesh.rotation.z = Math.sin(now * 0.012) * 0.06
+    } else {
+      this.bodyMesh.rotation.x = THREE.MathUtils.lerp(this.bodyMesh.rotation.x, 0, 14 * dt)
+      this.bodyMesh.rotation.z = THREE.MathUtils.lerp(this.bodyMesh.rotation.z, 0, 14 * dt)
+    }
   }
 
   public dispose(scene?: THREE.Scene): void {
@@ -256,6 +271,7 @@ export class RemotePlayerController implements GameplayEntity {
     }
     this.physics.world.removeCollider(this.collider, false)
     this.physics.world.removeRigidBody(this.body)
+    this.bodyGeo.dispose()
     this.bodyMat.dispose()
     this.visorMat.dispose()
     this.shieldBubble.dispose()
