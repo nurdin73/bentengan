@@ -17,10 +17,18 @@ import { OUTFIT_PRESETS, type OutfitPresetMeta } from '../../game/entities/chara
 import type { TeamId } from '../../types/game.types'
 import TactileButton from '../ui/TactileButton.vue'
 import CharacterPreviewViewport from './CharacterPreviewViewport.vue'
+import CharacterPickerMobileModal from './CharacterPickerMobileModal.vue'
+import { checkIsMobileTouchDevice } from '../hud/mobile-device.utils'
 
-const props = defineProps<{
-  team?: TeamId
-}>()
+const props = withDefaults(
+  defineProps<{
+    team?: TeamId
+    isMobile?: boolean
+  }>(),
+  {
+    isMobile: undefined,
+  },
+)
 
 const emit = defineEmits<{
   (e: 'close'): void
@@ -28,6 +36,21 @@ const emit = defineEmits<{
 }>()
 
 const roomStore = useRoomStore()
+
+const detectedIsMobile = ref(false)
+
+const updateMobileDetection = () => {
+  detectedIsMobile.value = checkIsMobileTouchDevice()
+}
+
+updateMobileDetection()
+
+const effectiveIsMobile = computed(() => {
+  if (props.isMobile !== undefined) {
+    return props.isMobile
+  }
+  return detectedIsMobile.value
+})
 
 const selectedOutfitId = ref<number>(roomStore.myOutfitId || 1)
 const previewTeam = ref<TeamId>(props.team ?? roomStore.myTeam ?? 'blue')
@@ -60,10 +83,15 @@ const handleKeyDown = (e: KeyboardEvent) => {
 }
 
 onMounted(() => {
+  updateMobileDetection()
+  window.addEventListener('resize', updateMobileDetection)
+  window.addEventListener('orientationchange', updateMobileDetection)
   window.addEventListener('keydown', handleKeyDown)
 })
 
 onUnmounted(() => {
+  window.removeEventListener('resize', updateMobileDetection)
+  window.removeEventListener('orientationchange', updateMobileDetection)
   window.removeEventListener('keydown', handleKeyDown)
 })
 
@@ -91,6 +119,10 @@ const handleConfirm = () => {
   emit('close')
 }
 
+const handleMobileSelect = (outfitId: number) => {
+  emit('select', outfitId)
+}
+
 // Icon helper per outfit
 const getOutfitIcon = (id: number) => {
   switch (id) {
@@ -113,7 +145,17 @@ const getOutfitIcon = (id: number) => {
 </script>
 
 <template>
+  <!-- Mobile Dedicated Fullscreen Wardrobe Modal -->
+  <CharacterPickerMobileModal
+    v-if="effectiveIsMobile"
+    :team="previewTeam"
+    @close="emit('close')"
+    @select="handleMobileSelect"
+  />
+
+  <!-- Desktop Standard Wardrobe Modal -->
   <div
+    v-else
     data-testid="character-picker-modal-backdrop"
     class="character-picker-modal-backdrop fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/75 backdrop-blur-sm pointer-events-auto"
     @click.self="emit('close')"
@@ -153,7 +195,7 @@ const getOutfitIcon = (id: number) => {
         </p>
       </div>
 
-      <!-- Main Content Area: Responsive Split (Desktop 2-columns / Mobile Stack) -->
+      <!-- Main Content Area: Desktop Split -->
       <div
         class="character-picker-body grid grid-cols-1 md:grid-cols-12 gap-4 sm:gap-5 items-start"
       >
@@ -383,105 +425,3 @@ const getOutfitIcon = (id: number) => {
     </div>
   </div>
 </template>
-
-<style scoped>
-@media (orientation: landscape) and (max-height: 520px) {
-  .character-picker-modal-backdrop {
-    padding: 0 !important;
-  }
-
-  .character-picker-modal-card {
-    width: 100vw !important;
-    height: 100vh !important;
-    max-width: 100vw !important;
-    max-height: 100vh !important;
-    border-radius: 0 !important;
-    border: none !important;
-    box-shadow: none !important;
-    padding: 0.5rem 1rem !important;
-    gap: 0.375rem !important;
-    display: flex !important;
-    flex-direction: column !important;
-    overflow: hidden !important;
-  }
-
-  .character-picker-close-btn {
-    top: 0.5rem !important;
-    right: 0.75rem !important;
-    width: 1.75rem !important;
-    height: 1.75rem !important;
-  }
-
-  .character-picker-header {
-    gap: 0 !important;
-    padding-right: 2.5rem !important;
-    flex-shrink: 0 !important;
-  }
-
-  .character-picker-subtitle {
-    display: none !important;
-  }
-
-  .character-picker-body {
-    display: grid !important;
-    grid-template-columns: 5fr 7fr !important;
-    gap: 0.75rem !important;
-    flex: 1 1 auto !important;
-    min-height: 0 !important;
-    overflow: hidden !important;
-    align-items: stretch !important;
-  }
-
-  .character-picker-left-col {
-    display: flex !important;
-    flex-direction: column !important;
-    gap: 0.375rem !important;
-    height: 100% !important;
-    min-height: 0 !important;
-  }
-
-  .character-picker-viewport-container {
-    flex: 1 1 auto !important;
-    min-height: 0 !important;
-    height: auto !important;
-    max-height: none !important;
-  }
-
-  .character-picker-summary-card {
-    padding: 0.375rem 0.625rem !important;
-    gap: 0.125rem !important;
-    flex-shrink: 0 !important;
-  }
-
-  .character-picker-right-col {
-    display: flex !important;
-    flex-direction: column !important;
-    gap: 0.375rem !important;
-    height: 100% !important;
-    min-height: 0 !important;
-    overflow: hidden !important;
-  }
-
-  .character-picker-team-bar {
-    padding: 0.25rem 0.5rem !important;
-    flex-shrink: 0 !important;
-  }
-
-  .character-picker-outfits-grid {
-    display: grid !important;
-    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
-    flex: 1 1 auto !important;
-    max-height: none !important;
-    min-height: 0 !important;
-    overflow-y: auto !important;
-    gap: 0.375rem !important;
-    padding-right: 0.25rem !important;
-  }
-
-  .character-picker-footer {
-    padding-top: 0.375rem !important;
-    flex-shrink: 0 !important;
-    gap: 0.5rem !important;
-  }
-}
-</style>

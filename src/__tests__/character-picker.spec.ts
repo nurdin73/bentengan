@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import CharacterPickerModal from '../components/wardrobe/CharacterPickerModal.vue'
+import CharacterPickerMobileModal from '../components/wardrobe/CharacterPickerMobileModal.vue'
 import { useRoomStore } from '../stores/room-store'
 import { OUTFIT_PRESETS } from '../game/entities/character-avatar'
 import {
@@ -142,6 +143,104 @@ describe('CharacterPickerModal Component', () => {
     expect(wrapper.find('.character-picker-team-bar').exists()).toBe(true)
     expect(wrapper.find('.character-picker-outfits-grid').exists()).toBe(true)
     expect(wrapper.find('.character-picker-footer').exists()).toBe(true)
+  })
+
+  it('delegates to CharacterPickerMobileModal when isMobile is true', async () => {
+    const wrapper = mount(CharacterPickerModal, {
+      props: {
+        team: 'blue',
+        isMobile: true,
+      },
+    })
+
+    expect(wrapper.find('[data-testid="character-picker-mobile-modal"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="character-picker-modal"]').exists()).toBe(false)
+
+    // Test mobile close button
+    const closeBtn = wrapper.find('[data-testid="close-character-picker-mobile-btn"]')
+    await closeBtn.trigger('click')
+    expect(wrapper.emitted('close')).toBeTruthy()
+  })
+})
+
+describe('CharacterPickerMobileModal Component', () => {
+  const storageMap = new Map<string, string>()
+
+  beforeEach(() => {
+    setActivePinia(createPinia())
+    storageMap.clear()
+    vi.stubGlobal('localStorage', {
+      getItem: vi.fn<(key: string) => string | null>((key: string) => storageMap.get(key) ?? null),
+      setItem: vi.fn<(key: string, value: string) => void>((key: string, value: string) =>
+        storageMap.set(key, value),
+      ),
+      removeItem: vi.fn<(key: string) => boolean>((key: string) => storageMap.delete(key)),
+      clear: vi.fn<() => void>(() => storageMap.clear()),
+    })
+  })
+
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  it('renders 2-column layout with all 6 costumes in grid and subtitle theme', () => {
+    const roomStore = useRoomStore()
+    roomStore.myOutfitId = 1
+
+    const wrapper = mount(CharacterPickerMobileModal, {
+      props: { team: 'blue' },
+    })
+
+    expect(wrapper.find('[data-testid="character-picker-mobile-modal"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="mobile-outfit-nameplate"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="mobile-outfit-nameplate"]').text()).toContain('Casual Striker')
+    expect(wrapper.find('[data-testid="mobile-outfit-nameplate"]').text()).toContain('Street Casual')
+
+    // Verify all 6 costume cards exist in the grid
+    const cards = wrapper.findAll('[data-testid^="mobile-outfit-card-"]')
+    expect(cards.length).toBe(6)
+
+    expect(wrapper.find('[data-testid="mobile-outfit-card-1"]').text()).toContain('SELECTED')
+  })
+
+  it('updates selection on click and equips outfit', async () => {
+    const roomStore = useRoomStore()
+    roomStore.myOutfitId = 1
+    const setOutfitSpy = vi.spyOn(roomStore, 'setOutfit')
+
+    const wrapper = mount(CharacterPickerMobileModal, {
+      props: { team: 'blue' },
+    })
+
+    // Click outfit #4 (Athletic Runner)
+    const card4 = wrapper.find('[data-testid="mobile-outfit-card-4"]')
+    await card4.trigger('click')
+
+    // Nameplate reflects Athletic Runner
+    expect(wrapper.find('[data-testid="mobile-outfit-nameplate"]').text()).toContain('Athletic Runner')
+
+    // Equip button appears because it is not equipped yet
+    const equipBtn = wrapper.find('[data-testid="mobile-equip-outfit-btn"]')
+    expect(equipBtn.exists()).toBe(true)
+    await equipBtn.trigger('click')
+
+    expect(setOutfitSpy).toHaveBeenCalledWith(4)
+    expect(wrapper.emitted('select')).toBeTruthy()
+    expect(wrapper.emitted('select')![0]).toEqual([4])
+  })
+
+  it('toggles team preview in mobile modal', async () => {
+    const wrapper = mount(CharacterPickerMobileModal, {
+      props: { team: 'blue' },
+    })
+
+    const redBtn = wrapper.find('[data-testid="mobile-team-red-btn"]')
+    await redBtn.trigger('click')
+    expect(redBtn.classes()).toContain('bg-red-500')
+
+    const blueBtn = wrapper.find('[data-testid="mobile-team-blue-btn"]')
+    await blueBtn.trigger('click')
+    expect(blueBtn.classes()).toContain('bg-blue-500')
   })
 })
 
