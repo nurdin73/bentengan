@@ -2,6 +2,8 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import * as THREE from 'three'
 import { PhysicsWorld } from '../game/physics/physics-world'
 import { PlayerController } from '../game/entities/player-controller'
+import { BotController } from '../game/entities/bot-controller'
+import { RemotePlayerController } from '../game/entities/remote-player-controller'
 
 describe('PlayerController Overhead World-Space Stamina & Nameplate', () => {
   let scene: THREE.Scene
@@ -53,6 +55,8 @@ describe('PlayerController Overhead World-Space Stamina & Nameplate', () => {
     expect(player.overheadSprite).toBeDefined()
     expect(player.mesh.children).toContain(player.overheadSprite)
     expect(player.overheadSprite.position.y).toBeCloseTo(1.15, 2)
+    expect(player.overheadSprite.material.depthTest).toBe(true)
+    expect(player.overheadSprite.material.depthWrite).toBe(false)
 
     player.dispose()
   })
@@ -128,5 +132,32 @@ describe('PlayerController Overhead World-Space Stamina & Nameplate', () => {
 
     expect(textureDisposeSpy).toHaveBeenCalled()
     expect(matDisposeSpy).toHaveBeenCalled()
+  })
+
+  it('enables depthTest and disables depthWrite on BotController and RemotePlayerController', () => {
+    const bot = new BotController(scene, physics, {
+      id: 'bot-depth-test',
+      name: 'Bot Cerdas',
+      teamId: 'red',
+      initialPosition: [5, 1, 20],
+      role: 'defender',
+    })
+
+    expect(bot.overheadSprite.material.depthTest).toBe(true)
+    expect(bot.overheadSprite.material.depthWrite).toBe(false)
+    bot.dispose()
+
+    const remote = new RemotePlayerController(scene, physics, {
+      id: 'remote-depth-test',
+      name: 'Pemain Jauh',
+      teamId: 'blue',
+      initialPosition: [-5, 1, -20],
+    })
+
+    const remoteSprite = remote.mesh.children.find((c) => c instanceof THREE.Sprite) as THREE.Sprite
+    expect(remoteSprite).toBeDefined()
+    expect(remoteSprite.material.depthTest).toBe(true)
+    expect(remoteSprite.material.depthWrite).toBe(false)
+    remote.dispose(scene)
   })
 })

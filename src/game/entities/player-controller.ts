@@ -188,7 +188,8 @@ export class PlayerController implements GameplayEntity {
     const spriteMat = new THREE.SpriteMaterial({
       map: this.overheadTexture,
       transparent: true,
-      depthTest: false,
+      depthTest: true,
+      depthWrite: false,
     })
     this.overheadSprite = new THREE.Sprite(spriteMat)
     this.overheadSprite.scale.set(1.7, 0.42, 1.0)

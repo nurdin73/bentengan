@@ -180,7 +180,8 @@ export class RemotePlayerController implements GameplayEntity {
     const spriteMat = new THREE.SpriteMaterial({
       map: texture,
       transparent: true,
-      depthTest: false,
+      depthTest: true,
+      depthWrite: false,
     })
     const sprite = new THREE.Sprite(spriteMat)
     sprite.scale.set(1.6, 0.35, 1.0)
