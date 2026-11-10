@@ -4,6 +4,7 @@ import { mount } from '@vue/test-utils'
 import * as THREE from 'three'
 import type { DataConnection } from 'peerjs'
 import { useRoomStore } from '../stores/room-store'
+import { useDevStore } from '../stores/dev-store'
 import { peerNetworkManager } from '../game/network/peer-network-manager'
 import { parseNetworkMessage, type PeerStatusNotification } from '../game/network/network-protocol'
 import GameHUD from '../components/hud/GameHUD.vue'
@@ -531,6 +532,40 @@ describe('Multiplayer Reconnection & Status Transparency Mechanics', () => {
 
       expect(engine.isPractice).toBe(false)
       expect(engine.bots.length).toBe(0)
+
+      engine.dispose()
+    })
+
+    it('enforces dev mode lockdown when isPractice is false', async () => {
+      const devStore = useDevStore()
+      devStore.unlockDevMode()
+      devStore.setGodMode(true)
+      devStore.setSpeedMultiplier(3.0)
+
+      const engine = createTestEngine()
+      await engine.init({
+        localPlayerId: 'p-local',
+        localPlayerUsername: 'Local Me',
+        teamId: 'blue',
+        isPractice: false,
+        roomPlayers: [
+          {
+            id: 'p-local',
+            peerId: 'peer-local',
+            username: 'Local Me',
+            teamId: 'blue',
+            isReady: true,
+            isHost: true,
+          },
+        ],
+      })
+
+      // Simulate tick call where applyDevModifiers executes
+      const engineInternal = engine as unknown as { applyDevModifiers: (now: number) => void }
+      engineInternal.applyDevModifiers(1000)
+
+      expect(engine.localPlayer?.isGodMode).toBe(false)
+      expect(engine.localPlayer?.speedMultiplier).toBe(1.0)
 
       engine.dispose()
     })

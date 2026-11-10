@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { setActivePinia, createPinia } from 'pinia'
 import { mount } from '@vue/test-utils'
 import { useDevStore } from '../stores/dev-store'
+import { useRoomStore } from '../stores/room-store'
 import DevDebugPanel from '../components/dev/DevDebugPanel.vue'
 import { GameplayRules } from '../game/systems/gameplay-rules'
 import type { GameplayEntity } from '../types/game.types'
@@ -182,6 +183,58 @@ describe('Developer God Mode & Bot Freeze Suite', () => {
       expect(winBtn.exists()).toBe(true)
       await winBtn.trigger('click')
       expect(store.pendingInstantWin).toBe(true)
+    })
+
+    it('does not render anything when in PvP mode even if dev mode was unlocked', () => {
+      const devStore = useDevStore()
+      devStore.unlockDevMode()
+      devStore.isOpen = true
+
+      const roomStore = useRoomStore()
+      roomStore.roomCode = 'ROOM1' // PvP match room code
+
+      const wrapper = mount(DevDebugPanel)
+      expect(wrapper.find('[data-testid="dev-debug-root"]').exists()).toBe(false)
+      expect(wrapper.find('[data-testid="dev-toggle-pill-btn"]').exists()).toBe(false)
+      expect(wrapper.find('[data-testid="dev-debug-panel"]').exists()).toBe(false)
+    })
+  })
+
+  describe('PvP Lockdown & Anti-Cheat Enforcement', () => {
+    it('correctly evaluates isPvP getter in roomStore', () => {
+      const roomStore = useRoomStore()
+      expect(roomStore.isPvP).toBe(false)
+
+      roomStore.roomCode = 'LOKAL'
+      expect(roomStore.isPvP).toBe(false)
+
+      roomStore.roomCode = 'PVP01'
+      expect(roomStore.isPvP).toBe(true)
+    })
+
+    it('blocks keyboard shortcuts and console API in PvP mode', () => {
+      const devStore = useDevStore()
+      const roomStore = useRoomStore()
+      roomStore.roomCode = 'PVP99'
+
+      const wrapper = mount(DevDebugPanel)
+
+      // 1. Keyboard event simulation
+      const event = new KeyboardEvent('keydown', { code: 'F2' })
+      window.dispatchEvent(event)
+      expect(devStore.isUnlocked).toBe(false)
+      expect(devStore.isOpen).toBe(false)
+
+      // 2. Console API attempt
+      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+      window.bentengan?.godMode(true)
+      expect(devStore.isUnlocked).toBe(false)
+      expect(devStore.godMode).toBe(false)
+      expect(warnSpy).toHaveBeenCalledWith(
+        expect.stringContaining('[BENTENGAN DEV] Perintah developer dinonaktifkan pada pertandingan PvP!'),
+      )
+      warnSpy.mockRestore()
+      wrapper.unmount()
     })
   })
 })

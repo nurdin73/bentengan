@@ -4,6 +4,7 @@ import { useRoute, useRouter, onBeforeRouteLeave } from 'vue-router'
 import { AlertCircle, ArrowLeft } from 'lucide-vue-next'
 import { useRoomStore } from '../stores/room-store'
 import { useGameStore } from '../stores/game-store'
+import { useDevStore } from '../stores/dev-store'
 import LobbyWaitingRoom from '../components/lobby/LobbyWaitingRoom.vue'
 import RulesBriefingView from '../components/lobby/RulesBriefingView.vue'
 import GameCanvas from '../components/game/GameCanvas.vue'
@@ -16,8 +17,10 @@ const route = useRoute()
 const router = useRouter()
 const roomStore = useRoomStore()
 const gameStore = useGameStore()
+const devStore = useDevStore()
 
 onBeforeRouteLeave(() => {
+  devStore.lockDevMode()
   roomStore.leaveRoom()
 })
 
@@ -32,6 +35,7 @@ const tempUsername = ref(roomStore.myUsername)
 const isSubmittingJoin = ref(false)
 
 onMounted(async () => {
+  devStore.lockDevMode()
   try {
     const hostedRoom = sessionStorage.getItem('bentengan_hosted_room')
     // If this browser tab was the Host of this room who reloaded: redirect back to Home

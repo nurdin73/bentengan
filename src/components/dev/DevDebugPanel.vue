@@ -12,10 +12,12 @@ import {
   PauseCircle,
 } from 'lucide-vue-next'
 import { useDevStore, type TeleportTarget } from '../../stores/dev-store'
+import { useRoomStore } from '../../stores/room-store'
 import { useDevShortcuts } from './use-dev-shortcuts'
 
 useDevShortcuts()
 const devStore = useDevStore()
+const roomStore = useRoomStore()
 
 const persistInSession = ref(false)
 
@@ -57,8 +59,12 @@ const handleClose = () => {
 </script>
 
 <template>
-  <!-- Only render when unlocked via URL param, hotkey, or console -->
-  <div v-if="devStore.isUnlocked" data-testid="dev-debug-root" class="relative pointer-events-auto">
+  <!-- Only render when unlocked via URL param, hotkey, or console AND not in PvP -->
+  <div
+    v-if="devStore.isUnlocked && !roomStore.isPvP"
+    data-testid="dev-debug-root"
+    class="relative pointer-events-auto"
+  >
     <!-- Dev Toggle Pill Button (Aligned with Help & HUD HP) -->
     <button
       data-testid="dev-toggle-pill-btn"

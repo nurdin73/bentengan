@@ -167,8 +167,8 @@ defineEmits<{
           <span class="text-[11px] uppercase tracking-wider">HUD HP</span>
         </button>
 
-        <!-- Developer Mode Toggle Button (Aligned side-by-side with Help and HUD HP) -->
-        <DevDebugPanel />
+        <!-- Developer Mode Toggle Button (Aligned side-by-side with Help and HUD HP) - Hidden in PvP -->
+        <DevDebugPanel v-if="!roomStore.isPvP" />
       </div>
       <div v-else class="flex items-center gap-2 pointer-events-auto">
         <!-- Settings Modal Button Mobile -->
@@ -181,7 +181,7 @@ defineEmits<{
         >
           <Settings class="w-4 h-4" />
         </button>
-        <DevDebugPanel />
+        <DevDebugPanel v-if="!roomStore.isPvP" />
       </div>
     </div>
 

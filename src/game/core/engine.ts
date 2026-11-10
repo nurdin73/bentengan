@@ -820,6 +820,14 @@ export class GameEngine {
   }
 
   private applyDevModifiers(now: number): void {
+    if (!this.isPractice) {
+      if (this.localPlayer) {
+        this.localPlayer.isGodMode = false
+        this.localPlayer.speedMultiplier = 1.0
+      }
+      return
+    }
+
     const dev = this.getDevStore()
     if (!dev || !dev.isUnlocked) return
 

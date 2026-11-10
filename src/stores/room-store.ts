@@ -64,6 +64,7 @@ export const useRoomStore = defineStore('room', {
       return me ? me.isReady : false
     },
     startableStatus: (state) => isMatchStartable(state.players),
+    isPvP: (state) => Boolean(state.roomCode && state.roomCode !== 'LOKAL'),
     canStartMatch: (state) => {
       if (state.roomCode === 'LOKAL') return true
       if (!state.isHost) return false

@@ -1,5 +1,6 @@
 import { onMounted, onUnmounted } from 'vue'
 import { useDevStore } from '../../stores/dev-store'
+import { useRoomStore } from '../../stores/room-store'
 
 declare global {
   interface Window {
@@ -23,8 +24,10 @@ declare global {
 
 export function useDevShortcuts() {
   const devStore = useDevStore()
+  const roomStore = useRoomStore()
 
   const checkAutoUnlock = () => {
+    if (roomStore.isPvP) return
     try {
       if (typeof window !== 'undefined') {
         const urlParams = new URLSearchParams(window.location.search)
@@ -46,6 +49,11 @@ export function useDevShortcuts() {
   }
 
   const handleKeyDown = (e: KeyboardEvent) => {
+    // Strictly disable dev shortcuts during PvP multiplayer matches
+    if (roomStore.isPvP) {
+      return
+    }
+
     // Avoid triggering when user is typing inside an input or textarea
     const target = e.target as HTMLElement | null
     if (
@@ -67,18 +75,33 @@ export function useDevShortcuts() {
     }
   }
 
+  const isPvPBlocked = () => {
+    if (roomStore.isPvP) {
+      console.warn('[BENTENGAN DEV] Perintah developer dinonaktifkan pada pertandingan PvP!')
+      return true
+    }
+    return false
+  }
+
   const registerConsoleApi = () => {
     if (typeof window === 'undefined') return
 
     window.__BENTENGAN_DEV__ = {
       store: devStore,
-      toggle: () => devStore.togglePanel(),
-      enable: () => devStore.unlockDevMode(),
+      toggle: () => {
+        if (isPvPBlocked()) return
+        devStore.togglePanel()
+      },
+      enable: () => {
+        if (isPvPBlocked()) return
+        devStore.unlockDevMode()
+      },
       disable: () => devStore.lockDevMode(),
     }
 
     window.bentengan = {
       godMode: (enable = true) => {
+        if (isPvPBlocked()) return
         devStore.unlockDevMode()
         devStore.setGodMode(enable)
         console.info(
@@ -86,6 +109,7 @@ export function useDevShortcuts() {
         )
       },
       freezeBots: (enable = true) => {
+        if (isPvPBlocked()) return
         devStore.unlockDevMode()
         devStore.setFreezeEnemyBots(enable)
         console.info(
@@ -93,21 +117,25 @@ export function useDevShortcuts() {
         )
       },
       speed: (mult = 2.0) => {
+        if (isPvPBlocked()) return
         devStore.unlockDevMode()
         devStore.setSpeedMultiplier(mult)
         console.info(`[BENTENGAN DEV] Speed Multiplier set to ${mult}x`)
       },
       teleport: (target) => {
+        if (isPvPBlocked()) return
         devStore.unlockDevMode()
         devStore.requestTeleport(target)
         console.info(`[BENTENGAN DEV] Teleport requested: ${target}`)
       },
       win: () => {
+        if (isPvPBlocked()) return
         devStore.unlockDevMode()
         devStore.requestInstantWin()
         console.info('[BENTENGAN DEV] Instant Win requested')
       },
       openDev: () => {
+        if (isPvPBlocked()) return
         devStore.unlockDevMode()
         devStore.isOpen = true
       },
