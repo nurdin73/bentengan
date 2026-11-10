@@ -97,7 +97,7 @@ export class BotController implements GameplayEntity {
   private patrolCenter: THREE.Vector3
   private patrolRadius: number
   private patrolTimer = 0
-  private patrolDirection = new THREE.Vector3()
+  public readonly patrolDirection = new THREE.Vector3()
 
   // Materials & visual cues
   private readonly bodyMat: THREE.MeshStandardMaterial
@@ -113,6 +113,9 @@ export class BotController implements GameplayEntity {
   private readonly scratchVel = { x: 0, y: 0, z: 0 }
   private readonly wallProbeRay: RAPIER.Ray
   private readonly upperClearanceRay: RAPIER.Ray
+  private readonly losRay: RAPIER.Ray
+  private lastSeenTargetPos: THREE.Vector3 | null = null
+  private searchTimer = 0
 
   // Stuck detection & unstuck juke state
   private readonly lastStuckCheckPos = new THREE.Vector3()
@@ -258,6 +261,7 @@ export class BotController implements GameplayEntity {
     this.collider = physics.world.createCollider(colliderDesc, this.body)
     this.wallProbeRay = new R.Ray({ x: 0, y: 0, z: 0 }, { x: 0, y: 0, z: 1 })
     this.upperClearanceRay = new R.Ray({ x: 0, y: 0, z: 0 }, { x: 0, y: 0, z: 1 })
+    this.losRay = new R.Ray({ x: 0, y: 0, z: 0 }, { x: 0, y: 0, z: 1 })
     this.lastStuckCheckPos.copy(this.previousPosition)
   }
 
@@ -269,6 +273,51 @@ export class BotController implements GameplayEntity {
   public recordCurrentPosition(): void {
     const pos = this.body.translation()
     this.currentPosition.set(pos.x, pos.y, pos.z)
+  }
+
+  /**
+   * Performs an obstacle line-of-sight raycast from the bot to targetPos.
+   * Returns false if an intervening static box/wall collider blocks direct vision.
+   */
+  public hasLineOfSight(targetPos: { x: number; y: number; z: number }): boolean {
+    const myPos = this.body.translation()
+    const eyeHeight = 0.5
+    const originX = myPos.x
+    const originY = myPos.y + eyeHeight
+    const originZ = myPos.z
+
+    const targetY = (targetPos.y ?? myPos.y) + eyeHeight
+    const dx = targetPos.x - originX
+    const dy = targetY - originY
+    const dz = targetPos.z - originZ
+    const dist = Math.sqrt(dx * dx + dy * dy + dz * dz)
+
+    if (dist < 0.2) return true
+
+    const invDist = 1 / dist
+    this.losRay.origin.x = originX
+    this.losRay.origin.y = originY
+    this.losRay.origin.z = originZ
+    this.losRay.dir.x = dx * invDist
+    this.losRay.dir.y = dy * invDist
+    this.losRay.dir.z = dz * invDist
+
+    const hit = this.physics.world.castRay(
+      this.losRay,
+      dist,
+      true,
+      undefined,
+      undefined,
+      this.collider,
+    )
+
+    if (!hit) {
+      return true
+    }
+
+    // A static obstacle (box, wall, stone pillar) will be hit before reaching the target.
+    // Margin of 0.45 accounts for character body radius.
+    return hit.timeOfImpact >= dist - 0.45
   }
 
   public updateFixed(dt: number, now: number, potentialTargets: GameplayEntity[] = []): void {
@@ -406,9 +455,10 @@ export class BotController implements GameplayEntity {
 
       for (const t of potentialTargets) {
         if (t.teamId === this.teamId || t.status === 'jailed') continue
-        const d = GameplayRules.distance3D(myPos, t.getPosition())
-        // Threat range: 3.2 meters
-        if (d < 3.2 && d < nearestDefenderDist) {
+        const tPos = t.getPosition()
+        const d = GameplayRules.distance3D(myPos, tPos)
+        // Threat range: 3.2 meters with direct line of sight
+        if (d < 3.2 && d < nearestDefenderDist && this.hasLineOfSight(tPos)) {
           nearestDefender = t
           nearestDefenderDist = d
         }
@@ -606,8 +656,9 @@ export class BotController implements GameplayEntity {
 
             // Target is in our territory if isInEnemyTerritory(t) is true (from t's perspective)
             if (GameplayRules.isInEnemyTerritory(t)) {
-              const d = GameplayRules.distance3D(myPos, t.getPosition())
-              if (d < intruderDist) {
+              const tPos = t.getPosition()
+              const d = GameplayRules.distance3D(myPos, tPos)
+              if (d < intruderDist && this.hasLineOfSight(tPos)) {
                 intruderInHome = t
                 intruderDist = d
                 isIntruderImmune = now < t.immunityUntil
@@ -616,9 +667,17 @@ export class BotController implements GameplayEntity {
           }
 
           if (intruderInHome) {
+            const tPos = intruderInHome.getPosition()
+            if (!this.lastSeenTargetPos) {
+              this.lastSeenTargetPos = new THREE.Vector3()
+            }
+            this.lastSeenTargetPos.set(tPos.x, tPos.y, tPos.z)
+            this.searchTimer = 1.5
+
             // SUB-STATE DEFENDER: Intruder in home yard! Protect benteng and intercept
             if (isIntruderImmune) {
-              const tPos = intruderInHome.getPosition()
+              this.lastSeenTargetPos = null
+              this.searchTimer = 0
               this.patrolDirection.set(myPos.x - tPos.x, 0, myPos.z - tPos.z).normalize()
               if (canSprint && this.stamina > 15) {
                 wantsSprint = true
@@ -628,7 +687,6 @@ export class BotController implements GameplayEntity {
                 speed = GAME_CONFIG.movement.walkSpeed * 1.0
               }
             } else {
-              const tPos = intruderInHome.getPosition()
               this.patrolDirection.set(tPos.x - myPos.x, 0, tPos.z - myPos.z).normalize()
               if (canSprint && this.stamina >= 20) {
                 wantsSprint = true
@@ -637,6 +695,21 @@ export class BotController implements GameplayEntity {
                 wantsSprint = false
                 speed = GAME_CONFIG.movement.walkSpeed * 1.0
               }
+            }
+          } else if (this.lastSeenTargetPos && this.searchTimer > 0) {
+            // Target lost behind an obstacle: investigate last seen position
+            this.searchTimer -= dt
+            const toLastX = this.lastSeenTargetPos.x - myPos.x
+            const toLastZ = this.lastSeenTargetPos.z - myPos.z
+            const distToLast = Math.sqrt(toLastX * toLastX + toLastZ * toLastZ)
+
+            if (distToLast < 0.8 || this.searchTimer <= 0) {
+              this.lastSeenTargetPos = null
+              this.searchTimer = 0
+            } else {
+              this.patrolDirection.set(toLastX, 0, toLastZ).normalize()
+              wantsSprint = false
+              speed = GAME_CONFIG.movement.walkSpeed * 0.85
             }
           } else if (isImmune) {
             // SUB-STATE IMMUNE REGROUP: Home is clear, but immunity is still active.
@@ -668,8 +741,9 @@ export class BotController implements GameplayEntity {
           let dangerousEnemy: GameplayEntity | null = null
           for (const t of potentialTargets) {
             if (t.teamId === this.teamId || t.status === 'jailed') continue
-            const d = GameplayRules.distance3D(myPos, t.getPosition())
-            if (d < 5.0 && now < t.immunityUntil) {
+            const tPos = t.getPosition()
+            const d = GameplayRules.distance3D(myPos, tPos)
+            if (d < 5.0 && now < t.immunityUntil && this.hasLineOfSight(tPos)) {
               dangerousEnemy = t
               break
             }
@@ -720,7 +794,7 @@ export class BotController implements GameplayEntity {
 
             const tPos = t.getPosition()
             const d = GameplayRules.distance3D(myPos, tPos)
-            if (d < 14.0 && d < targetDist) {
+            if (d < 14.0 && d < targetDist && this.hasLineOfSight(tPos)) {
               const isTrespassing = GameplayRules.isInEnemyTerritory(t)
               const isImmune = now < t.immunityUntil
 
@@ -739,6 +813,8 @@ export class BotController implements GameplayEntity {
           if (targetEntity && isTargetDangerous) {
             // Flee away from immune opponent!
             const tPos = targetEntity.getPosition()
+            this.lastSeenTargetPos = null
+            this.searchTimer = 0
             this.patrolDirection.set(myPos.x - tPos.x, 0, myPos.z - tPos.z).normalize()
             if (canSprint && this.stamina > 15) {
               wantsSprint = true
@@ -750,6 +826,12 @@ export class BotController implements GameplayEntity {
           } else if (targetEntity) {
             // Pursuit: Chase intruder trespassing in our home territory!
             const tPos = targetEntity.getPosition()
+            if (!this.lastSeenTargetPos) {
+              this.lastSeenTargetPos = new THREE.Vector3()
+            }
+            this.lastSeenTargetPos.set(tPos.x, tPos.y, tPos.z)
+            this.searchTimer = 1.5
+
             this.patrolDirection.set(tPos.x - myPos.x, 0, tPos.z - myPos.z).normalize()
             if (canSprint && this.stamina >= 20) {
               wantsSprint = true
@@ -757,6 +839,21 @@ export class BotController implements GameplayEntity {
             } else {
               wantsSprint = false
               speed = GAME_CONFIG.movement.walkSpeed * 1.0
+            }
+          } else if (this.lastSeenTargetPos && this.searchTimer > 0) {
+            // Target broke LOS behind obstacle: move to investigate last seen position
+            this.searchTimer -= dt
+            const toLastX = this.lastSeenTargetPos.x - myPos.x
+            const toLastZ = this.lastSeenTargetPos.z - myPos.z
+            const distToLast = Math.sqrt(toLastX * toLastX + toLastZ * toLastZ)
+
+            if (distToLast < 0.8 || this.searchTimer <= 0) {
+              this.lastSeenTargetPos = null
+              this.searchTimer = 0
+            } else {
+              this.patrolDirection.set(toLastX, 0, toLastZ).normalize()
+              wantsSprint = false
+              speed = GAME_CONFIG.movement.walkSpeed * 0.85
             }
           } else {
             // Normal Patrol logic
