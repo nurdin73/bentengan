@@ -97,22 +97,22 @@ describe('CharacterPickerModal Component', () => {
     expect(setOutfitSpy).toHaveBeenCalledWith(4)
     expect(wrapper.emitted('select')).toBeTruthy()
     expect(wrapper.emitted('select')![0]).toEqual([4])
-    expect(wrapper.emitted('close')).toBeTruthy()
+    expect(wrapper.emitted('close')).toBeFalsy()
   })
 
-  it('emits close on cancel button and close icon click', async () => {
+  it('emits close on close icon click and backdrop click', async () => {
     const wrapper = mount(CharacterPickerModal)
 
     const closeBtn = wrapper.find('[data-testid="close-character-picker-btn"]')
     await closeBtn.trigger('click')
     expect(wrapper.emitted('close')).toHaveLength(1)
 
-    const cancelBtn = wrapper.find('[data-testid="cancel-outfit-btn"]')
-    await cancelBtn.trigger('click')
+    const backdrop = wrapper.find('[data-testid="character-picker-modal-backdrop"]')
+    await backdrop.trigger('click')
     expect(wrapper.emitted('close')).toHaveLength(2)
   })
 
-  it('renders with mobile landscape responsive class hooks and 2-column structure', () => {
+  it('renders unified clean 2-column game layout with 3D preview and costumes grid', () => {
     const wrapper = mount(CharacterPickerModal, {
       props: {
         team: 'blue',
@@ -127,39 +127,13 @@ describe('CharacterPickerModal Component', () => {
 
     expect(card.exists()).toBe(true)
     expect(card.classes()).toContain('character-picker-modal-card')
-    expect(card.classes()).toContain('max-h-[94dvh]')
-    expect(card.classes()).toContain('overflow-y-auto')
-    expect(card.classes()).toContain('overscroll-contain')
 
-    // Semantic landscape layout elements
-    expect(wrapper.find('.character-picker-header').exists()).toBe(true)
-    expect(wrapper.find('.character-picker-subtitle').exists()).toBe(true)
-    expect(wrapper.find('.character-picker-close-btn').exists()).toBe(true)
-    expect(wrapper.find('.character-picker-body').exists()).toBe(true)
-    expect(wrapper.find('.character-picker-left-col').exists()).toBe(true)
-    expect(wrapper.find('.character-picker-viewport-container').exists()).toBe(true)
-    expect(wrapper.find('.character-picker-summary-card').exists()).toBe(true)
-    expect(wrapper.find('.character-picker-right-col').exists()).toBe(true)
-    expect(wrapper.find('.character-picker-team-bar').exists()).toBe(true)
-    expect(wrapper.find('.character-picker-outfits-grid').exists()).toBe(true)
-    expect(wrapper.find('.character-picker-footer').exists()).toBe(true)
-  })
-
-  it('delegates to CharacterPickerMobileModal when isMobile is true', async () => {
-    const wrapper = mount(CharacterPickerModal, {
-      props: {
-        team: 'blue',
-        isMobile: true,
-      },
-    })
-
-    expect(wrapper.find('[data-testid="character-picker-mobile-modal"]').exists()).toBe(true)
-    expect(wrapper.find('[data-testid="character-picker-modal"]').exists()).toBe(false)
-
-    // Test mobile close button
-    const closeBtn = wrapper.find('[data-testid="close-character-picker-mobile-btn"]')
-    await closeBtn.trigger('click')
-    expect(wrapper.emitted('close')).toBeTruthy()
+    // Clean 2-column structure
+    expect(wrapper.find('[data-testid="outfits-grid"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="team-preview-blue-btn"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="team-preview-red-btn"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="close-character-picker-btn"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="outfit-active-indicator"]').exists()).toBe(true)
   })
 })
 
@@ -183,7 +157,7 @@ describe('CharacterPickerMobileModal Component', () => {
     vi.restoreAllMocks()
   })
 
-  it('renders 2-column layout with all 6 costumes in grid and subtitle theme', () => {
+  it('renders 2-column layout with all 6 costumes in grid and active status', () => {
     const roomStore = useRoomStore()
     roomStore.myOutfitId = 1
 
@@ -191,16 +165,14 @@ describe('CharacterPickerMobileModal Component', () => {
       props: { team: 'blue' },
     })
 
-    expect(wrapper.find('[data-testid="character-picker-mobile-modal"]').exists()).toBe(true)
-    expect(wrapper.find('[data-testid="mobile-outfit-nameplate"]').exists()).toBe(true)
-    expect(wrapper.find('[data-testid="mobile-outfit-nameplate"]').text()).toContain('Casual Striker')
-    expect(wrapper.find('[data-testid="mobile-outfit-nameplate"]').text()).toContain('Street Casual')
+    expect(wrapper.find('[data-testid="character-picker-modal"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="outfit-active-indicator"]').text()).toContain('Digunakan')
 
     // Verify all 6 costume cards exist in the grid
-    const cards = wrapper.findAll('[data-testid^="mobile-outfit-card-"]')
+    const cards = wrapper.findAll('[data-testid^="outfit-card-"]')
     expect(cards.length).toBe(6)
 
-    expect(wrapper.find('[data-testid="mobile-outfit-card-1"]').text()).toContain('SELECTED')
+    expect(wrapper.find('[data-testid="outfit-card-1"]').text()).toContain('SELECTED')
   })
 
   it('updates selection on click and equips outfit', async () => {
@@ -213,15 +185,13 @@ describe('CharacterPickerMobileModal Component', () => {
     })
 
     // Click outfit #4 (Athletic Runner)
-    const card4 = wrapper.find('[data-testid="mobile-outfit-card-4"]')
+    const card4 = wrapper.find('[data-testid="outfit-card-4"]')
     await card4.trigger('click')
 
-    // Nameplate reflects Athletic Runner
-    expect(wrapper.find('[data-testid="mobile-outfit-nameplate"]').text()).toContain('Athletic Runner')
-
-    // Equip button appears because it is not equipped yet
-    const equipBtn = wrapper.find('[data-testid="mobile-equip-outfit-btn"]')
+    // Floating equip button appears inside 3D viewport because it is not equipped yet
+    const equipBtn = wrapper.find('[data-testid="save-outfit-btn"]')
     expect(equipBtn.exists()).toBe(true)
+    expect(equipBtn.text()).toContain('Gunakan')
     await equipBtn.trigger('click')
 
     expect(setOutfitSpy).toHaveBeenCalledWith(4)
@@ -234,13 +204,13 @@ describe('CharacterPickerMobileModal Component', () => {
       props: { team: 'blue' },
     })
 
-    const redBtn = wrapper.find('[data-testid="mobile-team-red-btn"]')
+    const redBtn = wrapper.find('[data-testid="team-preview-red-btn"]')
     await redBtn.trigger('click')
-    expect(redBtn.classes()).toContain('bg-red-500')
+    expect(redBtn.classes()).toContain('bg-red-600')
 
-    const blueBtn = wrapper.find('[data-testid="mobile-team-blue-btn"]')
+    const blueBtn = wrapper.find('[data-testid="team-preview-blue-btn"]')
     await blueBtn.trigger('click')
-    expect(blueBtn.classes()).toContain('bg-blue-500')
+    expect(blueBtn.classes()).toContain('bg-blue-600')
   })
 })
 

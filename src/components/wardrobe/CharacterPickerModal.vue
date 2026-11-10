@@ -1,34 +1,28 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import {
-  Shirt,
   X,
   Check,
   Shield,
-  Sparkles,
+  Zap,
   Crown,
   Flame,
-  Zap,
+  Sparkles,
   GraduationCap,
   CloudSnow,
+  Shirt,
 } from 'lucide-vue-next'
 import { useRoomStore } from '../../stores/room-store'
-import { OUTFIT_PRESETS, type OutfitPresetMeta } from '../../game/entities/character-avatar'
+import {
+  OUTFIT_PRESETS,
+  type OutfitPresetMeta,
+} from '../../game/entities/character-avatar'
 import type { TeamId } from '../../types/game.types'
-import TactileButton from '../ui/TactileButton.vue'
 import CharacterPreviewViewport from './CharacterPreviewViewport.vue'
-import CharacterPickerMobileModal from './CharacterPickerMobileModal.vue'
-import { checkIsMobileTouchDevice } from '../hud/mobile-device.utils'
 
-const props = withDefaults(
-  defineProps<{
-    team?: TeamId
-    isMobile?: boolean
-  }>(),
-  {
-    isMobile: undefined,
-  },
-)
+const props = defineProps<{
+  team?: TeamId
+}>()
 
 const emit = defineEmits<{
   (e: 'close'): void
@@ -37,26 +31,15 @@ const emit = defineEmits<{
 
 const roomStore = useRoomStore()
 
-const detectedIsMobile = ref(false)
-
-const updateMobileDetection = () => {
-  detectedIsMobile.value = checkIsMobileTouchDevice()
-}
-
-updateMobileDetection()
-
-const effectiveIsMobile = computed(() => {
-  if (props.isMobile !== undefined) {
-    return props.isMobile
-  }
-  return detectedIsMobile.value
-})
-
 const selectedOutfitId = ref<number>(roomStore.myOutfitId || 1)
 const previewTeam = ref<TeamId>(props.team ?? roomStore.myTeam ?? 'blue')
 
 const currentOutfit = computed(() => {
   return OUTFIT_PRESETS.find((o) => o.id === selectedOutfitId.value)
+})
+
+const isEquipped = computed(() => {
+  return roomStore.myOutfitId === selectedOutfitId.value
 })
 
 watch(
@@ -83,30 +66,11 @@ const handleKeyDown = (e: KeyboardEvent) => {
 }
 
 onMounted(() => {
-  updateMobileDetection()
-  window.addEventListener('resize', updateMobileDetection)
-  window.addEventListener('orientationchange', updateMobileDetection)
   window.addEventListener('keydown', handleKeyDown)
 })
 
 onUnmounted(() => {
-  window.removeEventListener('resize', updateMobileDetection)
-  window.removeEventListener('orientationchange', updateMobileDetection)
   window.removeEventListener('keydown', handleKeyDown)
-})
-
-const teamPrimaryColor = computed(() => {
-  return previewTeam.value === 'blue' ? '#3B82F6' : '#EF4444'
-})
-
-const teamSecondaryColor = computed(() => {
-  return previewTeam.value === 'blue' ? '#BAE6FD' : '#FECACA'
-})
-
-const teamBadgeClass = computed(() => {
-  return previewTeam.value === 'blue'
-    ? 'bg-blue-50 text-blue-700 border-blue-200'
-    : 'bg-red-50 text-red-700 border-red-200'
 })
 
 const handleSelectOutfit = (outfit: OutfitPresetMeta) => {
@@ -116,14 +80,8 @@ const handleSelectOutfit = (outfit: OutfitPresetMeta) => {
 const handleConfirm = () => {
   roomStore.setOutfit(selectedOutfitId.value)
   emit('select', selectedOutfitId.value)
-  emit('close')
 }
 
-const handleMobileSelect = (outfitId: number) => {
-  emit('select', outfitId)
-}
-
-// Icon helper per outfit
 const getOutfitIcon = (id: number) => {
   switch (id) {
     case 1:
@@ -145,281 +103,217 @@ const getOutfitIcon = (id: number) => {
 </script>
 
 <template>
-  <!-- Mobile Dedicated Fullscreen Wardrobe Modal -->
-  <CharacterPickerMobileModal
-    v-if="effectiveIsMobile"
-    :team="previewTeam"
-    @close="emit('close')"
-    @select="handleMobileSelect"
-  />
-
-  <!-- Desktop Standard Wardrobe Modal -->
   <div
-    v-else
     data-testid="character-picker-modal-backdrop"
-    class="character-picker-modal-backdrop fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/75 backdrop-blur-sm pointer-events-auto"
+    class="character-picker-modal-backdrop fixed inset-0 z-50 flex items-center justify-center p-0 sm:p-4 md:p-6 bg-black/80 backdrop-blur-md pointer-events-auto select-none overflow-hidden touch-none"
     @click.self="emit('close')"
   >
+    <!-- Modal Window: Fullscreen on mobile, rounded floating game window on desktop/tablet -->
     <div
       data-testid="character-picker-modal"
-      class="character-picker-modal-card timbul-card w-full max-w-4xl p-4 sm:p-6 flex flex-col gap-4 sm:gap-5 max-h-[94dvh] overflow-y-auto overscroll-contain relative shadow-2xl bg-[#f8f6f0]"
+      class="character-picker-modal-card relative w-full h-full sm:h-auto sm:max-w-4xl md:max-w-5xl sm:max-h-[92vh] sm:aspect-16/10 flex flex-col bg-gradient-to-b from-[#38bdf8] via-[#0284c7] to-[#0369a1] text-white overflow-hidden sm:rounded-3xl sm:border-4 sm:border-white/20 sm:shadow-2xl"
     >
-      <!-- Close Button -->
+      <!-- Background Decor Accents -->
+      <div
+        class="absolute -top-16 -left-16 w-64 h-64 rounded-full bg-white/10 blur-2xl pointer-events-none"
+      ></div>
+      <div
+        class="absolute -bottom-20 -right-20 w-80 h-80 rounded-full bg-cyan-300/15 blur-3xl pointer-events-none"
+      ></div>
+
+      <!-- Header: Quick Team Toggle Pills (Top-Left) -->
+      <div
+        class="absolute top-2.5 left-3 sm:top-3 sm:left-4 z-20 flex items-center gap-1.5 bg-black/40 backdrop-blur-md px-2.5 py-1 rounded-full border border-white/20 shadow-md"
+      >
+        <Shield class="w-3.5 h-3.5 text-amber-300" />
+        <span
+          class="text-[10px] font-heading font-black uppercase tracking-wider text-white/90 mr-1 hidden xs:inline"
+        >
+          Tim:
+        </span>
+        <button
+          type="button"
+          data-testid="team-preview-blue-btn"
+          class="px-2.5 py-0.5 rounded-full text-[10px] sm:text-xs font-heading font-black uppercase transition-all cursor-pointer border"
+          :class="
+            previewTeam === 'blue'
+              ? 'bg-blue-600 text-white border-white/60 shadow-xs'
+              : 'bg-black/30 text-white/70 border-transparent hover:bg-black/50'
+          "
+          @click="previewTeam = 'blue'"
+        >
+          Biru
+        </button>
+        <button
+          type="button"
+          data-testid="team-preview-red-btn"
+          class="px-2.5 py-0.5 rounded-full text-[10px] sm:text-xs font-heading font-black uppercase transition-all cursor-pointer border"
+          :class="
+            previewTeam === 'red'
+              ? 'bg-red-600 text-white border-white/60 shadow-xs'
+              : 'bg-black/30 text-white/70 border-transparent hover:bg-black/50'
+          "
+          @click="previewTeam = 'red'"
+        >
+          Merah
+        </button>
+      </div>
+
+      <!-- Close Button (Top-Right) -->
       <button
         type="button"
         data-testid="close-character-picker-btn"
-        class="character-picker-close-btn absolute top-4 right-4 sm:top-5 sm:right-5 w-8 h-8 rounded-full bg-neutral-100 hover:bg-neutral-200 active:scale-95 text-neutral-600 font-black flex items-center justify-center transition-all cursor-pointer border border-neutral-300 z-10"
+        class="absolute top-2.5 right-3 sm:top-3 sm:right-4 z-20 w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-red-600 hover:bg-red-500 active:scale-95 text-white flex items-center justify-center shadow-lg border-2 border-white/80 transition-all cursor-pointer"
         title="Tutup Lemari"
         @click="emit('close')"
       >
-        <X class="w-4 h-4" />
+        <X class="w-4 h-4 sm:w-5 sm:h-5 stroke-[2.5]" />
       </button>
 
-      <!-- Header -->
-      <div class="character-picker-header flex flex-col gap-1 pr-10">
-        <div class="flex items-center gap-2">
-          <div
-            class="w-8 h-8 rounded-xl bg-amber-400 text-amber-950 flex items-center justify-center shadow-xs border border-amber-500/50"
-          >
-            <Shirt class="w-4 h-4" />
-          </div>
-          <h2
-            class="font-heading font-black text-lg sm:text-xl text-neutral-900 uppercase tracking-wider"
-          >
-            Lemari Busana Karakter
-          </h2>
-        </div>
-        <p class="character-picker-subtitle font-sans text-xs text-neutral-600">
-          Pilih setelan busana modular untuk karakter 3D Anda. Putar preview karakter untuk melihat
-          detail aksesori.
-        </p>
-      </div>
-
-      <!-- Main Content Area: Desktop Split -->
+      <!-- Main Layout: 2 Columns (Preview Column + Grid 2x2 Costumes Column) -->
       <div
-        class="character-picker-body grid grid-cols-1 md:grid-cols-12 gap-4 sm:gap-5 items-start"
+        class="w-full h-full flex flex-row items-stretch p-2.5 sm:p-4 md:p-5 gap-2.5 sm:gap-4 md:gap-5 overflow-hidden"
       >
-        <!-- Left / Top Column: 3D Pedestal Viewport (md:col-span-5) -->
-        <div class="character-picker-left-col md:col-span-5 flex flex-col gap-2.5">
-          <div class="character-picker-viewport-container h-44 sm:h-52 md:h-[350px] w-full">
-            <CharacterPreviewViewport :outfit-id="selectedOutfitId" :team-id="previewTeam" />
-          </div>
+        <!-- KOLOM 1: 3D Preview dengan Tombol Gunakan / Digunakan Menyatu di Bawah -->
+        <div
+          class="w-[45%] lg:w-[42%] relative h-full min-h-0 pt-8 pb-1 flex flex-col"
+        >
+          <!-- 3D Viewport Container -->
+          <div class="w-full flex-1 min-h-0 relative overflow-hidden rounded-2xl shadow-inner border border-white/10">
+            <!-- 3D Viewport (pointer-events-none to prevent touch drag / spin conflicts) -->
+            <div class="w-full h-full pointer-events-none select-none">
+              <CharacterPreviewViewport
+                :outfit-id="selectedOutfitId"
+                :team-id="previewTeam"
+                :hide-hint="true"
+                class="w-full h-full"
+              />
+            </div>
 
-          <!-- Active Selected Outfit Summary Card -->
-          <div
-            class="character-picker-summary-card p-3 rounded-2xl bg-white/90 border border-neutral-300/80 shadow-2xs flex flex-col gap-1"
-          >
-            <div class="flex items-center justify-between">
-              <span
-                class="text-[10px] font-heading font-black text-neutral-500 uppercase tracking-wider"
+            <!-- Floating Action: Gunakan / Digunakan (Menyatu di bagian bawah 3D Viewport) -->
+            <div class="absolute bottom-3 inset-x-0 mx-auto w-fit z-20 pointer-events-auto">
+              <button
+                v-if="!isEquipped"
+                type="button"
+                data-testid="save-outfit-btn"
+                class="px-5 py-2 rounded-full bg-emerald-500 hover:bg-emerald-400 active:scale-95 text-white font-heading font-black text-xs sm:text-sm uppercase tracking-wider shadow-xl border-2 border-white/80 flex items-center gap-1.5 transition-all cursor-pointer"
+                title="Gunakan Busana Ini"
+                @click="handleConfirm"
               >
-                Pratinjau Busana
-              </span>
-              <span
-                class="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full border"
-                :class="teamBadgeClass"
+                <Check class="w-4 h-4 stroke-[3]" />
+                <span>Gunakan</span>
+              </button>
+              <div
+                v-else
+                data-testid="outfit-active-indicator"
+                class="px-4 py-1.5 rounded-full bg-black/60 backdrop-blur-md text-emerald-300 font-heading font-black text-xs sm:text-sm uppercase tracking-wider border border-emerald-400/50 shadow-xl flex items-center gap-1.5 select-none"
               >
-                {{ previewTeam === 'blue' ? 'Tim Biru' : 'Tim Merah' }}
-              </span>
-            </div>
-            <div class="font-heading font-black text-sm text-neutral-900 leading-tight">
-              {{ currentOutfit?.name }}
-            </div>
-            <div class="font-sans text-[11px] text-neutral-500 font-semibold">
-              {{ currentOutfit?.subtitle }}
+                <Check class="w-4 h-4 stroke-[3] text-emerald-400" />
+                <span>Digunakan</span>
+              </div>
             </div>
           </div>
         </div>
 
-        <!-- Right / Bottom Column: Team Bar & Outfits Grid (md:col-span-7) -->
-        <div class="character-picker-right-col md:col-span-7 flex flex-col gap-3">
-          <!-- Preview Team Toggle Bar -->
-          <div
-            class="character-picker-team-bar flex items-center justify-between flex-wrap gap-2.5 p-2.5 sm:p-3 rounded-2xl bg-white/80 border border-neutral-300/80 shadow-2xs"
-          >
-            <div class="flex items-center gap-2">
-              <Shield class="w-4 h-4 text-neutral-500" />
-              <span class="font-heading font-bold text-xs uppercase text-neutral-700"
-                >Preview Warna Tim:</span
-              >
-            </div>
+        <!-- KOLOM 2: Grid 2 Kolom Kostum -->
+        <div
+          class="w-[55%] lg:w-[58%] flex flex-col h-full min-h-0 bg-neutral-900/40 backdrop-blur-md rounded-2xl sm:rounded-3xl border-2 border-white/20 p-2 sm:p-3.5 shadow-2xl overflow-hidden"
+        >
+          <!-- Panel Header -->
+          <div class="flex items-center justify-between pb-2 shrink-0 border-b border-white/10">
             <div class="flex items-center gap-1.5">
-              <button
-                type="button"
-                data-testid="team-preview-blue-btn"
-                class="px-3 py-1 rounded-xl text-xs font-heading font-black uppercase transition-all cursor-pointer flex items-center gap-1.5 border"
-                :class="
-                  previewTeam === 'blue'
-                    ? 'bg-blue-600 text-white border-blue-700 shadow-xs'
-                    : 'bg-white text-neutral-600 border-neutral-200 hover:bg-neutral-50'
-                "
-                @click="previewTeam = 'blue'"
+              <Shirt class="w-4 h-4 text-amber-300" />
+              <span
+                class="text-xs sm:text-sm font-heading font-black uppercase tracking-wider text-white"
               >
-                <span
-                  class="w-2.5 h-2.5 rounded-full bg-blue-400 border border-white/50 inline-block"
-                ></span>
-                <span>Tim Biru</span>
-              </button>
-              <button
-                type="button"
-                data-testid="team-preview-red-btn"
-                class="px-3 py-1 rounded-xl text-xs font-heading font-black uppercase transition-all cursor-pointer flex items-center gap-1.5 border"
-                :class="
-                  previewTeam === 'red'
-                    ? 'bg-red-600 text-white border-red-700 shadow-xs'
-                    : 'bg-white text-neutral-600 border-neutral-200 hover:bg-neutral-50'
-                "
-                @click="previewTeam = 'red'"
-              >
-                <span
-                  class="w-2.5 h-2.5 rounded-full bg-red-400 border border-white/50 inline-block"
-                ></span>
-                <span>Tim Merah</span>
-              </button>
+                Koleksi Busana
+              </span>
             </div>
+            <span
+              class="text-[10px] sm:text-xs font-mono font-bold bg-white/10 px-2.5 py-0.5 rounded-full text-white/80"
+            >
+              {{ OUTFIT_PRESETS.length }} Kostum
+            </span>
           </div>
 
-          <!-- Outfits Grid: 2 columns on tablet/desktop, 1 on small mobile -->
+          <!-- Grid 2x2 (2 Columns of Costumes) -->
           <div
-            class="character-picker-outfits-grid grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-3 max-h-[280px] sm:max-h-[320px] md:max-h-[350px] overflow-y-auto pr-1"
+            data-testid="outfits-grid"
+            class="grid grid-cols-2 gap-2 sm:gap-2.5 overflow-y-auto flex-1 min-h-0 pr-1 py-2"
           >
             <div
               v-for="outfit in OUTFIT_PRESETS"
               :key="outfit.id"
               :data-testid="`outfit-card-${outfit.id}`"
-              class="relative p-3 rounded-2xl border transition-all cursor-pointer flex flex-col justify-between gap-2 bg-white group text-left select-none"
+              class="relative rounded-xl sm:rounded-2xl border-2 transition-all cursor-pointer flex flex-col justify-between items-center text-center select-none overflow-hidden min-h-[110px] sm:min-h-[130px] bg-gradient-to-b from-white to-slate-100 group shadow-md"
               :class="[
                 selectedOutfitId === outfit.id
-                  ? 'border-neutral-900 ring-2 ring-neutral-900 shadow-md bg-amber-50/40'
-                  : 'border-neutral-200 hover:border-neutral-400 shadow-2xs hover:shadow-xs',
+                  ? 'border-amber-400 ring-2 ring-amber-400/80 shadow-amber-500/20 shadow-lg'
+                  : 'border-slate-300/80 hover:border-white/80 opacity-90 hover:opacity-100',
               ]"
               @click="handleSelectOutfit(outfit)"
             >
-              <!-- Top Row: Icon, Number, Selected Mark -->
-              <div class="flex items-center justify-between">
-                <div class="flex items-center gap-2">
-                  <div
-                    class="w-7 h-7 rounded-xl flex items-center justify-center transition-colors"
-                    :class="
-                      selectedOutfitId === outfit.id
-                        ? 'bg-neutral-900 text-amber-300'
-                        : 'bg-neutral-100 text-neutral-700 group-hover:bg-neutral-200'
-                    "
-                  >
-                    <component :is="getOutfitIcon(outfit.id)" class="w-3.5 h-3.5" />
-                  </div>
-                  <span
-                    class="font-mono text-[10px] font-black uppercase px-1.5 py-0.5 rounded-md bg-neutral-100 text-neutral-600 border border-neutral-200"
-                  >
-                    #{{ outfit.id }}
-                  </span>
-                </div>
-
-                <!-- Active Indicator -->
-                <div
-                  v-if="selectedOutfitId === outfit.id"
-                  class="w-6 h-6 rounded-full bg-emerald-500 text-white flex items-center justify-center shadow-xs"
-                  title="Busana Terpilih"
+              <!-- Card Number Tag & Active Dot -->
+              <div class="w-full flex items-center justify-between px-2 pt-1.5">
+                <span
+                  class="text-[8px] sm:text-[9px] font-mono font-black text-neutral-400 uppercase"
                 >
-                  <Check class="w-3.5 h-3.5 stroke-[3]" />
-                </div>
-                <div
-                  v-else-if="roomStore.myOutfitId === outfit.id"
-                  class="text-[9px] font-heading font-black uppercase tracking-wider text-neutral-500 bg-neutral-100 px-2 py-0.5 rounded-full"
-                >
-                  Aktif
-                </div>
+                  #{{ outfit.id }}
+                </span>
+                <span
+                  class="w-2 h-2 rounded-full"
+                  :class="
+                    roomStore.myOutfitId === outfit.id ? 'bg-emerald-500' : 'bg-transparent'
+                  "
+                  title="Aktif"
+                ></span>
               </div>
 
-              <!-- Body Info -->
-              <div class="flex flex-col gap-0.5">
+              <!-- Stylized Avatar / Outfit Icon -->
+              <div class="flex-1 flex flex-col items-center justify-center p-1 w-full min-h-0">
                 <div
-                  class="font-heading font-black text-xs sm:text-sm text-neutral-900 leading-tight"
+                  class="w-9 h-9 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center transition-all shadow-inner"
+                  :class="
+                    selectedOutfitId === outfit.id
+                      ? 'bg-neutral-900 text-amber-300 scale-105'
+                      : 'bg-slate-200 text-neutral-700'
+                  "
+                >
+                  <component :is="getOutfitIcon(outfit.id)" class="w-5 h-5 sm:w-6 sm:h-6" />
+                </div>
+                <span
+                  class="mt-1 text-[10px] sm:text-xs font-heading font-black text-neutral-900 truncate max-w-full px-1"
                 >
                   {{ outfit.name }}
-                </div>
-                <div class="font-sans text-[10.5px] font-semibold text-neutral-500">
-                  {{ outfit.subtitle }}
-                </div>
-                <p
-                  class="font-sans text-[10px] text-neutral-600 mt-0.5 line-clamp-2 leading-relaxed"
+                </span>
+                <span
+                  class="text-[8.5px] sm:text-[9.5px] font-sans text-neutral-500 truncate max-w-full px-1"
                 >
-                  {{ outfit.description }}
-                </p>
+                  {{ outfit.subtitle }}
+                </span>
               </div>
 
-              <!-- Visual Color Palettes & Accessories Pills -->
-              <div class="pt-1.5 border-t border-neutral-100 flex flex-col gap-1">
-                <!-- Palette chips -->
-                <div
-                  class="flex items-center justify-between text-[8.5px] text-neutral-500 font-bold uppercase"
-                >
-                  <span>Warna Tim:</span>
-                  <div class="flex items-center gap-1">
-                    <span
-                      class="w-2.5 h-2.5 rounded-full border border-black/10 inline-block shadow-2xs"
-                      :style="{ backgroundColor: teamPrimaryColor }"
-                      title="Warna Primer"
-                    ></span>
-                    <span
-                      class="w-2.5 h-2.5 rounded-full border border-black/10 inline-block shadow-2xs"
-                      :style="{ backgroundColor: teamSecondaryColor }"
-                      title="Warna Sekunder"
-                    ></span>
-                  </div>
-                </div>
-
-                <!-- Accessories Chips -->
-                <div class="flex flex-wrap gap-1 text-[8.5px] text-neutral-600 font-sans">
-                  <span
-                    class="px-1.5 py-0.5 rounded-md bg-neutral-100 border border-neutral-200/80"
-                  >
-                    🧢 {{ outfit.hatName }}
-                  </span>
-                  <span
-                    class="px-1.5 py-0.5 rounded-md bg-neutral-100 border border-neutral-200/80"
-                  >
-                    👕 {{ outfit.topName }}
-                  </span>
-                </div>
+              <!-- Bottom Selected Banner (Stumble Guys Style) -->
+              <div
+                v-if="selectedOutfitId === outfit.id"
+                class="w-full bg-white text-neutral-900 font-heading font-black text-[9px] sm:text-[10px] uppercase tracking-wider py-0.5 sm:py-1 border-t-2 border-amber-400 shrink-0 shadow-xs"
+              >
+                SELECTED
+              </div>
+              <div
+                v-else-if="roomStore.myOutfitId === outfit.id"
+                class="w-full bg-emerald-600 text-white font-heading font-black text-[8px] sm:text-[9px] uppercase tracking-wider py-0.5 sm:py-1 shrink-0"
+              >
+                DIPAKAI
+              </div>
+              <div
+                v-else
+                class="w-full bg-slate-200 text-neutral-500 font-sans font-semibold text-[8px] sm:text-[9px] py-0.5 sm:py-1 truncate shrink-0 px-1"
+              >
+                🧢 {{ outfit.hatName }}
               </div>
             </div>
           </div>
-        </div>
-      </div>
-
-      <!-- Action Footer -->
-      <div
-        class="character-picker-footer pt-3 border-t border-neutral-200 flex items-center justify-between gap-3 flex-wrap"
-      >
-        <div class="text-xs text-neutral-500 font-sans">
-          Busana terpilih:
-          <strong class="text-neutral-900 font-bold">
-            {{ OUTFIT_PRESETS.find((o) => o.id === selectedOutfitId)?.name }}
-          </strong>
-        </div>
-
-        <div class="flex items-center gap-2 ml-auto">
-          <TactileButton
-            type="button"
-            data-testid="cancel-outfit-btn"
-            variant="neutral"
-            size="md"
-            @click="emit('close')"
-          >
-            Batal
-          </TactileButton>
-
-          <TactileButton
-            type="button"
-            data-testid="save-outfit-btn"
-            variant="amber"
-            size="md"
-            @click="handleConfirm"
-          >
-            <Check class="w-4 h-4 mr-1 text-neutral-900" />
-            <span>Gunakan Busana</span>
-          </TactileButton>
         </div>
       </div>
     </div>

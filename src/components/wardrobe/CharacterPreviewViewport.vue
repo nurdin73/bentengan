@@ -5,10 +5,16 @@ import { RotateCw, Sparkles } from 'lucide-vue-next'
 import { CharacterAvatar } from '../../game/entities/character-avatar'
 import type { TeamId } from '../../types/game.types'
 
-const props = defineProps<{
-  outfitId: number
-  teamId: TeamId
-}>()
+const props = withDefaults(
+  defineProps<{
+    outfitId: number
+    teamId: TeamId
+    hideHint?: boolean
+  }>(),
+  {
+    hideHint: false,
+  },
+)
 
 const containerRef = ref<HTMLDivElement | null>(null)
 
@@ -257,6 +263,7 @@ onUnmounted(() => {
 
     <!-- Bottom Center: Rotate 360° Interaction Hint -->
     <div
+      v-if="!props.hideHint"
       data-testid="preview-rotate-hint"
       class="absolute bottom-2 inset-x-0 mx-auto z-10 w-fit flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-black/50 backdrop-blur-xs border border-white/10 text-[9px] font-sans font-bold text-neutral-300 pointer-events-none select-none"
     >
