@@ -55,6 +55,25 @@ describe('Milestone 6 — Visual Polish, VFX & Arena Polish', () => {
       vfx.dispose()
     })
 
+    it('spawns sprint dust at foot level rather than neck height', () => {
+      const scene = new THREE.Scene()
+      const vfx = new VFXManager(scene)
+
+      // Character center origin is at y = 0.8m (standing on ground y = 0)
+      vfx.spawnSprintDust({ x: 0, y: 0.8, z: 0 }, true)
+
+      const spawned = vfx.group.children.find(
+        (c) =>
+          c.visible && c instanceof THREE.Mesh && c.geometry instanceof THREE.DodecahedronGeometry,
+      ) as THREE.Mesh | undefined
+
+      expect(spawned).toBeDefined()
+      // Foot level is y ~ 0.06m (well below neck height 0.88m)
+      expect(spawned!.position.y).toBeCloseTo(0.06, 2)
+
+      vfx.dispose()
+    })
+
     it('spawns capture shockwave ring and scales over time', () => {
       const scene = new THREE.Scene()
       const vfx = new VFXManager(scene)

@@ -1,4 +1,5 @@
 import * as THREE from 'three'
+import { GAME_CONFIG } from '../core/constants'
 import { useSettingsStore } from '../../stores/settings-store'
 
 export interface Vector3Position {
@@ -151,9 +152,10 @@ export class VFXManager {
   }
 
   /**
-   * Spawns a dust puff at the given position (e.g., player foot when sprinting)
+   * Spawns a dust puff at the given position (e.g., player foot when sprinting).
+   * Offsets character center origin downwards to foot level if isCenterOrigin is true.
    */
-  public spawnSprintDust(pos: Vector3Position): void {
+  public spawnSprintDust(pos: Vector3Position, isCenterOrigin = true): void {
     if (!this.isHighDensity() && Math.random() < 0.5) return
 
     const particle = this.dustPool.find((p) => !p.active)
@@ -162,9 +164,11 @@ export class VFXManager {
     particle.active = true
     particle.lifetime = 0
     particle.maxLifetime = 0.35 + Math.random() * 0.15
+    const halfHeight = GAME_CONFIG.movement.characterHeight / 2
+    const footY = isCenterOrigin ? pos.y - halfHeight : pos.y
     particle.mesh.position.set(
       pos.x + (Math.random() * 0.3 - 0.15),
-      pos.y + 0.08,
+      footY + 0.06,
       pos.z + (Math.random() * 0.3 - 0.15),
     )
     particle.velocity.set(
