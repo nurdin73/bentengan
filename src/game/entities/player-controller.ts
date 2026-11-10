@@ -5,6 +5,7 @@ import type { GameplayEntity, MovementInput, PlayerStatus, TeamId } from '../../
 import { GAME_CONFIG } from '../core/constants'
 import { EnergyShieldBubble } from './energy-shield-bubble'
 import { soundManager } from '../audio/sound-manager'
+import { CharacterAvatar } from './character-avatar'
 
 function drawRoundedRect(
   ctx: CanvasRenderingContext2D,
@@ -33,6 +34,7 @@ export interface PlayerControllerOptions {
   name?: string
   teamId: TeamId
   initialPosition: [number, number, number]
+  outfitId?: number
 }
 
 export class PlayerController implements GameplayEntity {
@@ -41,6 +43,7 @@ export class PlayerController implements GameplayEntity {
   public readonly teamId: TeamId
   public readonly mesh: THREE.Group
   public readonly bodyMesh: THREE.Mesh
+  public readonly avatar: CharacterAvatar
   public readonly body: RAPIER.RigidBody
   public readonly collider: RAPIER.Collider
 
@@ -135,6 +138,7 @@ export class PlayerController implements GameplayEntity {
     })
     this.bodyMesh = new THREE.Mesh(bodyGeo, this.bodyMat)
     this.bodyMesh.castShadow = true
+    this.bodyMesh.visible = false
     this.mesh.add(this.bodyMesh)
 
     // Face / eye direction visor
@@ -142,7 +146,15 @@ export class PlayerController implements GameplayEntity {
     this.visorMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.2 })
     const visor = new THREE.Mesh(visorGeo, this.visorMat)
     visor.position.set(0, characterHeight * 0.25, characterRadius * 0.9)
+    visor.visible = false
     this.mesh.add(visor)
+
+    // Modular 3D Soft-box Character Avatar
+    this.avatar = new CharacterAvatar({
+      teamId: options.teamId,
+      outfitId: options.outfitId ?? 1,
+    })
+    this.mesh.add(this.avatar.rootGroup)
 
     // Immunity visual energy shield bubble
     this.shieldBubble = new EnergyShieldBubble()
@@ -505,6 +517,16 @@ export class PlayerController implements GameplayEntity {
       this.bodyMesh.rotation.z = Math.sin(now * 0.008) * 0.12
     }
 
+    // Update modular 3D character avatar animation
+    this.avatar.updateAnimation(
+      dt,
+      horizSpeed,
+      this.isGrounded,
+      this.isSprinting,
+      this.status === 'stunned',
+      this.status === 'jailed',
+    )
+
     // Overhead 3D nameplate & stamina bar update
     this.updateOverheadDisplay()
   }
@@ -586,6 +608,7 @@ export class PlayerController implements GameplayEntity {
     this.bodyMat.opacity = opacity
     this.visorMat.transparent = isTransparent
     this.visorMat.opacity = opacity
+    this.avatar.setOpacity(opacity)
     if (this.overheadSprite.material) {
       this.overheadSprite.material.opacity = opacity
     }
@@ -613,6 +636,7 @@ export class PlayerController implements GameplayEntity {
     if (this.mesh.parent) {
       this.mesh.parent.remove(this.mesh)
     }
+    this.avatar.dispose()
     this.bodyMat.dispose()
     this.visorMat.dispose()
     this.shieldBubble.dispose()

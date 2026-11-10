@@ -4,12 +4,14 @@ import type { PhysicsWorld } from '../physics/physics-world'
 import type { GameplayEntity, PlayerStatus, TeamId } from '../../types/game.types'
 import { GAME_CONFIG } from '../core/constants'
 import { EnergyShieldBubble } from './energy-shield-bubble'
+import { CharacterAvatar } from './character-avatar'
 
 export interface RemotePlayerControllerOptions {
   id: string
   name: string
   teamId: TeamId
   initialPosition: [number, number, number]
+  outfitId?: number
 }
 
 export class RemotePlayerController implements GameplayEntity {
@@ -17,6 +19,7 @@ export class RemotePlayerController implements GameplayEntity {
   public readonly name: string
   public readonly teamId: TeamId
   public readonly mesh: THREE.Group
+  public readonly avatar: CharacterAvatar
   public readonly body: RAPIER.RigidBody
   public readonly collider: RAPIER.Collider
 
@@ -79,6 +82,7 @@ export class RemotePlayerController implements GameplayEntity {
     })
     this.bodyMesh = new THREE.Mesh(this.bodyGeo, this.bodyMat)
     this.bodyMesh.castShadow = true
+    this.bodyMesh.visible = false
     this.mesh.add(this.bodyMesh)
 
     // Direction Visor
@@ -91,7 +95,15 @@ export class RemotePlayerController implements GameplayEntity {
     })
     const visor = new THREE.Mesh(visorGeo, this.visorMat)
     visor.position.set(0, characterHeight * 0.25, characterRadius * 0.9)
+    visor.visible = false
     this.mesh.add(visor)
+
+    // Modular 3D Soft-box Character Avatar
+    this.avatar = new CharacterAvatar({
+      teamId: options.teamId,
+      outfitId: options.outfitId ?? 1,
+    })
+    this.mesh.add(this.avatar.rootGroup)
 
     // Immunity visual energy shield bubble
     this.shieldBubble = new EnergyShieldBubble()
@@ -244,12 +256,15 @@ export class RemotePlayerController implements GameplayEntity {
     if (this.status === 'jailed') {
       this.bodyMat.opacity = 0.45
       this.visorMat.opacity = 0.45
+      this.avatar.setOpacity(0.45)
     } else if (this.status === 'stunned') {
       this.bodyMat.opacity = 0.75
       this.visorMat.opacity = 0.75
+      this.avatar.setOpacity(0.75)
     } else {
       this.bodyMat.opacity = 1.0
       this.visorMat.opacity = 1.0
+      this.avatar.setOpacity(1.0)
     }
 
     // 4. Procedural running forward tilt & subtle chibi waddle
@@ -261,6 +276,9 @@ export class RemotePlayerController implements GameplayEntity {
       this.bodyMesh.rotation.x = THREE.MathUtils.lerp(this.bodyMesh.rotation.x, 0, 14 * dt)
       this.bodyMesh.rotation.z = THREE.MathUtils.lerp(this.bodyMesh.rotation.z, 0, 14 * dt)
     }
+
+    const animSpeed = isMoving ? (this.isSprinting ? GAME_CONFIG.movement.sprintSpeed : GAME_CONFIG.movement.walkSpeed) : 0
+    this.avatar.updateAnimation(dt, animSpeed, true, this.isSprinting, isStunned, this.status === 'jailed')
   }
 
   public dispose(scene?: THREE.Scene): void {
@@ -269,6 +287,7 @@ export class RemotePlayerController implements GameplayEntity {
     } else if (scene) {
       scene.remove(this.mesh)
     }
+    this.avatar.dispose()
     this.physics.world.removeCollider(this.collider, false)
     this.physics.world.removeRigidBody(this.body)
     this.bodyGeo.dispose()

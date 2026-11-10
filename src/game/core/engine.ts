@@ -6,6 +6,7 @@ import { ThirdPersonCameraController } from '../camera/third-person'
 import { PlayerController } from '../entities/player-controller'
 import { BotController } from '../entities/bot-controller'
 import { RemotePlayerController } from '../entities/remote-player-controller'
+import { preloadCharacterModel } from '../entities/character-avatar'
 import { GameplayRules } from '../systems/gameplay-rules'
 import { GAME_CONFIG } from './constants'
 import { peerNetworkManager } from '../network/peer-network-manager'
@@ -200,6 +201,9 @@ export class GameEngine {
     soundManager.init()
     this.physics = await PhysicsWorld.create()
 
+    // Preload 3D character modular model
+    await preloadCharacterModel().catch(() => null)
+
     // 2. Create Symmetrical Arena
     this.arena = new ArenaGreybox(this.scene, this.physics)
 
@@ -230,6 +234,7 @@ export class GameEngine {
         name: this.localPlayerUsername,
         teamId,
         initialPosition: [0, 1, spawnZ],
+        outfitId: 1,
       })
 
       // 4. Spawn Milestone 2 Simulated Roster (Solo Practice against AI)
@@ -249,6 +254,7 @@ export class GameEngine {
         name: this.localPlayerUsername,
         teamId,
         initialPosition: localSpawnPos,
+        outfitId: (myIdx % 6) + 1,
       })
 
       // B. Spawn Remote Players (Opponents & Teammates)
@@ -264,6 +270,7 @@ export class GameEngine {
           name: p.username,
           teamId: p.teamId,
           initialPosition: pSpawnPos,
+          outfitId: (pIdx % 6) + 1,
         })
 
         // Orient remote player towards the opposing fortress
@@ -319,6 +326,7 @@ export class GameEngine {
       targetObjective: [enemyBasePos.x, enemyBasePos.y, enemyBasePos.z],
       enemyBasePosition: [enemyBasePos.x, enemyBasePos.y, enemyBasePos.z],
       allyJailPosition: [allyJailPos.x, 1, allyJailPos.z],
+      outfitId: 2,
     })
     allyBot.status = 'jailed'
     this.bots.push(allyBot)
@@ -335,6 +343,7 @@ export class GameEngine {
       targetObjective: [playerBasePos.x, playerBasePos.y, playerBasePos.z],
       enemyBasePosition: [playerBasePos.x, playerBasePos.y, playerBasePos.z],
       allyJailPosition: [enemyJailPos.x, 1, enemyJailPos.z],
+      outfitId: 3,
     })
     this.bots.push(enemyBot1)
 
@@ -349,6 +358,7 @@ export class GameEngine {
       patrolRadius: 8,
       enemyBasePosition: [playerBasePos.x, playerBasePos.y, playerBasePos.z],
       allyJailPosition: [enemyJailPos.x, 1, enemyJailPos.z],
+      outfitId: 4,
     })
     this.bots.push(enemyBot2)
   }
@@ -602,11 +612,16 @@ export class GameEngine {
     const defaultZ = player.teamId === 'blue' ? -20 : 20
     const spawnPos: [number, number, number] = initialPos ?? [0, 1, defaultZ]
 
+    const sameTeamPlayers = this.roomPlayers.filter((p) => p.teamId === player.teamId)
+    const pIdx = Math.max(0, sameTeamPlayers.findIndex((p) => p.id === player.id))
+    const outfitId = (pIdx % 6) + 1
+
     const remote = new RemotePlayerController(this.scene, this.physics, {
       id: player.id,
       name: player.username,
       teamId: player.teamId,
       initialPosition: spawnPos,
+      outfitId,
     })
 
     const facingYaw = player.teamId === 'blue' ? Math.PI : 0
