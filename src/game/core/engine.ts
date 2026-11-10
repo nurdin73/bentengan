@@ -132,7 +132,8 @@ export class GameEngine {
 
     // 1. Three.js Scene & Camera Setup
     this.scene = new THREE.Scene()
-    this.scene.background = new THREE.Color(0x0f172a)
+    this.scene.background = new THREE.Color(0x7dd3fc)
+    this.scene.fog = new THREE.Fog(0x7dd3fc, 45, 95)
 
     const aspect = container.clientWidth / (container.clientHeight || 1)
     this.camera = new THREE.PerspectiveCamera(60, aspect, 0.1, 150)
@@ -171,11 +172,17 @@ export class GameEngine {
   }
 
   private setupLighting(): void {
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.7)
+    // Stylized dual-tone hemisphere light (sky blue upper, grass green ground bounce)
+    const hemiLight = new THREE.HemisphereLight(0xbae6fd, 0x4d7c0f, 0.65)
+    this.scene.add(hemiLight)
+
+    // Soft ambient fill to avoid pitch-black crevices in low-poly geometry
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.25)
     this.scene.add(ambientLight)
 
-    const sunLight = new THREE.DirectionalLight(0xfffbeb, 1.2)
-    sunLight.position.set(20, 35, 15)
+    // Warm direct sunlight with shadow map for arena depth
+    const sunLight = new THREE.DirectionalLight(0xfffbeb, 1.25)
+    sunLight.position.set(22, 38, 18)
     sunLight.castShadow = true
     sunLight.shadow.mapSize.width = 2048
     sunLight.shadow.mapSize.height = 2048
