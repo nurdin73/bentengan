@@ -43,7 +43,6 @@ export interface GameEngineInitOptions {
   roomPlayers?: RoomPlayer[]
   isPractice?: boolean
   isHost?: boolean
-  matchDurationLimitSec?: number
 }
 
 export interface GameEngineStateCallback {
@@ -67,7 +66,6 @@ export interface GameEngineStateCallback {
     isInEnemyTerritory: boolean
     isNearJailedAlly?: boolean
   }) => void
-  onTimerUpdate?: (remainingSec: number, limitSec: number) => void
   onCapture: (hunterName: string, targetName: string) => void
   onRescue: (rescuerName: string, targetName: string) => void
   onMatchEnd: (result: MatchResult) => void
@@ -119,8 +117,6 @@ export class GameEngine {
   private lastTime = 0
   private accumulator = 0
   private matchStartTime = 0
-  public matchDurationLimitSec: number = GAME_CONFIG.gameplay.defaultMatchDurationSec
-  private lastTimerUpdateSec = -1
   private readonly fixedDt = GAME_CONFIG.fixedDeltaTime
 
   private playerTeam: TeamId = 'blue'
@@ -199,9 +195,6 @@ export class GameEngine {
     this.isHost = options.isHost ?? false
     this.localPlayerId = options.localPlayerId ?? 'local-player'
     this.localPlayerUsername = options.localPlayerUsername ?? 'Anda'
-    if (options.matchDurationLimitSec !== undefined) {
-      this.matchDurationLimitSec = options.matchDurationLimitSec
-    }
 
     // 1. Initialize Audio and Rapier Physics World
     soundManager.init()
@@ -524,29 +517,6 @@ export class GameEngine {
       }
     }
 
-    // Match Timer Countdown & Timeout Check
-    if (this.isRunning && !this.isMatchFinished) {
-      const elapsedSec = Math.max(0, Math.floor((now - this.matchStartTime) / 1000))
-      const remainingSec =
-        this.matchDurationLimitSec > 0
-          ? Math.max(0, this.matchDurationLimitSec - elapsedSec)
-          : elapsedSec
-
-      if (remainingSec !== this.lastTimerUpdateSec) {
-        this.lastTimerUpdateSec = remainingSec
-        this.callbacks.onTimerUpdate?.(remainingSec, this.matchDurationLimitSec)
-      }
-
-      // Check timeout (Host authoritative or Solo practice)
-      if (
-        this.matchDurationLimitSec > 0 &&
-        remainingSec <= 0 &&
-        (this.isHost || this.isPractice)
-      ) {
-        this.handleMatchTimeout()
-      }
-    }
-
     // Render frame
     this.renderer.render(this.scene, this.camera)
 
@@ -751,8 +721,8 @@ export class GameEngine {
         this.localPlayer.immunitySource = 'rescue'
       }
       this.callbacks.onRescue(event.sourceId ?? '', event.targetId ?? '')
-    } else if (event.event === 'match_end' && event.reason) {
-      this.endMatch(event.winner ?? null, event.reason)
+    } else if (event.event === 'match_end' && event.winner && event.reason) {
+      this.endMatch(event.winner, event.reason)
     } else if (event.event === 'smoke' && event.position) {
       const [sx, sy, sz] = event.position
       const duration = event.durationMs ?? GAME_CONFIG.skills.smoke.durationMs
@@ -1062,51 +1032,19 @@ export class GameEngine {
     }
   }
 
-  private getAllGameplayEntities(): GameplayEntity[] {
-    return [
-      ...(this.localPlayer ? [this.localPlayer] : []),
-      ...this.bots,
-      ...Array.from(this.remotePlayers.values()),
-    ]
-  }
-
-  private handleMatchTimeout(): void {
-    if (this.isMatchFinished) return
-
-    // Calculate tie-break scores based on jailed enemy prisoners
-    // Tim Biru menangkap pemain merah -> redJailed (skor Biru)
-    // Tim Merah menangkap pemain biru -> blueJailed (skor Merah)
-    const allEntities = this.getAllGameplayEntities()
-    const bluePlayers = allEntities.filter((p) => p.teamId === 'blue')
-    const redPlayers = allEntities.filter((p) => p.teamId === 'red')
-    const blueJailed = bluePlayers.filter((p) => p.status === 'jailed').length
-    const redJailed = redPlayers.filter((p) => p.status === 'jailed').length
-
-    let winner: TeamId | null = null
-    if (redJailed > blueJailed) {
-      winner = 'blue' // Tim Biru mengurung lebih banyak tawanan merah
-    } else if (blueJailed > redJailed) {
-      winner = 'red' // Tim Merah mengurung lebih banyak tawanan biru
-    } else {
-      winner = null // Seri / Draw (jumlah tawanan sama)
-    }
-
-    this.endMatch(winner, 'timeout')
-  }
-
-  private endMatch(winner: TeamId | null, reason: MatchEndReason): void {
+  private endMatch(winner: TeamId, reason: MatchEndReason): void {
     if (this.isMatchFinished) return
     this.isMatchFinished = true
 
     if (this.isHost && !this.isPractice) {
       peerNetworkManager.broadcastGameEvent({
         event: 'match_end',
-        winner: winner ?? undefined,
+        winner,
         reason,
       })
     }
 
-    if (reason === 'base_capture' && this.arena && winner) {
+    if (reason === 'base_capture' && this.arena) {
       const basePos =
         winner === 'blue'
           ? this.arena.zones.redBasePosition
@@ -1119,9 +1057,6 @@ export class GameEngine {
       soundManager.playVictory()
     } else if (winner) {
       soundManager.playDefeat()
-    } else {
-      // Neutral draw / tie sound
-      soundManager.playBaseTouch()
     }
 
     const durationSeconds = Math.round((performance.now() - this.matchStartTime) / 1000)

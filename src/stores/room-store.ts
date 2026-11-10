@@ -1,6 +1,5 @@
 import { defineStore } from 'pinia'
-import type { Room, RoomPlayer, RoomPrivacy, RoomStatus, TeamId } from '../types/game.types'
-import { GAME_CONFIG } from '../game/core/constants'
+import type { Room, RoomPlayer, RoomStatus, TeamId } from '../types/game.types'
 import { isMatchStartable } from '../game/network/network-protocol'
 import { peerNetworkManager } from '../game/network/peer-network-manager'
 import { useGameStore } from './game-store'
@@ -27,9 +26,6 @@ export const useRoomStore = defineStore('room', {
     myTeam: 'blue' as TeamId,
     players: [] as RoomPlayer[],
     maxPlayers: 8 as 8 | 12,
-    matchDurationSec: GAME_CONFIG.gameplay.defaultMatchDurationSec as number,
-    roomPrivacy: 'public' as RoomPrivacy,
-    requiresPin: false,
 
     // Multiplayer & Rules Briefing Gate
     hasAcknowledgedRules: false,
@@ -60,7 +56,6 @@ export const useRoomStore = defineStore('room', {
       if (!state.isHost) return false
       return isMatchStartable(state.players).startable
     },
-    currentRoom: () => peerNetworkManager.room,
   },
 
   actions: {
@@ -71,15 +66,8 @@ export const useRoomStore = defineStore('room', {
           this.status = room.status
           this.players = [...room.players]
           this.maxPlayers = room.maxPlayers
-          if (room.matchDurationSec !== undefined) {
-            this.matchDurationSec = room.matchDurationSec
-          }
-          if (room.privacy) {
-            this.roomPrivacy = room.privacy
-          }
           this.isConnecting = false
           this.connectionError = null
-          this.requiresPin = false
 
           const me = this.players.find((p) => p.id === this.myPlayerId)
           if (me) {
@@ -90,9 +78,8 @@ export const useRoomStore = defineStore('room', {
           this.status = 'playing'
           this.isConnecting = false
         },
-        onConnectionError: (errorMsg: string, requiresPin?: boolean) => {
+        onConnectionError: (errorMsg: string) => {
           this.connectionError = errorMsg
-          this.requiresPin = !!requiresPin
           this.isConnecting = false
         },
         onDisconnected: () => {
@@ -171,8 +158,6 @@ export const useRoomStore = defineStore('room', {
       this.myTeam = team
       this.hasAcknowledgedRules = true
       this.connectionError = null
-      this.requiresPin = false
-      this.roomPrivacy = 'public'
       this.players = [
         {
           id: this.myPlayerId,
@@ -185,24 +170,14 @@ export const useRoomStore = defineStore('room', {
       ]
     },
 
-    async createHostRoom(
-      roomCode: string,
-      team: TeamId = 'blue',
-      maxPlayers: 8 | 12 = 8,
-      matchDurationSec: number = GAME_CONFIG.gameplay.defaultMatchDurationSec,
-      privacy: RoomPrivacy = 'public',
-      pin?: string,
-    ) {
+    async createHostRoom(roomCode: string, team: TeamId = 'blue', maxPlayers: 8 | 12 = 8) {
       this.initNetworkListeners()
       this.isConnecting = true
       this.connectionError = null
-      this.requiresPin = false
       this.roomCode = roomCode.toUpperCase()
       this.isHost = true
       this.myTeam = team
       this.maxPlayers = maxPlayers
-      this.matchDurationSec = matchDurationSec
-      this.roomPrivacy = privacy
       this.hasAcknowledgedRules = true // Host creates room and already knows rules
 
       try {
@@ -221,9 +196,6 @@ export const useRoomStore = defineStore('room', {
             isReady: true,
           },
           maxPlayers,
-          matchDurationSec,
-          privacy,
-          pin,
         )
       } catch (err) {
         this.isConnecting = false
@@ -231,39 +203,20 @@ export const useRoomStore = defineStore('room', {
       }
     },
 
-    setMatchDuration(durationSec: number) {
-      if (this.isHost) {
-        this.matchDurationSec = durationSec
-        peerNetworkManager.setMatchDuration(durationSec)
-      }
-    },
-
-    setRoomPrivacy(privacy: RoomPrivacy, pin?: string) {
-      if (this.isHost) {
-        this.roomPrivacy = privacy
-        peerNetworkManager.setRoomPrivacy(privacy, pin)
-      }
-    },
-
-    async joinRemoteRoom(roomCode: string, team: TeamId = 'red', pin?: string) {
+    async joinRemoteRoom(roomCode: string, team: TeamId = 'red') {
       this.initNetworkListeners()
       this.isConnecting = true
       this.connectionError = null
-      this.requiresPin = false
       this.roomCode = roomCode.toUpperCase()
       this.isHost = false
       this.myTeam = team
 
       try {
-        await peerNetworkManager.joinRoom(
-          this.roomCode,
-          {
-            id: this.myPlayerId,
-            username: this.myUsername,
-            teamId: team,
-          },
-          pin,
-        )
+        await peerNetworkManager.joinRoom(this.roomCode, {
+          id: this.myPlayerId,
+          username: this.myUsername,
+          teamId: team,
+        })
       } catch (err) {
         this.isConnecting = false
         this.connectionError = err instanceof Error ? err.message : 'Gagal bergabung ke room.'
@@ -316,8 +269,6 @@ export const useRoomStore = defineStore('room', {
       this.reconnectMessage = ''
       this.activeToasts = []
       this.connectionError = null
-      this.requiresPin = false
-      this.roomPrivacy = 'public'
       this.hasAcknowledgedRules = false
       this.latencyMs = 0
     },

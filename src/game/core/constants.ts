@@ -29,7 +29,6 @@ export const GAME_CONFIG = {
     immunityDurationMs: 2000,
     stunDurationMs: 2000,
     baseCaptureRadius: 2.6,
-    defaultMatchDurationSec: 300,
   },
 
   skills: {

@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { ref, watch, onMounted, onUnmounted } from 'vue'
 import { GameEngine } from '../../game/core/engine'
-import { GAME_CONFIG } from '../../game/core/constants'
 import type { VirtualMovementInput } from '../../game/input/input-manager'
 import type { SkillId } from '../../game/skills/skill-types'
 import { useGameStore } from '../../stores/game-store'
@@ -33,9 +32,6 @@ onMounted(async () => {
     },
     onRosterUpdate: (roster) => {
       gameStore.updateRosterCounts(roster)
-    },
-    onTimerUpdate: (remainingSec, limitSec) => {
-      gameStore.updateMatchTimer(remainingSec, limitSec)
     },
     onCapture: (hunterName: string, targetName: string) => {
       if (hunterName === 'Anda' || hunterName === roomStore.myUsername) {
@@ -89,9 +85,6 @@ onMounted(async () => {
     roomPlayers: roomStore.players,
     isPractice: roomStore.roomCode === 'LOKAL',
     isHost: roomStore.isHost,
-    matchDurationLimitSec:
-      roomStore.currentRoom?.matchDurationSec ??
-      GAME_CONFIG.gameplay.defaultMatchDurationSec,
   })
 
   if (gameStore.isPaused) {
