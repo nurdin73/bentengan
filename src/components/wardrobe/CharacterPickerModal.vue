@@ -178,10 +178,10 @@ const getOutfitIcon = (id: number) => {
         <div
           class="w-[45%] lg:w-[42%] relative h-full min-h-0 pt-8 pb-1 flex flex-col"
         >
-          <!-- 3D Viewport Container -->
-          <div class="w-full flex-1 min-h-0 relative overflow-hidden rounded-2xl shadow-inner border border-white/10">
+          <!-- 3D Viewport Container with Docked Full-Width Bottom Action Bar -->
+          <div class="w-full flex-1 min-h-0 relative overflow-hidden rounded-2xl shadow-inner border border-white/10 flex flex-col justify-between bg-black/20">
             <!-- 3D Viewport (pointer-events-none to prevent touch drag / spin conflicts) -->
-            <div class="w-full h-full pointer-events-none select-none">
+            <div class="w-full flex-1 min-h-0 pointer-events-none select-none relative">
               <CharacterPreviewViewport
                 :outfit-id="selectedOutfitId"
                 :team-id="previewTeam"
@@ -190,26 +190,26 @@ const getOutfitIcon = (id: number) => {
               />
             </div>
 
-            <!-- Floating Action: Gunakan / Digunakan (Menyatu di bagian bawah 3D Viewport) -->
-            <div class="absolute bottom-3 inset-x-0 mx-auto w-fit z-20 pointer-events-auto">
+            <!-- Docked Full-Width Action Bar (100% width of 3D container) -->
+            <div class="w-full shrink-0 z-20 pointer-events-auto">
               <button
                 v-if="!isEquipped"
                 type="button"
                 data-testid="save-outfit-btn"
-                class="px-5 py-2 rounded-full bg-emerald-500 hover:bg-emerald-400 active:scale-95 text-white font-heading font-black text-xs sm:text-sm uppercase tracking-wider shadow-xl border-2 border-white/80 flex items-center gap-1.5 transition-all cursor-pointer"
+                class="w-full py-2.5 sm:py-3 bg-emerald-500 hover:bg-emerald-400 active:brightness-95 text-white font-heading font-black text-xs sm:text-sm uppercase tracking-wider shadow-lg border-t border-emerald-400/50 flex items-center justify-center gap-1.5 transition-all cursor-pointer"
                 title="Gunakan Busana Ini"
                 @click="handleConfirm"
               >
                 <Check class="w-4 h-4 stroke-[3]" />
-                <span>Gunakan</span>
+                <span>Gunakan Busana</span>
               </button>
               <div
                 v-else
                 data-testid="outfit-active-indicator"
-                class="px-4 py-1.5 rounded-full bg-black/60 backdrop-blur-md text-emerald-300 font-heading font-black text-xs sm:text-sm uppercase tracking-wider border border-emerald-400/50 shadow-xl flex items-center gap-1.5 select-none"
+                class="w-full py-2 sm:py-2.5 bg-black/60 backdrop-blur-md text-emerald-300 font-heading font-black text-xs sm:text-sm uppercase tracking-wider border-t border-emerald-400/30 text-center flex items-center justify-center gap-1.5 select-none"
               >
                 <Check class="w-4 h-4 stroke-[3] text-emerald-400" />
-                <span>Digunakan</span>
+                <span>Sedang Digunakan</span>
               </div>
             </div>
           </div>
