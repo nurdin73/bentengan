@@ -56,6 +56,7 @@ export interface PlayerState {
 }
 
 export type RoomStatus = 'waiting' | 'starting' | 'playing' | 'finished'
+export type RoomPrivacy = 'public' | 'private'
 
 export interface RoomPlayer {
   id: string
@@ -74,9 +75,11 @@ export interface Room {
   status: RoomStatus
   players: RoomPlayer[]
   createdAt: number
+  matchDurationSec?: number
+  privacy?: RoomPrivacy
 }
 
-export type MatchEndReason = 'base_capture' | 'team_elimination' | 'host_disconnect'
+export type MatchEndReason = 'base_capture' | 'team_elimination' | 'host_disconnect' | 'timeout'
 
 export interface MatchPlayerStats {
   playerId: string

@@ -17,6 +17,8 @@ import {
   AlertCircle,
   X,
   Castle,
+  Globe,
+  Lock,
 } from 'lucide-vue-next'
 import { useRoomStore } from '../../stores/room-store'
 import TactileButton from '../ui/TactileButton.vue'
@@ -29,6 +31,22 @@ const copied = ref(false)
 const activeMobileTab = ref<TeamId>(roomStore.myTeam || 'blue')
 const showLeaveDialog = ref(false)
 const showStartDialog = ref(false)
+
+const durationOptions = [
+  { value: 180, label: '3m' },
+  { value: 300, label: '5m' },
+  { value: 600, label: '10m' },
+  { value: 0, label: '∞' },
+] as const
+
+const onSelectDuration = (val: number) => {
+  roomStore.setMatchDuration(val)
+}
+
+const formatDurationLabel = (sec: number) => {
+  if (sec <= 0) return 'Bebas (∞)'
+  return `${Math.floor(sec / 60)} Menit`
+}
 
 const emit = defineEmits<{
   (e: 'leave'): void
@@ -112,6 +130,64 @@ const confirmLeave = () => {
             <Shield v-if="roomStore.maxPlayers === 12" class="w-3.5 h-3.5 text-blue-600" />
             <Swords v-else class="w-3.5 h-3.5 text-amber-600" />
             <span>{{ roomStore.maxPlayers === 12 ? '6 vs 6 (Maks. 12)' : '4 vs 4 (Maks. 8)' }}</span>
+          </span>
+        </div>
+
+        <!-- Durasi Pertandingan (Interactive for Host, Badge for Guest) -->
+        <div class="flex flex-col">
+          <span class="font-heading font-black text-[10px] sm:text-[11px] uppercase tracking-wider text-neutral-500">
+            DURASI MATCH
+          </span>
+          <!-- If Host: Interactive Pill Options -->
+          <div
+            v-if="roomStore.isHost"
+            data-testid="waiting-room-duration-selector"
+            class="flex items-center gap-1 p-0.5 bg-neutral-100 border border-neutral-300 rounded-xl"
+          >
+            <button
+              v-for="opt in durationOptions"
+              :key="opt.value"
+              type="button"
+              :data-testid="`waiting-duration-${opt.value}-btn`"
+              :class="[
+                'px-2 py-1 rounded-lg font-heading font-black text-[10px] sm:text-xs transition-all cursor-pointer',
+                roomStore.matchDurationSec === opt.value
+                  ? 'bg-amber-400 text-neutral-950 shadow-2xs'
+                  : 'text-neutral-600 hover:text-neutral-900',
+              ]"
+              @click="onSelectDuration(opt.value)"
+            >
+              {{ opt.label }}
+            </button>
+          </div>
+          <!-- If Guest: Informative Badge -->
+          <span
+            v-else
+            data-testid="waiting-room-duration-badge"
+            class="px-2.5 sm:px-3 py-1.5 bg-neutral-100 border border-neutral-300 rounded-xl font-heading font-black text-[11px] sm:text-xs text-neutral-800 flex items-center gap-1.5"
+          >
+            <Clock class="w-3.5 h-3.5 text-neutral-500" />
+            <span>{{ formatDurationLabel(roomStore.matchDurationSec) }}</span>
+          </span>
+        </div>
+
+        <!-- Tipe Akses Ruangan (Display Badge) -->
+        <div class="flex flex-col">
+          <span class="font-heading font-black text-[10px] sm:text-[11px] uppercase tracking-wider text-neutral-500">
+            AKSES
+          </span>
+          <span
+            data-testid="waiting-room-privacy-badge"
+            :class="[
+              'px-2.5 sm:px-3 py-1.5 border rounded-xl font-heading font-black text-[11px] sm:text-xs flex items-center gap-1.5',
+              roomStore.roomPrivacy === 'private'
+                ? 'bg-rose-50 border-rose-300 text-rose-800'
+                : 'bg-emerald-50 border-emerald-300 text-emerald-800'
+            ]"
+          >
+            <Lock v-if="roomStore.roomPrivacy === 'private'" class="w-3.5 h-3.5 text-rose-600" />
+            <Globe v-else class="w-3.5 h-3.5 text-emerald-600" />
+            <span>{{ roomStore.roomPrivacy === 'private' ? 'Privat' : 'Publik' }}</span>
           </span>
         </div>
       </div>
@@ -496,6 +572,7 @@ const confirmLeave = () => {
         </span>
       </div>
     </ConfirmDialog>
+
 
     <!-- Floating Toast Notifications for Lobby -->
     <div

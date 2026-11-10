@@ -13,6 +13,7 @@ export const RoomPlayerSchema = z.object({
 })
 
 export const RoomStatusSchema = z.enum(['waiting', 'starting', 'playing', 'finished'])
+export const RoomPrivacySchema = z.enum(['public', 'private'])
 
 export const RoomSchema = z.object({
   id: z.string(),
@@ -22,6 +23,8 @@ export const RoomSchema = z.object({
   status: RoomStatusSchema,
   players: z.array(RoomPlayerSchema),
   createdAt: z.number(),
+  matchDurationSec: z.number().optional(),
+  privacy: RoomPrivacySchema.optional(),
 })
 
 // Client -> Host: Request to join room
@@ -30,6 +33,7 @@ export const JoinRequestMessageSchema = z.object({
   playerId: z.string(),
   username: z.string().min(1).max(20),
   teamId: TeamIdSchema,
+  pin: z.string().optional(),
 })
 
 // Host -> Client: Acknowledge join
@@ -38,6 +42,7 @@ export const JoinResponseMessageSchema = z.object({
   accepted: z.boolean(),
   room: RoomSchema.optional(),
   reason: z.string().optional(),
+  requiresPin: z.boolean().optional(),
 })
 
 // Host -> All Clients: Synchronize full room state
@@ -64,6 +69,7 @@ export const SetReadyMessageSchema = z.object({
 export const MatchStartMessageSchema = z.object({
   type: z.literal('MATCH_START'),
   startTime: z.number(),
+  durationLimitSec: z.number().optional(),
 })
 
 // Heartbeat & Latency Measurement
@@ -107,8 +113,8 @@ export const WorldSnapshotMessageSchema = z.object({
 export const GameEventMessageSchema = z.object({
   type: z.literal('GAME_EVENT'),
   event: z.enum(['capture', 'rescue', 'base_capture', 'match_end', 'smoke']),
-  winner: TeamIdSchema.optional(),
-  reason: z.enum(['base_capture', 'team_elimination', 'host_disconnect']).optional(),
+  winner: TeamIdSchema.nullable().optional(),
+  reason: z.enum(['base_capture', 'team_elimination', 'host_disconnect', 'timeout']).optional(),
   sourceId: z.string().optional(),
   targetId: z.string().optional(),
   position: z.tuple([z.number(), z.number(), z.number()]).optional(),

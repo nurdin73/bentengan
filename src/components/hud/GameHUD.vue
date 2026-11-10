@@ -9,6 +9,7 @@ import {
   Crosshair,
   HelpCircle,
   Timer,
+  Clock,
   Settings,
 } from 'lucide-vue-next'
 import { useGameStore } from '../../stores/game-store'
@@ -120,6 +121,43 @@ defineEmits<{
           &bull; {{ roomStore.roomCode }}
         </span>
       </div>
+
+      <!-- Top Center: Match Countdown Timer & Jailed Scoreboard -->
+      <div
+        data-testid="hud-match-timer-scoreboard"
+        class="pointer-events-auto flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-full bg-neutral-900/85 backdrop-blur-md border border-neutral-700/80 shadow-md text-xs font-mono font-bold select-none"
+      >
+        <!-- Blue Team Captured Score (Red jailed by Blue) -->
+        <div class="flex items-center gap-1 text-blue-400" title="Pemain Merah yang Ditawan Biru">
+          <span class="w-2 h-2 rounded-full bg-blue-500 shrink-0"></span>
+          <span data-testid="hud-blue-score" class="font-mono text-xs font-black">{{ gameStore.redJailedCount }}</span>
+        </div>
+
+        <span class="text-neutral-500 font-sans text-[10px]">&bull;</span>
+
+        <!-- Match Timer Display -->
+        <div
+          data-testid="hud-timer-display"
+          :class="[
+            'flex items-center gap-1 font-mono font-black text-xs sm:text-sm px-1',
+            gameStore.remainingTimeSec <= 30 && gameStore.matchDurationLimitSec > 0
+              ? 'text-rose-400 animate-pulse'
+              : 'text-neutral-100',
+          ]"
+        >
+          <Clock class="w-3.5 h-3.5 text-neutral-400 shrink-0" />
+          <span>{{ gameStore.formattedRemainingTime }}</span>
+        </div>
+
+        <span class="text-neutral-500 font-sans text-[10px]">&bull;</span>
+
+        <!-- Red Team Captured Score (Blue jailed by Red) -->
+        <div class="flex items-center gap-1 text-rose-400" title="Pemain Biru yang Ditawan Merah">
+          <span data-testid="hud-red-score" class="font-mono text-xs font-black">{{ gameStore.blueJailedCount }}</span>
+          <span class="w-2 h-2 rounded-full bg-rose-500 shrink-0"></span>
+        </div>
+      </div>
+
       <!-- Top Right: Desktop Controls, Settings & HUD HP Toggle (Desktop Only) -->
       <div v-if="!isMobile" class="flex items-center gap-2 pointer-events-auto">
         <!-- Settings Modal Button (Gear) -->

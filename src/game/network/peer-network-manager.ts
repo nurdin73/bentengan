@@ -1,5 +1,6 @@
 import { Peer, type DataConnection } from 'peerjs'
-import type { Room, RoomPlayer, TeamId } from '../../types/game.types'
+import type { Room, RoomPlayer, RoomPrivacy, TeamId } from '../../types/game.types'
+import { GAME_CONFIG } from '../core/constants'
 import {
   getHostPeerId,
   parseNetworkMessage,
@@ -26,8 +27,8 @@ const PEER_CONFIG = {
 
 export interface PeerNetworkEvents {
   onRoomStateUpdated: (room: Room) => void
-  onMatchStarted: (startTime: number) => void
-  onConnectionError: (errorMsg: string) => void
+  onMatchStarted: (startTime: number, durationLimitSec?: number) => void
+  onConnectionError: (errorMsg: string, requiresPin?: boolean) => void
   onDisconnected: () => void
   onLatencyUpdated: (latencyMs: number) => void
   onPlayerUpdate: (update: PlayerUpdateMessage) => void
@@ -49,6 +50,8 @@ export class PeerNetworkManager {
   private currentRoom: Room | null = null
   private localPlayerId = ''
   private isHost = false
+  private roomPrivacy: RoomPrivacy = 'public'
+  private roomPin: string | null = null
   private isIntentionalDisconnect = false
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null
   private reconnectAttempts = 0
@@ -56,6 +59,7 @@ export class PeerNetworkManager {
   private cachedClientParams: {
     roomCode: string
     player: Omit<RoomPlayer, 'peerId' | 'isHost' | 'isReady'>
+    pin?: string
   } | null = null
 
   public events: Partial<PeerNetworkEvents> = {}
@@ -75,6 +79,9 @@ export class PeerNetworkManager {
     roomCode: string,
     player: Omit<RoomPlayer, 'peerId' | 'isHost'>,
     maxPlayers: 8 | 12 = 8,
+    matchDurationSec: number = GAME_CONFIG.gameplay.defaultMatchDurationSec,
+    privacy: RoomPrivacy = 'public',
+    pin?: string,
   ): Promise<string> {
     this.disconnect()
     this.isIntentionalDisconnect = false
@@ -87,6 +94,8 @@ export class PeerNetworkManager {
     const hostPeerId = getHostPeerId(roomCode)
     this.localPlayerId = player.id
     this.isHost = true
+    this.roomPrivacy = privacy
+    this.roomPin = pin?.trim() || null
 
     return new Promise((resolve, reject) => {
       try {
@@ -108,6 +117,8 @@ export class PeerNetworkManager {
             hostPeerId: id,
             maxPlayers,
             status: 'waiting',
+            matchDurationSec,
+            privacy,
             players: [
               {
                 id: player.id,
@@ -163,10 +174,11 @@ export class PeerNetworkManager {
   public async joinRoom(
     roomCode: string,
     player: Omit<RoomPlayer, 'peerId' | 'isHost' | 'isReady'>,
+    pin?: string,
   ): Promise<void> {
     this.disconnect()
     this.isIntentionalDisconnect = false
-    this.cachedClientParams = { roomCode, player }
+    this.cachedClientParams = { roomCode, player, pin }
     this.reconnectAttempts = 0
     if (this.reconnectTimer) {
       clearTimeout(this.reconnectTimer)
@@ -202,6 +214,7 @@ export class PeerNetworkManager {
               playerId: player.id,
               username: player.username,
               teamId: player.teamId,
+              pin: pin?.trim(),
             }
             conn.send(joinMsg)
             this.startPingHeartbeat()
@@ -318,6 +331,26 @@ export class PeerNetworkManager {
   }
 
   /**
+   * Host updates the match duration limit and synchronizes room state to all clients.
+   */
+  public setMatchDuration(durationSec: number): void {
+    if (!this.isHost || !this.currentRoom) return
+    this.currentRoom.matchDurationSec = durationSec
+    this.broadcastRoomState()
+  }
+
+  /**
+   * Host updates the room privacy and synchronizes room state to all clients.
+   */
+  public setRoomPrivacy(privacy: RoomPrivacy, pin?: string): void {
+    if (!this.isHost || !this.currentRoom) return
+    this.roomPrivacy = privacy
+    this.roomPin = pin?.trim() || null
+    this.currentRoom.privacy = privacy
+    this.broadcastRoomState()
+  }
+
+  /**
    * Host starts the match.
    */
   public startMatch(): boolean {
@@ -332,13 +365,17 @@ export class PeerNetworkManager {
     this.currentRoom.status = 'playing'
     const startTime = Date.now() + 1000
 
+    const durationLimitSec =
+      this.currentRoom.matchDurationSec ?? GAME_CONFIG.gameplay.defaultMatchDurationSec
+
     const msg: NetworkMessage = {
       type: 'MATCH_START',
       startTime,
+      durationLimitSec,
     }
 
     this.broadcastMessage(msg)
-    this.events.onMatchStarted?.(startTime)
+    this.events.onMatchStarted?.(startTime, durationLimitSec)
     return true
   }
 
@@ -494,7 +531,7 @@ export class PeerNetworkManager {
     this.reconnectTimer = setTimeout(() => {
       if (this.isIntentionalDisconnect || !this.cachedClientParams) return
 
-      const { roomCode, player } = this.cachedClientParams
+      const { roomCode, player, pin } = this.cachedClientParams
       const hostPeerId = getHostPeerId(roomCode)
 
       if (this.peer && this.peer.disconnected && !this.peer.destroyed) {
@@ -533,6 +570,7 @@ export class PeerNetworkManager {
             playerId: player.id,
             username: player.username,
             teamId: player.teamId,
+            pin: pin?.trim(),
           }
           conn.send(joinMsg)
           this.startPingHeartbeat()
@@ -606,6 +644,34 @@ export class PeerNetworkManager {
             conn.send(resp)
             conn.close()
             return
+          }
+
+          // Validate PIN if private room
+          if (this.roomPrivacy === 'private') {
+            const providedPin = msg.pin?.trim()
+            if (!providedPin) {
+              const resp: NetworkMessage = {
+                type: 'JOIN_RESPONSE',
+                accepted: false,
+                reason: 'Ruangan ini diproteksi PIN. Masukkan PIN untuk bergabung.',
+                requiresPin: true,
+              }
+              conn.send(resp)
+              conn.close()
+              return
+            }
+
+            if (this.roomPin && providedPin !== this.roomPin) {
+              const resp: NetworkMessage = {
+                type: 'JOIN_RESPONSE',
+                accepted: false,
+                reason: 'PIN ruangan salah. Coba lagi.',
+                requiresPin: true,
+              }
+              conn.send(resp)
+              conn.close()
+              return
+            }
           }
 
           const newPlayer: RoomPlayer = {
@@ -770,7 +836,10 @@ export class PeerNetworkManager {
           this.currentRoom = msg.room
           this.events.onRoomStateUpdated?.(msg.room)
         } else {
-          this.events.onConnectionError?.(msg.reason ?? 'Permintaan bergabung ditolak.')
+          this.events.onConnectionError?.(
+            msg.reason ?? 'Permintaan bergabung ditolak.',
+            msg.requiresPin,
+          )
         }
         break
       }
@@ -782,7 +851,7 @@ export class PeerNetworkManager {
       }
 
       case 'MATCH_START': {
-        this.events.onMatchStarted?.(msg.startTime)
+        this.events.onMatchStarted?.(msg.startTime, msg.durationLimitSec)
         break
       }
 

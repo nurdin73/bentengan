@@ -22,6 +22,7 @@ const isPlayerWinner = computed(() => {
 })
 
 const isHostDisconnect = computed(() => result.value?.reason === 'host_disconnect')
+const isTie = computed(() => result.value?.reason === 'timeout' && result.value?.winner === null)
 
 const reasonText = computed(() => {
   if (!result.value) return ''
@@ -37,6 +38,14 @@ const reasonText = computed(() => {
     return isPlayerWinner.value
       ? 'Seluruh Tim Lawan Terpenjara (Team Elimination)!'
       : 'Seluruh Anggota Tim Anda Telah Tertangkap!'
+  }
+  if (result.value.reason === 'timeout') {
+    if (result.value.winner === null) {
+      return 'Waktu habis! Jumlah tawanan kedua tim sama (Hasil Imbang).'
+    }
+    return isPlayerWinner.value
+      ? 'Waktu Habis! Tim Anda Menang Berdasarkan Tawanan Terbanyak!'
+      : 'Waktu Habis! Tim Lawan Menang Berdasarkan Tawanan Terbanyak!'
   }
   return 'Pertandingan Selesai'
 })
@@ -73,10 +82,12 @@ const handleLeaveToHome = () => {
             'font-heading font-black text-2xl sm:text-4xl tracking-wide uppercase leading-tight',
             isHostDisconnect
               ? 'text-rose-500'
-              : (isPlayerWinner ? 'text-amber-500' : 'text-neutral-700'),
+              : isTie
+                ? 'text-amber-500'
+                : (isPlayerWinner ? 'text-amber-500' : 'text-neutral-700'),
           ]"
         >
-          {{ isHostDisconnect ? 'KONEKSI TERPUTUS' : (isPlayerWinner ? 'KEMENANGAN!' : 'KEKALAHAN') }}
+          {{ isHostDisconnect ? 'KONEKSI TERPUTUS' : (isTie ? 'HASIL IMBANG (SERI)' : (isPlayerWinner ? 'KEMENANGAN!' : 'KEKALAHAN')) }}
         </h2>
         <div
           v-if="result?.winner"
@@ -87,6 +98,13 @@ const handleLeaveToHome = () => {
           ]"
         >
           {{ result?.winner === 'blue' ? 'Tim Benteng Biru' : 'Tim Benteng Merah' }} Menang
+        </div>
+        <div
+          v-else-if="isTie"
+          data-testid="results-tie-label"
+          class="px-3.5 py-1 sm:px-4 sm:py-1.5 rounded-full font-heading font-bold text-xs uppercase tracking-wider text-amber-950 bg-amber-400 shadow-sm"
+        >
+          Pertandingan Seri (Draw)
         </div>
         <div
           v-else

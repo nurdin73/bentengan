@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter, onBeforeRouteLeave } from 'vue-router'
-import { AlertCircle, ArrowLeft } from 'lucide-vue-next'
+import { AlertCircle, ArrowLeft, Lock } from 'lucide-vue-next'
 import { useRoomStore } from '../stores/room-store'
 import { useGameStore } from '../stores/game-store'
 import LobbyWaitingRoom from '../components/lobby/LobbyWaitingRoom.vue'
@@ -29,6 +29,7 @@ const roomCode = computed(() => {
 
 const gameCanvasRef = ref<InstanceType<typeof GameCanvas> | null>(null)
 const tempUsername = ref(roomStore.myUsername)
+const tempPin = ref((route.query.pin as string) || '')
 const isSubmittingJoin = ref(false)
 
 onMounted(async () => {
@@ -57,7 +58,7 @@ onMounted(async () => {
 const handleJoinAcknowledge = async () => {
   isSubmittingJoin.value = true
   roomStore.myUsername = tempUsername.value.trim() || 'Pemain'
-  await roomStore.joinRemoteRoom(roomCode.value, 'red')
+  await roomStore.joinRemoteRoom(roomCode.value, 'red', tempPin.value.trim() || undefined)
   if (!roomStore.connectionError) {
     roomStore.acknowledgeRules()
   }
@@ -162,6 +163,26 @@ const handleLeaveToHome = () => {
             maxlength="16"
             placeholder="Masukkan nama Anda..."
             class="w-full bg-neutral-100 border-2 border-neutral-300 focus:border-amber-400 rounded-2xl px-4 py-2.5 font-sans font-bold text-neutral-800 text-base sm:text-sm outline-none"
+          />
+        </div>
+
+        <!-- Input PIN jika ruangan privat atau diminta host -->
+        <div
+          v-if="roomStore.requiresPin || tempPin || route.query.pin"
+          class="flex flex-col gap-1.5 pb-2 border-b border-neutral-200"
+        >
+          <label for="directPin" class="font-heading font-black text-xs uppercase tracking-wider text-rose-700 flex items-center gap-1.5">
+            <Lock class="w-3.5 h-3.5 text-rose-600" />
+            <span>PIN Ruangan (Diperlukan)</span>
+          </label>
+          <input
+            id="directPin"
+            v-model="tempPin"
+            data-testid="guest-pin-input"
+            type="password"
+            maxlength="6"
+            placeholder="Ketik PIN ruangan..."
+            class="w-full bg-rose-50/50 border-2 border-rose-300 focus:border-rose-500 rounded-2xl px-4 py-2 font-mono font-bold text-center tracking-[0.25em] text-neutral-800 text-sm outline-none"
           />
         </div>
 

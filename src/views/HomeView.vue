@@ -20,7 +20,7 @@ import SettingsModal from '../components/settings/SettingsModal.vue'
 import ConfirmDialog from '../components/ui/ConfirmDialog.vue'
 import TactileButton from '../components/ui/TactileButton.vue'
 import IndonesiaFlag from '../components/ui/IndonesiaFlag.vue'
-import type { TeamId } from '../types/game.types'
+import type { RoomPrivacy, TeamId } from '../types/game.types'
 
 const router = useRouter()
 const roomStore = useRoomStore()
@@ -36,17 +36,35 @@ const handleCreateHost = async (payload: {
   team: TeamId
   roomCode: string
   maxPlayers?: 8 | 12
+  matchDurationSec?: number
+  privacy?: RoomPrivacy
+  pin?: string
 }) => {
   roomStore.myUsername = payload.username
-  await roomStore.createHostRoom(payload.roomCode, payload.team, payload.maxPlayers ?? 8)
+  await roomStore.createHostRoom(
+    payload.roomCode,
+    payload.team,
+    payload.maxPlayers ?? 8,
+    payload.matchDurationSec ?? 300,
+    payload.privacy ?? 'public',
+    payload.pin,
+  )
   if (!roomStore.connectionError) {
     router.push(`/rooms/${payload.roomCode}`)
   }
 }
 
-const handleJoinRoom = (payload: { username: string; team: TeamId; roomCode: string }) => {
+const handleJoinRoom = (payload: {
+  username: string
+  team: TeamId
+  roomCode: string
+  pin?: string
+}) => {
   roomStore.myUsername = payload.username
-  router.push(`/rooms/${payload.roomCode}`)
+  router.push({
+    path: `/rooms/${payload.roomCode}`,
+    query: payload.pin ? { pin: payload.pin } : undefined,
+  })
 }
 
 const handleStartPractice = (team: TeamId) => {

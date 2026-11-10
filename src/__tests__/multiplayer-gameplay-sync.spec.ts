@@ -273,4 +273,33 @@ describe('Multiplayer Gameplay Real-Time Synchronization', () => {
 
     remote.dispose(scene)
   })
+
+  it('validates MATCH_START message with custom durationLimitSec', () => {
+    const rawMsg = {
+      type: 'MATCH_START',
+      startTime: 1700000000000,
+      durationLimitSec: 300,
+    }
+    const parsed = parseNetworkMessage(rawMsg)
+    expect(parsed).not.toBeNull()
+    expect(parsed?.type).toBe('MATCH_START')
+    expect((parsed as unknown as { durationLimitSec: number }).durationLimitSec).toBe(300)
+  })
+
+  it('validates GAME_EVENT timeout match_end with draw (null winner)', () => {
+    const drawEvent: GameEventMessage = {
+      type: 'GAME_EVENT',
+      event: 'match_end',
+      winner: null,
+      reason: 'timeout',
+      timestamp: Date.now(),
+    }
+    const parsed = parseNetworkMessage(drawEvent)
+    expect(parsed).not.toBeNull()
+    expect(parsed?.type).toBe('GAME_EVENT')
+    const event = parsed as GameEventMessage
+    expect(event.event).toBe('match_end')
+    expect(event.winner).toBeNull()
+    expect(event.reason).toBe('timeout')
+  })
 })

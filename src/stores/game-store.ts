@@ -18,6 +18,8 @@ export const useGameStore = defineStore('game', {
     isPointerLocked: false,
     isPaused: false,
     gameTimeSeconds: 0,
+    matchDurationLimitSec: GAME_CONFIG.gameplay.defaultMatchDurationSec as number,
+    remainingTimeSec: GAME_CONFIG.gameplay.defaultMatchDurationSec as number,
 
     // Milestone 2 Core Gameplay State
     canRescueNearby: false,
@@ -83,6 +85,12 @@ export const useGameStore = defineStore('game', {
     },
     isRescueOnCooldown: (state) =>
       state.rescueCooldownRemainingSeconds > 0 || performance.now() < state.rescueCooldownUntil,
+    formattedRemainingTime: (state): string => {
+      if (state.matchDurationLimitSec <= 0) return '∞'
+      const mins = Math.floor(state.remainingTimeSec / 60)
+      const secs = state.remainingTimeSec % 60
+      return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`
+    },
   },
 
   actions: {
@@ -154,6 +162,12 @@ export const useGameStore = defineStore('game', {
       this.matchResult = result
     },
 
+    updateMatchTimer(remainingSec: number, limitSec: number = GAME_CONFIG.gameplay.defaultMatchDurationSec) {
+      this.remainingTimeSec = remainingSec
+      this.matchDurationLimitSec = limitSec
+      this.gameTimeSeconds = limitSec > 0 ? Math.max(0, limitSec - remainingSec) : remainingSec
+    },
+
     resetStats() {
       this.capturesCount = 0
       this.rescuesCount = 0
@@ -175,6 +189,8 @@ export const useGameStore = defineStore('game', {
       this.blueTotalCount = 2
       this.redTotalCount = 2
       this.gameTimeSeconds = 0
+      this.matchDurationLimitSec = GAME_CONFIG.gameplay.defaultMatchDurationSec
+      this.remainingTimeSec = GAME_CONFIG.gameplay.defaultMatchDurationSec
       this.isPaused = false
       this.skills = {
         dash: {
