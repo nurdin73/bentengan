@@ -37,7 +37,9 @@ describe('Rematch Readiness & Multiplayer Sync', () => {
     }
     roomStore.players = [player1, player2]
 
-    const returnToLobbySpy = vi.spyOn(peerNetworkManager, 'returnToLobby').mockImplementation(() => {})
+    const returnToLobbySpy = vi
+      .spyOn(peerNetworkManager, 'returnToLobby')
+      .mockImplementation(() => {})
 
     roomStore.returnToLobbyForRematch()
 
@@ -67,7 +69,9 @@ describe('Rematch Readiness & Multiplayer Sync', () => {
       },
     ]
 
-    const returnToLobbySpy = vi.spyOn(peerNetworkManager, 'returnToLobby').mockImplementation(() => {})
+    const returnToLobbySpy = vi
+      .spyOn(peerNetworkManager, 'returnToLobby')
+      .mockImplementation(() => {})
 
     roomStore.returnToLobbyForRematch()
 
@@ -101,11 +105,27 @@ describe('Rematch Readiness & Multiplayer Sync', () => {
     roomStore.isHost = false
     roomStore.status = 'finished'
     roomStore.players = [
-      { id: 'host-1', peerId: 'p-host', username: 'HostUser', teamId: 'blue', isReady: true, isHost: true },
-      { id: 'guest-1', peerId: 'p-guest', username: 'GuestUser', teamId: 'red', isReady: true, isHost: false },
+      {
+        id: 'host-1',
+        peerId: 'p-host',
+        username: 'HostUser',
+        teamId: 'blue',
+        isReady: true,
+        isHost: true,
+      },
+      {
+        id: 'guest-1',
+        peerId: 'p-guest',
+        username: 'GuestUser',
+        teamId: 'red',
+        isReady: true,
+        isHost: false,
+      },
     ]
 
-    const returnToLobbySpy = vi.spyOn(peerNetworkManager, 'returnToLobby').mockImplementation(() => {})
+    const returnToLobbySpy = vi
+      .spyOn(peerNetworkManager, 'returnToLobby')
+      .mockImplementation(() => {})
 
     roomStore.returnToLobbyForRematch()
 
@@ -158,4 +178,3 @@ describe('Rematch Readiness & Multiplayer Sync', () => {
     })
   })
 })
-

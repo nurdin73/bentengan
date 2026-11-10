@@ -74,7 +74,10 @@ const handleClose = () => {
     >
       <Wrench class="w-3.5 h-3.5 text-amber-400 shrink-0" />
       <span class="text-[11px] uppercase tracking-wider">DEV</span>
-      <span class="text-[9px] bg-neutral-800 text-neutral-400 px-1 py-0.2 rounded border border-neutral-700 font-mono hidden sm:inline">~</span>
+      <span
+        class="text-[9px] bg-neutral-800 text-neutral-400 px-1 py-0.2 rounded border border-neutral-700 font-mono hidden sm:inline"
+        >~</span
+      >
     </button>
 
     <!-- Dev Panel Modal / Card -->
@@ -86,12 +89,12 @@ const handleClose = () => {
       leave-from-class="scale-100 opacity-100 translate-y-0"
       leave-to-class="scale-95 opacity-0 translate-y-2"
     >
-        <div
-          v-if="devStore.isOpen"
-          data-testid="dev-debug-panel"
-          class="fixed top-14 sm:top-16 right-3 sm:right-5 w-[340px] max-h-[85vh] overflow-y-auto bg-neutral-950/95 border border-neutral-800 rounded-2xl shadow-2xl backdrop-blur-xl p-4 text-neutral-200 font-sans flex flex-col gap-4 text-xs select-none z-50 pointer-events-auto"
-        >
-          <!-- Panel Header -->
+      <div
+        v-if="devStore.isOpen"
+        data-testid="dev-debug-panel"
+        class="fixed top-14 sm:top-16 right-3 sm:right-5 w-[340px] max-h-[85vh] overflow-y-auto bg-neutral-950/95 border border-neutral-800 rounded-2xl shadow-2xl backdrop-blur-xl p-4 text-neutral-200 font-sans flex flex-col gap-4 text-xs select-none z-50 pointer-events-auto"
+      >
+        <!-- Panel Header -->
         <div class="flex items-center justify-between pb-2 border-b border-neutral-800">
           <div class="flex items-center gap-2">
             <span class="w-2.5 h-2.5 rounded-full bg-amber-400 animate-ping" />
@@ -111,7 +114,9 @@ const handleClose = () => {
 
         <!-- Section 1: Bot AI Controls -->
         <div class="flex flex-col gap-2">
-          <span class="text-[10px] font-mono font-bold tracking-wider uppercase text-neutral-400 flex items-center gap-1.5">
+          <span
+            class="text-[10px] font-mono font-bold tracking-wider uppercase text-neutral-400 flex items-center gap-1.5"
+          >
             <PauseCircle class="w-3.5 h-3.5 text-rose-400" />
             Kontrol Bot Lawan
           </span>
@@ -135,7 +140,9 @@ const handleClose = () => {
             <span
               :class="[
                 'text-[10px] px-2 py-0.5 rounded-md font-mono uppercase',
-                devStore.freezeEnemyBots ? 'bg-rose-500 text-white' : 'bg-neutral-800 text-neutral-400',
+                devStore.freezeEnemyBots
+                  ? 'bg-rose-500 text-white'
+                  : 'bg-neutral-800 text-neutral-400',
               ]"
             >
               {{ devStore.freezeEnemyBots ? 'AKTIF' : 'OFF' }}
@@ -163,7 +170,9 @@ const handleClose = () => {
 
         <!-- Section 2: Player God Mode Modifiers -->
         <div class="flex flex-col gap-2">
-          <span class="text-[10px] font-mono font-bold tracking-wider uppercase text-neutral-400 flex items-center gap-1.5">
+          <span
+            class="text-[10px] font-mono font-bold tracking-wider uppercase text-neutral-400 flex items-center gap-1.5"
+          >
             <Shield class="w-3.5 h-3.5 text-emerald-400" />
             God Mode & Karakter
           </span>
@@ -187,7 +196,9 @@ const handleClose = () => {
             <span
               :class="[
                 'text-[10px] px-2 py-0.5 rounded-md font-mono uppercase',
-                devStore.godMode ? 'bg-emerald-500 text-white font-bold' : 'bg-neutral-800 text-neutral-400',
+                devStore.godMode
+                  ? 'bg-emerald-500 text-white font-bold'
+                  : 'bg-neutral-800 text-neutral-400',
               ]"
             >
               {{ devStore.godMode ? 'AKTIF' : 'OFF' }}
@@ -241,7 +252,9 @@ const handleClose = () => {
 
         <!-- Section 3: Teleport Shortcuts -->
         <div class="flex flex-col gap-2">
-          <span class="text-[10px] font-mono font-bold tracking-wider uppercase text-neutral-400 flex items-center gap-1.5">
+          <span
+            class="text-[10px] font-mono font-bold tracking-wider uppercase text-neutral-400 flex items-center gap-1.5"
+          >
             <MapPin class="w-3.5 h-3.5 text-indigo-400" />
             Teleportasi Cepat
           </span>
@@ -300,7 +313,9 @@ const handleClose = () => {
         </div>
 
         <!-- Footer / Helpers -->
-        <div class="flex items-center justify-between pt-2 border-t border-neutral-800/80 text-[10px] text-neutral-500">
+        <div
+          class="flex items-center justify-between pt-2 border-t border-neutral-800/80 text-[10px] text-neutral-500"
+        >
           <label class="flex items-center gap-1.5 cursor-pointer hover:text-neutral-300">
             <input
               v-model="persistInSession"
@@ -315,4 +330,3 @@ const handleClose = () => {
     </transition>
   </div>
 </template>
-

@@ -105,7 +105,9 @@ describe('Mobile Responsive Layout & Icon Integration', () => {
       await practiceBtn.trigger('click')
       expect(wrapper.find('[data-testid="practice-picker-dialog"]').exists()).toBe(true)
       expect(wrapper.find('[data-testid="dialog-title"]').text()).toBe('Pilih Tim Latihan')
-      expect(wrapper.find('[data-testid="dialog-message"]').text()).toContain('Uji kelincahan dan taktikmu')
+      expect(wrapper.find('[data-testid="dialog-message"]').text()).toContain(
+        'Uji kelincahan dan taktikmu',
+      )
 
       const blueBtn = wrapper.find('[data-testid="practice-pick-blue-btn"]')
       const redBtn = wrapper.find('[data-testid="practice-pick-red-btn"]')
@@ -184,7 +186,9 @@ describe('Mobile Responsive Layout & Icon Integration', () => {
 
       expect(wrapper.find('[data-testid="controls-grid-desktop"]').exists()).toBe(false)
       expect(wrapper.find('[data-testid="controls-grid-touch"]').exists()).toBe(true)
-      expect(wrapper.find('[data-testid="controls-grid-touch"]').text()).toContain('Virtual Joystick')
+      expect(wrapper.find('[data-testid="controls-grid-touch"]').text()).toContain(
+        'Virtual Joystick',
+      )
       expect(wrapper.find('[data-testid="controls-grid-touch"]').text()).toContain('Sprint Sentuh')
       expect(wrapper.find('[data-testid="controls-grid-touch"]').text()).toContain('Lompat Sentuh')
     })
@@ -233,8 +237,22 @@ describe('Mobile Responsive Layout & Icon Integration', () => {
       const roomStore = useRoomStore()
       roomStore.roomCode = 'ROOM88'
       roomStore.players = [
-        { id: 'p1', peerId: 'peer-1', username: 'Alpha', teamId: 'blue', isHost: true, isReady: true },
-        { id: 'p2', peerId: 'peer-2', username: 'Beta', teamId: 'red', isHost: false, isReady: false },
+        {
+          id: 'p1',
+          peerId: 'peer-1',
+          username: 'Alpha',
+          teamId: 'blue',
+          isHost: true,
+          isReady: true,
+        },
+        {
+          id: 'p2',
+          peerId: 'peer-2',
+          username: 'Beta',
+          teamId: 'red',
+          isHost: false,
+          isReady: false,
+        },
       ]
 
       const wrapper = mount(LobbyWaitingRoom)
@@ -258,7 +276,16 @@ describe('Mobile Responsive Layout & Icon Integration', () => {
       const roomStore = useRoomStore()
       roomStore.isHost = false
       roomStore.myPlayerId = 'p-me'
-      roomStore.players = [{ id: 'p-me', peerId: 'peer-me', username: 'Hero', teamId: 'blue', isHost: false, isReady: false }]
+      roomStore.players = [
+        {
+          id: 'p-me',
+          peerId: 'peer-me',
+          username: 'Hero',
+          teamId: 'blue',
+          isHost: false,
+          isReady: false,
+        },
+      ]
 
       const wrapper = mount(LobbyWaitingRoom)
 
@@ -314,7 +341,14 @@ describe('Mobile Responsive Layout & Icon Integration', () => {
       roomStore.roomCode = 'BNTG9'
       roomStore.players = [
         { id: 'h1', peerId: 'p-h1', username: 'Host', teamId: 'blue', isHost: true, isReady: true },
-        { id: 'g1', peerId: 'p-g1', username: 'Guest', teamId: 'red', isHost: false, isReady: true },
+        {
+          id: 'g1',
+          peerId: 'p-g1',
+          username: 'Guest',
+          teamId: 'red',
+          isHost: false,
+          isReady: true,
+        },
       ]
       const startSpy = vi.spyOn(roomStore, 'startMatch')
 
@@ -345,7 +379,9 @@ describe('Mobile Responsive Layout & Icon Integration', () => {
       })
 
       expect(wrapper.find('[data-testid="dialog-title"]').text()).toBe('Perhatian')
-      expect(wrapper.find('[data-testid="dialog-message"]').text()).toBe('Ini pesan peringatan penting.')
+      expect(wrapper.find('[data-testid="dialog-message"]').text()).toBe(
+        'Ini pesan peringatan penting.',
+      )
       expect(wrapper.find('[data-testid="dialog-cancel-btn"]').exists()).toBe(false)
       expect(wrapper.find('[data-testid="dialog-confirm-btn"]').exists()).toBe(true)
 
@@ -611,7 +647,9 @@ describe('Mobile Responsive Layout & Icon Integration', () => {
 
       // Verified content
       expect(wrapper.find('[data-testid="results-winner-title"]').text()).toBe('KEMENANGAN!')
-      expect(wrapper.find('[data-testid="results-team-label"]').text()).toContain('Tim Benteng Biru Menang')
+      expect(wrapper.find('[data-testid="results-team-label"]').text()).toContain(
+        'Tim Benteng Biru Menang',
+      )
       expect(wrapper.find('[data-testid="results-win-reason"]').text()).toContain('Base Capture')
       expect(wrapper.find('[data-testid="results-stat-duration"]').text()).toBe('45s')
       expect(wrapper.find('[data-testid="results-stat-captures"]').text()).toBe('3')

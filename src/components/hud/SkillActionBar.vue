@@ -68,12 +68,7 @@ const getStrokeDashoffset = (progress: number): number => {
         class="absolute inset-0 w-full h-full -rotate-90 pointer-events-none p-1"
         viewBox="0 0 44 44"
       >
-        <circle
-          cx="22"
-          cy="22"
-          r="19"
-          class="stroke-black/60 fill-transparent stroke-[4px]"
-        />
+        <circle cx="22" cy="22" r="19" class="stroke-black/60 fill-transparent stroke-[4px]" />
         <circle
           cx="22"
           cy="22"
@@ -94,7 +89,9 @@ const getStrokeDashoffset = (progress: number): number => {
               props.isMobile ? 'w-5 h-5' : 'w-6 h-6',
             ]"
           />
-          <span class="font-heading font-black text-[9px] text-sky-200 uppercase tracking-wider leading-none mt-0.5">
+          <span
+            class="font-heading font-black text-[9px] text-sky-200 uppercase tracking-wider leading-none mt-0.5"
+          >
             {{ dashSkill.name }}
           </span>
         </template>
@@ -142,12 +139,7 @@ const getStrokeDashoffset = (progress: number): number => {
         class="absolute inset-0 w-full h-full -rotate-90 pointer-events-none p-1"
         viewBox="0 0 44 44"
       >
-        <circle
-          cx="22"
-          cy="22"
-          r="19"
-          class="stroke-black/60 fill-transparent stroke-[4px]"
-        />
+        <circle cx="22" cy="22" r="19" class="stroke-black/60 fill-transparent stroke-[4px]" />
         <circle
           cx="22"
           cy="22"
@@ -168,7 +160,9 @@ const getStrokeDashoffset = (progress: number): number => {
               props.isMobile ? 'w-5 h-5' : 'w-6 h-6',
             ]"
           />
-          <span class="font-heading font-black text-[9px] text-sky-200 uppercase tracking-wider leading-none mt-0.5">
+          <span
+            class="font-heading font-black text-[9px] text-sky-200 uppercase tracking-wider leading-none mt-0.5"
+          >
             {{ smokeSkill.name }}
           </span>
         </template>
@@ -216,12 +210,7 @@ const getStrokeDashoffset = (progress: number): number => {
         class="absolute inset-0 w-full h-full -rotate-90 pointer-events-none p-1"
         viewBox="0 0 44 44"
       >
-        <circle
-          cx="22"
-          cy="22"
-          r="19"
-          class="stroke-black/60 fill-transparent stroke-[4px]"
-        />
+        <circle cx="22" cy="22" r="19" class="stroke-black/60 fill-transparent stroke-[4px]" />
         <circle
           cx="22"
           cy="22"
@@ -242,7 +231,9 @@ const getStrokeDashoffset = (progress: number): number => {
               props.isMobile ? 'w-5 h-5' : 'w-6 h-6',
             ]"
           />
-          <span class="font-heading font-black text-[9px] text-sky-200 uppercase tracking-wider leading-none mt-0.5">
+          <span
+            class="font-heading font-black text-[9px] text-sky-200 uppercase tracking-wider leading-none mt-0.5"
+          >
             {{ adrenalineSkill.name }}
           </span>
         </template>
@@ -267,4 +258,3 @@ const getStrokeDashoffset = (progress: number): number => {
     </button>
   </div>
 </template>
-

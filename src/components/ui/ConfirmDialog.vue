@@ -1,12 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import {
-  AlertTriangle,
-  AlertCircle,
-  HelpCircle,
-  Info,
-  X,
-} from 'lucide-vue-next'
+import { AlertTriangle, AlertCircle, HelpCircle, Info, X } from 'lucide-vue-next'
 import TactileButton from './TactileButton.vue'
 
 export type DialogType = 'confirm' | 'alert' | 'danger' | 'info'
@@ -180,4 +174,3 @@ const onConfirm = () => {
   }
 }
 </style>
-

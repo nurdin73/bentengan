@@ -114,7 +114,9 @@ const handleRestoreClick = () => {
           >
             {{ props.rescueCooldownSeconds }}
           </span>
-          <span class="font-heading text-[6.5px] font-black tracking-widest text-neutral-400 uppercase mt-0.5">
+          <span
+            class="font-heading text-[6.5px] font-black tracking-widest text-neutral-400 uppercase mt-0.5"
+          >
             CD
           </span>
         </template>

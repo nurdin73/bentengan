@@ -124,4 +124,3 @@ describe('Modular Action Cluster Components Decomposition', () => {
     })
   })
 })
-

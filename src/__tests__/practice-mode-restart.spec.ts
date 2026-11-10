@@ -71,7 +71,8 @@ describe('Practice Mode Restart & Reset Mechanics', () => {
             template: '<div data-testid="game-hud-mock" />',
           },
           ResultsModal: {
-            template: '<div data-testid="results-modal-mock"><button data-testid="modal-restart" @click="$emit(\'restart\')">Restart</button></div>',
+            template:
+              '<div data-testid="results-modal-mock"><button data-testid="modal-restart" @click="$emit(\'restart\')">Restart</button></div>',
           },
         },
       },
@@ -148,7 +149,8 @@ describe('Practice Mode Restart & Reset Mechanics', () => {
             template: '<div data-testid="game-hud-mock" />',
           },
           ResultsModal: {
-            template: '<div data-testid="results-modal-mock"><button data-testid="modal-restart" @click="$emit(\'restart\')">Restart</button></div>',
+            template:
+              '<div data-testid="results-modal-mock"><button data-testid="modal-restart" @click="$emit(\'restart\')">Restart</button></div>',
           },
         },
       },

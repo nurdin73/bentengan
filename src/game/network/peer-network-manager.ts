@@ -756,7 +756,9 @@ export class PeerNetworkManager {
               this.disconnectGraceTimers.delete(leftPlayer.id)
               if (this.currentRoom) {
                 this.events.onPlayerLeft?.(leftPlayer.id)
-                this.currentRoom.players = this.currentRoom.players.filter((p) => p.id !== leftPlayer.id)
+                this.currentRoom.players = this.currentRoom.players.filter(
+                  (p) => p.id !== leftPlayer.id,
+                )
                 this.broadcastRoomState()
                 this.broadcastPeerStatus(leftPlayer.id, leftPlayer.username, 'left')
               }
@@ -766,7 +768,9 @@ export class PeerNetworkManager {
           } else {
             // Immediate removal while in lobby waiting room
             this.events.onPlayerLeft?.(leftPlayer.id)
-            this.currentRoom.players = this.currentRoom.players.filter((p) => p.peerId !== leavingPeerId)
+            this.currentRoom.players = this.currentRoom.players.filter(
+              (p) => p.peerId !== leavingPeerId,
+            )
             this.broadcastRoomState()
           }
         }

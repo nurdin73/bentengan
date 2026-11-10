@@ -271,10 +271,18 @@ onUnmounted(() => {
         @touchend.prevent="handleJoystickEnd"
         @touchcancel.prevent="handleJoystickEnd"
       >
-        <div class="pointer-events-none absolute top-2 text-[10px] font-bold text-neutral-500">▲</div>
-        <div class="pointer-events-none absolute bottom-2 text-[10px] font-bold text-neutral-500">▼</div>
-        <div class="pointer-events-none absolute left-2 text-[10px] font-bold text-neutral-500">◀</div>
-        <div class="pointer-events-none absolute right-2 text-[10px] font-bold text-neutral-500">▶</div>
+        <div class="pointer-events-none absolute top-2 text-[10px] font-bold text-neutral-500">
+          ▲
+        </div>
+        <div class="pointer-events-none absolute bottom-2 text-[10px] font-bold text-neutral-500">
+          ▼
+        </div>
+        <div class="pointer-events-none absolute left-2 text-[10px] font-bold text-neutral-500">
+          ◀
+        </div>
+        <div class="pointer-events-none absolute right-2 text-[10px] font-bold text-neutral-500">
+          ▶
+        </div>
 
         <!-- Center Knob -->
         <div
@@ -303,7 +311,7 @@ onUnmounted(() => {
       <div
         data-testid="hud-utility-cluster-anchor"
         class="pointer-events-auto absolute"
-        style="right: 240px; bottom: 41px;"
+        style="right: 240px; bottom: 41px"
       >
         <ActionUtilityCluster
           :can-rescue="props.canRescue"

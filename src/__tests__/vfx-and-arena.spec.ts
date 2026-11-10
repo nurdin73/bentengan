@@ -37,7 +37,8 @@ describe('Milestone 6 — Visual Polish, VFX & Arena Polish', () => {
       vfx.spawnSprintDust({ x: 2, y: 1, z: 5 })
 
       const visibleDust = vfx.group.children.filter(
-        (c) => c.visible && c instanceof THREE.Mesh && c.geometry instanceof THREE.DodecahedronGeometry,
+        (c) =>
+          c.visible && c instanceof THREE.Mesh && c.geometry instanceof THREE.DodecahedronGeometry,
       )
       expect(visibleDust.length).toBeGreaterThanOrEqual(1)
 
@@ -46,7 +47,8 @@ describe('Milestone 6 — Visual Polish, VFX & Arena Polish', () => {
 
       // Expired particles should be hidden and recycled
       const activeAfterExpiry = vfx.group.children.filter(
-        (c) => c.visible && c instanceof THREE.Mesh && c.geometry instanceof THREE.DodecahedronGeometry,
+        (c) =>
+          c.visible && c instanceof THREE.Mesh && c.geometry instanceof THREE.DodecahedronGeometry,
       )
       expect(activeAfterExpiry.length).toBe(0)
 
@@ -85,7 +87,8 @@ describe('Milestone 6 — Visual Polish, VFX & Arena Polish', () => {
       vfx.spawnRescueSparkles({ x: 10, y: 1, z: 20 })
 
       const visibleSparkles = vfx.group.children.filter(
-        (c) => c.visible && c instanceof THREE.Mesh && c.geometry instanceof THREE.OctahedronGeometry,
+        (c) =>
+          c.visible && c instanceof THREE.Mesh && c.geometry instanceof THREE.OctahedronGeometry,
       )
       expect(visibleSparkles.length).toBeGreaterThanOrEqual(8)
 
@@ -137,4 +140,3 @@ describe('Milestone 6 — Visual Polish, VFX & Arena Polish', () => {
     })
   })
 })
-

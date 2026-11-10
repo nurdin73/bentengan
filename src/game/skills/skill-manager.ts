@@ -80,7 +80,11 @@ export class SkillManager {
     }
   }
 
-  public canActivate(id: SkillId, player: PlayerController, now: number = performance.now()): SkillActivationResult {
+  public canActivate(
+    id: SkillId,
+    player: PlayerController,
+    now: number = performance.now(),
+  ): SkillActivationResult {
     if (player.status === 'jailed') {
       return { success: false, reason: 'jailed' }
     }
@@ -164,11 +168,7 @@ export class SkillManager {
       materials.push(mat)
 
       const mesh = new THREE.Mesh(this.smokePuffGeo, mat)
-      mesh.position.set(
-        Math.cos(angle) * dist,
-        Math.random() * 0.8,
-        Math.sin(angle) * dist,
-      )
+      mesh.position.set(Math.cos(angle) * dist, Math.random() * 0.8, Math.sin(angle) * dist)
       mesh.scale.setScalar(0.7 + Math.random() * 0.6)
       group.add(mesh)
     }

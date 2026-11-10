@@ -95,7 +95,10 @@ defineEmits<{
 </script>
 
 <template>
-  <div data-testid="game-hud" class="pointer-events-none absolute inset-0 flex flex-col justify-between p-3 sm:p-5">
+  <div
+    data-testid="game-hud"
+    class="pointer-events-none absolute inset-0 flex flex-col justify-between p-3 sm:p-5"
+  >
     <!-- Top Bar: Network Signal on Left -->
     <div class="flex items-center justify-between w-full z-30">
       <div
@@ -116,7 +119,10 @@ defineEmits<{
           ]"
         />
         <span>{{ roomStore.isReconnecting ? 'Menyambung...' : `${roomStore.latencyMs} ms` }}</span>
-        <span v-if="roomStore.roomCode && roomStore.roomCode !== 'LOKAL'" class="text-neutral-500 text-[10px] hidden xs:inline">
+        <span
+          v-if="roomStore.roomCode && roomStore.roomCode !== 'LOKAL'"
+          class="text-neutral-500 text-[10px] hidden xs:inline"
+        >
           &bull; {{ roomStore.roomCode }}
         </span>
       </div>
@@ -225,7 +231,10 @@ defineEmits<{
               MENYAMBUNG ULANG KONEKSI...
             </div>
             <div class="text-xs font-sans font-bold text-amber-900 mt-0.5">
-              {{ roomStore.reconnectMessage || 'Koneksi terputus. Sistem sedang mencoba menghubungkan kembali secara otomatis...' }}
+              {{
+                roomStore.reconnectMessage ||
+                'Koneksi terputus. Sistem sedang mencoba menghubungkan kembali secara otomatis...'
+              }}
             </div>
           </div>
           <button
@@ -259,7 +268,11 @@ defineEmits<{
           <div>
             <div class="text-lg uppercase tracking-wider text-stroke-black">BEBASKAN REKAN!</div>
             <div class="text-xs font-sans text-blue-100 font-bold">
-              {{ isEffectiveMobile ? 'Ketuk di sini untuk bebaskan rekan!' : 'Tekan E untuk menyelamatkan rekan satu tim!' }}
+              {{
+                isEffectiveMobile
+                  ? 'Ketuk di sini untuk bebaskan rekan!'
+                  : 'Tekan E untuk menyelamatkan rekan satu tim!'
+              }}
             </div>
           </div>
         </div>
@@ -275,20 +288,25 @@ defineEmits<{
         leave-to-class="scale-90 opacity-0"
       >
         <div
-          v-if="!gameStore.canRescueNearby && gameStore.isNearJailedAlly && gameStore.rescueCooldownRemainingSeconds > 0"
+          v-if="
+            !gameStore.canRescueNearby &&
+            gameStore.isNearJailedAlly &&
+            gameStore.rescueCooldownRemainingSeconds > 0
+          "
           data-testid="hud-rescue-cooldown-prompt"
           class="pointer-events-auto bg-amber-950/90 border-b-[5px] border-amber-600 text-amber-200 font-heading font-black px-6 py-3 rounded-2xl shadow-2xl flex items-center gap-3 animate-pulse"
         >
           <Timer class="w-8 h-8 shrink-0 text-amber-400 drop-shadow-sm" />
           <div>
-            <div class="text-lg uppercase tracking-wider text-amber-300">COOLDOWN RESCUE ({{ gameStore.rescueCooldownRemainingSeconds }}s)</div>
+            <div class="text-lg uppercase tracking-wider text-amber-300">
+              COOLDOWN RESCUE ({{ gameStore.rescueCooldownRemainingSeconds }}s)
+            </div>
             <div class="text-xs font-sans text-amber-200/90 font-bold">
               Tunggu hingga cooldown selesai untuk menyelamatkan kawan!
             </div>
           </div>
         </div>
       </transition>
-
 
       <!-- Stunned Alert -->
       <transition
@@ -307,7 +325,9 @@ defineEmits<{
           <ZapOff class="w-8 h-8 shrink-0 text-white drop-shadow-sm animate-pulse" />
           <div>
             <div class="text-lg uppercase tracking-wider text-stroke-black">STUNNED!</div>
-            <div class="text-xs font-sans text-red-100 font-bold">Stamina habis! Tidak bisa bergerak selama 2 detik.</div>
+            <div class="text-xs font-sans text-red-100 font-bold">
+              Stamina habis! Tidak bisa bergerak selama 2 detik.
+            </div>
           </div>
         </div>
       </transition>
@@ -359,10 +379,7 @@ defineEmits<{
       data-testid="hud-skills-container"
       class="fixed bottom-3 sm:bottom-6 left-1/2 -translate-x-1/2 z-30"
     >
-      <SkillActionBar
-        :is-mobile="false"
-        @trigger-skill="$emit('trigger-skill', $event)"
-      />
+      <SkillActionBar :is-mobile="false" @trigger-skill="$emit('trigger-skill', $event)" />
     </div>
 
     <!-- Mobile Virtual Joystick & Touch Controls -->
@@ -382,14 +399,8 @@ defineEmits<{
 
     <!-- Modals (Teleported to body to escape HUD pointer-events-none) -->
     <Teleport to="body">
-      <GameControlsModal
-        v-if="showControlsModal"
-        @close="closeControlsModal"
-      />
-      <SettingsModal
-        v-if="showSettingsModal"
-        @close="closeSettingsModal"
-      />
+      <GameControlsModal v-if="showControlsModal" @close="closeControlsModal" />
+      <SettingsModal v-if="showSettingsModal" @close="closeSettingsModal" />
     </Teleport>
   </div>
 </template>

@@ -12,10 +12,7 @@ export class GameplayRules {
     return Math.sqrt(dx * dx + dy * dy + dz * dz)
   }
 
-  public static distance2D(
-    p1: { x: number; z: number },
-    p2: { x: number; z: number },
-  ): number {
+  public static distance2D(p1: { x: number; z: number }, p2: { x: number; z: number }): number {
     const dx = p1.x - p2.x
     const dz = p1.z - p2.z
     return Math.sqrt(dx * dx + dz * dz)
@@ -115,4 +112,3 @@ export class GameplayRules {
     return null
   }
 }
-

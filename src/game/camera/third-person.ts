@@ -34,8 +34,14 @@ export class ThirdPersonCameraController {
     physics?: PhysicsWorld,
     excludeCollider?: RAPIER.Collider,
   ): void {
-    const { sensitivity, minPitch, maxPitch, distance: maxDistance, minDistance, wallBuffer } =
-      GAME_CONFIG.camera
+    const {
+      sensitivity,
+      minPitch,
+      maxPitch,
+      distance: maxDistance,
+      minDistance,
+      wallBuffer,
+    } = GAME_CONFIG.camera
 
     // 1. Accumulate mouse rotations with user settings
     let userSensitivity = 1.0
@@ -101,11 +107,19 @@ export class ThirdPersonCameraController {
     if (targetDistance < this.currentDistance) {
       // Zooming in (hit wall): very fast response
       const fastInFactor = 1 - Math.exp(-35 * dt)
-      this.currentDistance = THREE.MathUtils.lerp(this.currentDistance, targetDistance, fastInFactor)
+      this.currentDistance = THREE.MathUtils.lerp(
+        this.currentDistance,
+        targetDistance,
+        fastInFactor,
+      )
     } else {
       // Zooming out (open area): smooth relaxed recovery
       const smoothOutFactor = 1 - Math.exp(-12 * dt)
-      this.currentDistance = THREE.MathUtils.lerp(this.currentDistance, targetDistance, smoothOutFactor)
+      this.currentDistance = THREE.MathUtils.lerp(
+        this.currentDistance,
+        targetDistance,
+        smoothOutFactor,
+      )
     }
 
     // 6. Compute ideal camera position with clamped dynamic distance

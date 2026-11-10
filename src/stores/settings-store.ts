@@ -53,13 +53,23 @@ export const useSettingsStore = defineStore('settings', {
   state: (): GameSettingsState => {
     const saved = loadFromStorage()
     return {
-      mouseSensitivity: typeof saved.mouseSensitivity === 'number' ? saved.mouseSensitivity : DEFAULT_SETTINGS.mouseSensitivity,
+      mouseSensitivity:
+        typeof saved.mouseSensitivity === 'number'
+          ? saved.mouseSensitivity
+          : DEFAULT_SETTINGS.mouseSensitivity,
       invertY: typeof saved.invertY === 'boolean' ? saved.invertY : DEFAULT_SETTINGS.invertY,
-      masterVolume: typeof saved.masterVolume === 'number' ? saved.masterVolume : DEFAULT_SETTINGS.masterVolume,
+      masterVolume:
+        typeof saved.masterVolume === 'number' ? saved.masterVolume : DEFAULT_SETTINGS.masterVolume,
       sfxVolume: typeof saved.sfxVolume === 'number' ? saved.sfxVolume : DEFAULT_SETTINGS.sfxVolume,
       isMuted: typeof saved.isMuted === 'boolean' ? saved.isMuted : DEFAULT_SETTINGS.isMuted,
-      shadowsEnabled: typeof saved.shadowsEnabled === 'boolean' ? saved.shadowsEnabled : DEFAULT_SETTINGS.shadowsEnabled,
-      particleDensity: saved.particleDensity === 'low' || saved.particleDensity === 'high' ? saved.particleDensity : DEFAULT_SETTINGS.particleDensity,
+      shadowsEnabled:
+        typeof saved.shadowsEnabled === 'boolean'
+          ? saved.shadowsEnabled
+          : DEFAULT_SETTINGS.shadowsEnabled,
+      particleDensity:
+        saved.particleDensity === 'low' || saved.particleDensity === 'high'
+          ? saved.particleDensity
+          : DEFAULT_SETTINGS.particleDensity,
     }
   },
 
@@ -118,4 +128,3 @@ export const useSettingsStore = defineStore('settings', {
     },
   },
 })
-

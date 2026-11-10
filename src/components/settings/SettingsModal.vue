@@ -64,11 +64,15 @@ onUnmounted(() => {
 
       <!-- Header -->
       <div class="flex items-center gap-2.5 pr-8 border-b border-neutral-200 pb-3">
-        <div class="w-9 h-9 rounded-xl bg-amber-100 border border-amber-300 flex items-center justify-center text-amber-700 shrink-0">
+        <div
+          class="w-9 h-9 rounded-xl bg-amber-100 border border-amber-300 flex items-center justify-center text-amber-700 shrink-0"
+        >
           <Settings class="w-5 h-5" />
         </div>
         <div>
-          <h2 class="font-heading font-black text-lg sm:text-2xl text-neutral-900 uppercase tracking-wide leading-tight">
+          <h2
+            class="font-heading font-black text-lg sm:text-2xl text-neutral-900 uppercase tracking-wide leading-tight"
+          >
             Pengaturan Game
           </h2>
           <p class="font-sans text-xs text-neutral-500 font-bold">
@@ -88,7 +92,9 @@ onUnmounted(() => {
             <div class="flex items-center gap-2">
               <Volume2 v-if="!settings.isMuted" class="w-4 h-4 text-amber-600" />
               <VolumeX v-else class="w-4 h-4 text-rose-500" />
-              <span class="font-heading font-bold text-sm text-neutral-800 uppercase tracking-wide">Audio & Suara</span>
+              <span class="font-heading font-bold text-sm text-neutral-800 uppercase tracking-wide"
+                >Audio & Suara</span
+              >
             </div>
             <button
               type="button"
@@ -166,7 +172,9 @@ onUnmounted(() => {
         >
           <div class="flex items-center gap-2">
             <Sliders class="w-4 h-4 text-amber-600" />
-            <span class="font-heading font-bold text-sm text-neutral-800 uppercase tracking-wide">Kamera & Sensitivitas</span>
+            <span class="font-heading font-bold text-sm text-neutral-800 uppercase tracking-wide"
+              >Kamera & Sensitivitas</span
+            >
           </div>
 
           <!-- Sensitivity Slider -->
@@ -185,7 +193,9 @@ onUnmounted(() => {
               step="0.1"
               :value="settings.mouseSensitivity"
               class="w-full accent-amber-500 cursor-pointer"
-              @input="settings.setMouseSensitivity(Number(($event.target as HTMLInputElement).value))"
+              @input="
+                settings.setMouseSensitivity(Number(($event.target as HTMLInputElement).value))
+              "
             />
           </div>
 
@@ -215,14 +225,18 @@ onUnmounted(() => {
         >
           <div class="flex items-center gap-2">
             <Sparkles class="w-4 h-4 text-amber-600" />
-            <span class="font-heading font-bold text-sm text-neutral-800 uppercase tracking-wide">Grafis & Efek Partikel</span>
+            <span class="font-heading font-bold text-sm text-neutral-800 uppercase tracking-wide"
+              >Grafis & Efek Partikel</span
+            >
           </div>
 
           <!-- Shadows Toggle -->
           <div class="flex items-center justify-between">
             <div class="flex flex-col">
               <span class="text-xs font-bold text-neutral-700">Bayangan 3D (Shadows)</span>
-              <span class="text-[10px] text-neutral-500">Matikan untuk meningkatkan performa di HP lama</span>
+              <span class="text-[10px] text-neutral-500"
+                >Matikan untuk meningkatkan performa di HP lama</span
+              >
             </div>
             <button
               type="button"
@@ -302,4 +316,3 @@ onUnmounted(() => {
     </div>
   </div>
 </template>
-

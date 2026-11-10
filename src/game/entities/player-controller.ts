@@ -287,7 +287,8 @@ export class PlayerController implements GameplayEntity {
     const isMoving = moveX !== 0 || moveZ !== 0
 
     // 3. Sprint & Stamina Mechanics
-    const canSprint = (this.stamina > 0 && !this.isExhausted) || isAdrenalineActive || this.isGodMode
+    const canSprint =
+      (this.stamina > 0 && !this.isExhausted) || isAdrenalineActive || this.isGodMode
     const wantsSprint = (input.sprint || isDashActive) && isMoving && canSprint
     this.isSprinting = wantsSprint
 
@@ -401,8 +402,7 @@ export class PlayerController implements GameplayEntity {
 
     const currentLinVel = this.body.linvel()
     // Grounded requires physical ray hit on an upward slope (normal.y >= 0.5) and no upward jump velocity
-    const newlyGrounded =
-      groundHit !== null && groundHit.normal.y >= 0.5 && currentLinVel.y <= 0.2
+    const newlyGrounded = groundHit !== null && groundHit.normal.y >= 0.5 && currentLinVel.y <= 0.2
 
     if (!this.wasGrounded && newlyGrounded) {
       soundManager.playLand()
@@ -466,7 +466,9 @@ export class PlayerController implements GameplayEntity {
 
     // Procedural animation: Smooth forward tilt & cute subtle chibi waddle
     const currentLinVel = this.body.linvel()
-    const horizSpeed = Math.sqrt(currentLinVel.x * currentLinVel.x + currentLinVel.z * currentLinVel.z)
+    const horizSpeed = Math.sqrt(
+      currentLinVel.x * currentLinVel.x + currentLinVel.z * currentLinVel.z,
+    )
     const isMovingGrounded = horizSpeed > 0.4 && this.isGrounded
 
     if (isMovingGrounded) {
@@ -474,8 +476,12 @@ export class PlayerController implements GameplayEntity {
       this.runAnimCycle += dt * animSpeed
       const targetForwardTilt = this.isSprinting ? 0.14 : 0.07
       const tiltDamping = 1 - Math.exp(-14 * dt)
-      this.bodyMesh.rotation.x = THREE.MathUtils.lerp(this.bodyMesh.rotation.x, targetForwardTilt, tiltDamping)
-      
+      this.bodyMesh.rotation.x = THREE.MathUtils.lerp(
+        this.bodyMesh.rotation.x,
+        targetForwardTilt,
+        tiltDamping,
+      )
+
       const waddleAmp = this.isSprinting ? 0.05 : 0.03
       this.bodyMesh.rotation.z = Math.sin(this.runAnimCycle) * waddleAmp
     } else {

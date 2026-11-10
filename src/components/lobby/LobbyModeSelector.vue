@@ -1,14 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import {
-  Swords,
-  Shield,
-  Sparkles,
-  LogIn,
-  AlertCircle,
-  Users,
-  Check,
-} from 'lucide-vue-next'
+import { Swords, Shield, Sparkles, LogIn, AlertCircle, Users, Check } from 'lucide-vue-next'
 import type { TeamId } from '../../types/game.types'
 
 const props = defineProps<{
@@ -19,7 +11,10 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits<{
-  (e: 'create-host', payload: { username: string; team: TeamId; roomCode: string; maxPlayers: 8 | 12 }): void
+  (
+    e: 'create-host',
+    payload: { username: string; team: TeamId; roomCode: string; maxPlayers: 8 | 12 },
+  ): void
   (e: 'join-room', payload: { username: string; team: TeamId; roomCode: string }): void
 }>()
 
@@ -27,8 +22,7 @@ const username = ref(props.initialUsername)
 const selectedCapacity = ref<8 | 12>(8)
 const targetRoomCode = ref('')
 const hostRoomCode = ref(
-  Math.random().toString(36).substring(2, 6).toUpperCase() +
-  Math.floor(10 + Math.random() * 90),
+  Math.random().toString(36).substring(2, 6).toUpperCase() + Math.floor(10 + Math.random() * 90),
 )
 
 const onCreateHost = () => {
@@ -78,7 +72,9 @@ const onJoinRoom = () => {
 
     <!-- Pilihan Format Pertandingan (4v4 vs 6v6) sebagai Tombol Timbul -->
     <div class="flex flex-col gap-1.5">
-      <label class="font-heading font-black text-xs uppercase tracking-wider text-neutral-800 flex items-center gap-1.5">
+      <label
+        class="font-heading font-black text-xs uppercase tracking-wider text-neutral-800 flex items-center gap-1.5"
+      >
         <Users class="w-3.5 h-3.5 text-neutral-600" />
         <span>Format Pertandingan</span>
       </label>
@@ -108,10 +104,7 @@ const onJoinRoom = () => {
             >
               4 vs 4
             </span>
-            <Check
-              v-if="selectedCapacity === 8"
-              class="w-3.5 h-3.5 text-amber-700 stroke-[3]"
-            />
+            <Check v-if="selectedCapacity === 8" class="w-3.5 h-3.5 text-amber-700 stroke-[3]" />
           </div>
           <span
             :class="[
@@ -147,10 +140,7 @@ const onJoinRoom = () => {
             >
               6 vs 6
             </span>
-            <Check
-              v-if="selectedCapacity === 12"
-              class="w-3.5 h-3.5 text-blue-700 stroke-[3]"
-            />
+            <Check v-if="selectedCapacity === 12" class="w-3.5 h-3.5 text-blue-700 stroke-[3]" />
           </div>
           <span
             :class="[
@@ -181,7 +171,9 @@ const onJoinRoom = () => {
       <!-- Mobile-only subtle visual divider -->
       <div class="flex items-center gap-2.5 sm:hidden py-0.5">
         <div class="flex-1 h-px bg-neutral-200"></div>
-        <span class="text-[10px] font-heading font-black uppercase tracking-widest text-neutral-400">Atau Masukkan Kode</span>
+        <span class="text-[10px] font-heading font-black uppercase tracking-widest text-neutral-400"
+          >Atau Masukkan Kode</span
+        >
         <div class="flex-1 h-px bg-neutral-200"></div>
       </div>
 

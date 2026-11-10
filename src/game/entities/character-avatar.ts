@@ -20,7 +20,8 @@ export const OUTFIT_PRESETS: OutfitPresetMeta[] = [
     id: 1,
     name: 'Casual Striker',
     subtitle: 'Street Casual',
-    description: 'Topi trucker dua warna, kaos santai boxy, celana jeans rolled-cuff, dan sepatu boot chunky.',
+    description:
+      'Topi trucker dua warna, kaos santai boxy, celana jeans rolled-cuff, dan sepatu boot chunky.',
     hatName: 'Trucker Cap',
     topName: 'Boxy Tee',
     bottomName: 'Rolled Jeans',
@@ -30,7 +31,8 @@ export const OUTFIT_PRESETS: OutfitPresetMeta[] = [
     id: 2,
     name: 'Jawara Nusantara',
     subtitle: 'Pendekar Tradisional',
-    description: 'Udeng ikat kepala batik, baju pangsi pesilat, sabuk emas nusantara, dan celana komprang.',
+    description:
+      'Udeng ikat kepala batik, baju pangsi pesilat, sabuk emas nusantara, dan celana komprang.',
     hatName: 'Udeng Tradisional',
     topName: 'Baju Pangsi & Sabuk',
     bottomName: 'Celana Komprang',
@@ -40,7 +42,8 @@ export const OUTFIT_PRESETS: OutfitPresetMeta[] = [
     id: 3,
     name: 'Street Sprinter',
     subtitle: 'Urban Runner',
-    description: 'Topi terbalik dengan jambul rambut, hoodie santai saku kanguru, dan celana training garis samping.',
+    description:
+      'Topi terbalik dengan jambul rambut, hoodie santai saku kanguru, dan celana training garis samping.',
     hatName: 'Backwards Cap & Tuft',
     topName: 'Kangaroo Hoodie',
     bottomName: 'Trackpants',
@@ -50,7 +53,8 @@ export const OUTFIT_PRESETS: OutfitPresetMeta[] = [
     id: 4,
     name: 'Athletic Runner',
     subtitle: 'Sporty Sprinter',
-    description: 'Rambut spike energik, sweatband dahi, tank top tanpa lengan, dan celana pendek atletik.',
+    description:
+      'Rambut spike energik, sweatband dahi, tank top tanpa lengan, dan celana pendek atletik.',
     hatName: 'Sweatband & Hair',
     topName: 'Athletic Tank',
     bottomName: 'Sport Shorts',
@@ -60,7 +64,8 @@ export const OUTFIT_PRESETS: OutfitPresetMeta[] = [
     id: 5,
     name: 'Bocil Pramuka',
     subtitle: 'Seragam Sekolah',
-    description: 'Baret miring emblem emas garuda, kemeja kacu merah-putih, celana pendek seragam, dan kaus kaki tinggi.',
+    description:
+      'Baret miring emblem emas garuda, kemeja kacu merah-putih, celana pendek seragam, dan kaus kaki tinggi.',
     hatName: 'Baret Pramuka',
     topName: 'Kemeja Kacu',
     bottomName: 'Celana Seragam',
@@ -70,7 +75,8 @@ export const OUTFIT_PRESETS: OutfitPresetMeta[] = [
     id: 6,
     name: 'Urban Puffer',
     subtitle: 'Musim Dingin Kota',
-    description: 'Kupluk pom-pom beanie tebal, rompi puffer ber-zipper modern, dan celana kargo saku samping.',
+    description:
+      'Kupluk pom-pom beanie tebal, rompi puffer ber-zipper modern, dan celana kargo saku samping.',
     hatName: 'Pom-Pom Beanie',
     topName: 'Puffer Vest',
     bottomName: 'Cargo Pants',
@@ -171,11 +177,13 @@ export class CharacterAvatar {
         window.location.protocol &&
         window.location.protocol.startsWith('http')
       ) {
-        preloadCharacterModel().then((template) => {
-          if (template && !this.isModelAttached) {
-            this.attachTemplateModel(template)
-          }
-        }).catch(() => null)
+        preloadCharacterModel()
+          .then((template) => {
+            if (template && !this.isModelAttached) {
+              this.attachTemplateModel(template)
+            }
+          })
+          .catch(() => null)
       }
     }
   }
@@ -372,10 +380,14 @@ export class CharacterAvatar {
     if (isJailed) {
       // Jailed: Slumped posture
       const damping = 1 - Math.exp(-10 * dt)
-      if (this.pivotTorso) this.pivotTorso.rotation.x = THREE.MathUtils.lerp(this.pivotTorso.rotation.x, 0.1, damping)
-      if (this.pivotHead) this.pivotHead.rotation.x = THREE.MathUtils.lerp(this.pivotHead.rotation.x, 0.15, damping)
-      if (this.pivotArmL) this.pivotArmL.rotation.x = THREE.MathUtils.lerp(this.pivotArmL.rotation.x, 0.1, damping)
-      if (this.pivotArmR) this.pivotArmR.rotation.x = THREE.MathUtils.lerp(this.pivotArmR.rotation.x, 0.1, damping)
+      if (this.pivotTorso)
+        this.pivotTorso.rotation.x = THREE.MathUtils.lerp(this.pivotTorso.rotation.x, 0.1, damping)
+      if (this.pivotHead)
+        this.pivotHead.rotation.x = THREE.MathUtils.lerp(this.pivotHead.rotation.x, 0.15, damping)
+      if (this.pivotArmL)
+        this.pivotArmL.rotation.x = THREE.MathUtils.lerp(this.pivotArmL.rotation.x, 0.1, damping)
+      if (this.pivotArmR)
+        this.pivotArmR.rotation.x = THREE.MathUtils.lerp(this.pivotArmR.rotation.x, 0.1, damping)
       return
     }
 
@@ -399,7 +411,11 @@ export class CharacterAvatar {
       // Subtle torso forward tilt & waddle
       const targetTorsoTilt = isSprinting ? 0.18 : 0.08
       const tiltDamping = 1 - Math.exp(-12 * dt)
-      this.pivotTorso.rotation.x = THREE.MathUtils.lerp(this.pivotTorso.rotation.x, targetTorsoTilt, tiltDamping)
+      this.pivotTorso.rotation.x = THREE.MathUtils.lerp(
+        this.pivotTorso.rotation.x,
+        targetTorsoTilt,
+        tiltDamping,
+      )
       this.pivotTorso.rotation.z = Math.sin(this.walkCycle) * (isSprinting ? 0.04 : 0.02)
 
       // Head bobbing
@@ -410,23 +426,83 @@ export class CharacterAvatar {
     } else if (!isGrounded) {
       // Airborne / Jump Pose: Arms up, legs bent back
       const jumpDamping = 1 - Math.exp(-10 * dt)
-      if (this.pivotArmL) this.pivotArmL.rotation.x = THREE.MathUtils.lerp(this.pivotArmL.rotation.x, -0.35, jumpDamping)
-      if (this.pivotArmR) this.pivotArmR.rotation.x = THREE.MathUtils.lerp(this.pivotArmR.rotation.x, -0.35, jumpDamping)
-      if (this.pivotLegL) this.pivotLegL.rotation.x = THREE.MathUtils.lerp(this.pivotLegL.rotation.x, 0.3, jumpDamping)
-      if (this.pivotLegR) this.pivotLegR.rotation.x = THREE.MathUtils.lerp(this.pivotLegR.rotation.x, 0.3, jumpDamping)
-      this.pivotTorso.rotation.x = THREE.MathUtils.lerp(this.pivotTorso.rotation.x, 0.05, jumpDamping)
+      if (this.pivotArmL)
+        this.pivotArmL.rotation.x = THREE.MathUtils.lerp(
+          this.pivotArmL.rotation.x,
+          -0.35,
+          jumpDamping,
+        )
+      if (this.pivotArmR)
+        this.pivotArmR.rotation.x = THREE.MathUtils.lerp(
+          this.pivotArmR.rotation.x,
+          -0.35,
+          jumpDamping,
+        )
+      if (this.pivotLegL)
+        this.pivotLegL.rotation.x = THREE.MathUtils.lerp(
+          this.pivotLegL.rotation.x,
+          0.3,
+          jumpDamping,
+        )
+      if (this.pivotLegR)
+        this.pivotLegR.rotation.x = THREE.MathUtils.lerp(
+          this.pivotLegR.rotation.x,
+          0.3,
+          jumpDamping,
+        )
+      this.pivotTorso.rotation.x = THREE.MathUtils.lerp(
+        this.pivotTorso.rotation.x,
+        0.05,
+        jumpDamping,
+      )
     } else {
       // Grounded Idle: Smoothly return all joints to zero
       const returnDamping = 1 - Math.exp(-12 * dt)
-      if (this.pivotArmL) this.pivotArmL.rotation.x = THREE.MathUtils.lerp(this.pivotArmL.rotation.x, 0, returnDamping)
-      if (this.pivotArmR) this.pivotArmR.rotation.x = THREE.MathUtils.lerp(this.pivotArmR.rotation.x, 0, returnDamping)
-      if (this.pivotLegL) this.pivotLegL.rotation.x = THREE.MathUtils.lerp(this.pivotLegL.rotation.x, 0, returnDamping)
-      if (this.pivotLegR) this.pivotLegR.rotation.x = THREE.MathUtils.lerp(this.pivotLegR.rotation.x, 0, returnDamping)
-      this.pivotTorso.rotation.x = THREE.MathUtils.lerp(this.pivotTorso.rotation.x, 0, returnDamping)
-      this.pivotTorso.rotation.z = THREE.MathUtils.lerp(this.pivotTorso.rotation.z, 0, returnDamping)
+      if (this.pivotArmL)
+        this.pivotArmL.rotation.x = THREE.MathUtils.lerp(
+          this.pivotArmL.rotation.x,
+          0,
+          returnDamping,
+        )
+      if (this.pivotArmR)
+        this.pivotArmR.rotation.x = THREE.MathUtils.lerp(
+          this.pivotArmR.rotation.x,
+          0,
+          returnDamping,
+        )
+      if (this.pivotLegL)
+        this.pivotLegL.rotation.x = THREE.MathUtils.lerp(
+          this.pivotLegL.rotation.x,
+          0,
+          returnDamping,
+        )
+      if (this.pivotLegR)
+        this.pivotLegR.rotation.x = THREE.MathUtils.lerp(
+          this.pivotLegR.rotation.x,
+          0,
+          returnDamping,
+        )
+      this.pivotTorso.rotation.x = THREE.MathUtils.lerp(
+        this.pivotTorso.rotation.x,
+        0,
+        returnDamping,
+      )
+      this.pivotTorso.rotation.z = THREE.MathUtils.lerp(
+        this.pivotTorso.rotation.z,
+        0,
+        returnDamping,
+      )
       if (this.pivotHead) {
-        this.pivotHead.rotation.x = THREE.MathUtils.lerp(this.pivotHead.rotation.x, 0, returnDamping)
-        this.pivotHead.rotation.z = THREE.MathUtils.lerp(this.pivotHead.rotation.z, 0, returnDamping)
+        this.pivotHead.rotation.x = THREE.MathUtils.lerp(
+          this.pivotHead.rotation.x,
+          0,
+          returnDamping,
+        )
+        this.pivotHead.rotation.z = THREE.MathUtils.lerp(
+          this.pivotHead.rotation.z,
+          0,
+          returnDamping,
+        )
       }
     }
   }

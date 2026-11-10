@@ -480,7 +480,11 @@ export class BotController implements GameplayEntity {
         } else {
           // Coast is clear: only sprint for the final dash into base (<= 5.5m) to conserve stamina
           this.patrolDirection.set(baseNormX, 0, baseNormZ).normalize()
-          if (baseDist <= 5.5 && canSprint && this.stamina >= GAME_CONFIG.stamina.minSprintThreshold) {
+          if (
+            baseDist <= 5.5 &&
+            canSprint &&
+            this.stamina >= GAME_CONFIG.stamina.minSprintThreshold
+          ) {
             wantsSprint = true
             speed = GAME_CONFIG.movement.sprintSpeed * 0.9
           } else {
@@ -590,30 +594,88 @@ export class BotController implements GameplayEntity {
           wantsSprint = false
           speed = GAME_CONFIG.movement.walkSpeed * 0.75
         } else if (this.role === 'hybrid') {
-        // DUAL ROLE (Penyerang & Penjaga Sekaligus)
-        // Check if any opponent intruder is trespassing in our home territory
-        let intruderInHome: GameplayEntity | null = null
-        let intruderDist = Infinity
-        let isIntruderImmune = false
+          // DUAL ROLE (Penyerang & Penjaga Sekaligus)
+          // Check if any opponent intruder is trespassing in our home territory
+          let intruderInHome: GameplayEntity | null = null
+          let intruderDist = Infinity
+          let isIntruderImmune = false
 
-        for (const t of potentialTargets) {
-          if (t.teamId === this.teamId || t.status === 'jailed') continue
+          for (const t of potentialTargets) {
+            if (t.teamId === this.teamId || t.status === 'jailed') continue
 
-          // Target is in our territory if isInEnemyTerritory(t) is true (from t's perspective)
-          if (GameplayRules.isInEnemyTerritory(t)) {
-            const d = GameplayRules.distance3D(myPos, t.getPosition())
-            if (d < intruderDist) {
-              intruderInHome = t
-              intruderDist = d
-              isIntruderImmune = now < t.immunityUntil
+            // Target is in our territory if isInEnemyTerritory(t) is true (from t's perspective)
+            if (GameplayRules.isInEnemyTerritory(t)) {
+              const d = GameplayRules.distance3D(myPos, t.getPosition())
+              if (d < intruderDist) {
+                intruderInHome = t
+                intruderDist = d
+                isIntruderImmune = now < t.immunityUntil
+              }
             }
           }
-        }
 
-        if (intruderInHome) {
-          // SUB-STATE DEFENDER: Intruder in home yard! Protect benteng and intercept
-          if (isIntruderImmune) {
-            const tPos = intruderInHome.getPosition()
+          if (intruderInHome) {
+            // SUB-STATE DEFENDER: Intruder in home yard! Protect benteng and intercept
+            if (isIntruderImmune) {
+              const tPos = intruderInHome.getPosition()
+              this.patrolDirection.set(myPos.x - tPos.x, 0, myPos.z - tPos.z).normalize()
+              if (canSprint && this.stamina > 15) {
+                wantsSprint = true
+                speed = GAME_CONFIG.movement.sprintSpeed * 0.85
+              } else {
+                wantsSprint = false
+                speed = GAME_CONFIG.movement.walkSpeed * 1.0
+              }
+            } else {
+              const tPos = intruderInHome.getPosition()
+              this.patrolDirection.set(tPos.x - myPos.x, 0, tPos.z - myPos.z).normalize()
+              if (canSprint && this.stamina >= 20) {
+                wantsSprint = true
+                speed = GAME_CONFIG.movement.sprintSpeed * 1.0
+              } else {
+                wantsSprint = false
+                speed = GAME_CONFIG.movement.walkSpeed * 1.0
+              }
+            }
+          } else if (isImmune) {
+            // SUB-STATE IMMUNE REGROUP: Home is clear, but immunity is still active.
+            // Hold position in home territory and do not rush border until immunity expires
+            const dx = myPos.x - this.patrolCenter.x
+            const dz = myPos.z - this.patrolCenter.z
+            const distFromCenter = Math.sqrt(dx * dx + dz * dz)
+            if (distFromCenter > 2.0) {
+              this.patrolDirection.set(-dx, 0, -dz).normalize()
+            } else {
+              this.patrolDirection.set(Math.sin(now * 0.002), 0, Math.cos(now * 0.002)).normalize()
+            }
+            wantsSprint = false
+            speed = GAME_CONFIG.movement.walkSpeed * 0.75
+          } else {
+            // SUB-STATE ATTACKER: Home yard is completely clear and immunity expired! Advance across border
+            if (this.targetObjective) {
+              const dx = this.targetObjective.x - myPos.x
+              const dz = this.targetObjective.z - myPos.z
+              this.patrolDirection.set(dx, 0, dz).normalize()
+            } else {
+              this.patrolDirection.set(-myPos.x * 0.1, 0, enemyDirZ).normalize()
+            }
+            wantsSprint = false
+            speed = GAME_CONFIG.movement.walkSpeed * 1.0
+          }
+        } else if (this.role === 'attacker') {
+          // Attacker prioritizes crossing the center border to attack enemy base
+          let dangerousEnemy: GameplayEntity | null = null
+          for (const t of potentialTargets) {
+            if (t.teamId === this.teamId || t.status === 'jailed') continue
+            const d = GameplayRules.distance3D(myPos, t.getPosition())
+            if (d < 5.0 && now < t.immunityUntil) {
+              dangerousEnemy = t
+              break
+            }
+          }
+
+          if (dangerousEnemy) {
+            const tPos = dangerousEnemy.getPosition()
             this.patrolDirection.set(myPos.x - tPos.x, 0, myPos.z - tPos.z).normalize()
             if (canSprint && this.stamina > 15) {
               wantsSprint = true
@@ -622,8 +684,71 @@ export class BotController implements GameplayEntity {
               wantsSprint = false
               speed = GAME_CONFIG.movement.walkSpeed * 1.0
             }
+          } else if (isImmune) {
+            // IMMUNE REGROUP: Hold position in home territory until immunity expires before launching assault
+            const dx = myPos.x - this.patrolCenter.x
+            const dz = myPos.z - this.patrolCenter.z
+            const distFromCenter = Math.sqrt(dx * dx + dz * dz)
+            if (distFromCenter > 2.0) {
+              this.patrolDirection.set(-dx, 0, -dz).normalize()
+            } else {
+              this.patrolDirection.set(Math.sin(now * 0.002), 0, Math.cos(now * 0.002)).normalize()
+            }
+            wantsSprint = false
+            speed = GAME_CONFIG.movement.walkSpeed * 0.75
           } else {
-            const tPos = intruderInHome.getPosition()
+            // Drive forward across dividing line towards enemy base objective
+            if (this.targetObjective) {
+              const dx = this.targetObjective.x - myPos.x
+              const dz = this.targetObjective.z - myPos.z
+              this.patrolDirection.set(dx, 0, dz).normalize()
+            } else {
+              this.patrolDirection.set(-myPos.x * 0.1, 0, enemyDirZ).normalize()
+            }
+            wantsSprint = false
+            speed = GAME_CONFIG.movement.walkSpeed * 1.0
+          }
+        } else {
+          // Defender guards home territory and catches intruders
+          let targetEntity: GameplayEntity | null = null
+          let targetDist = Infinity
+          let isTargetDangerous = false
+
+          for (const t of potentialTargets) {
+            if (t.teamId === this.teamId || t.status === 'jailed') continue
+
+            const tPos = t.getPosition()
+            const d = GameplayRules.distance3D(myPos, tPos)
+            if (d < 14.0 && d < targetDist) {
+              const isTrespassing = GameplayRules.isInEnemyTerritory(t)
+              const isImmune = now < t.immunityUntil
+
+              if (isImmune) {
+                targetEntity = t
+                targetDist = d
+                isTargetDangerous = true
+              } else if (isTrespassing) {
+                targetEntity = t
+                targetDist = d
+                isTargetDangerous = false
+              }
+            }
+          }
+
+          if (targetEntity && isTargetDangerous) {
+            // Flee away from immune opponent!
+            const tPos = targetEntity.getPosition()
+            this.patrolDirection.set(myPos.x - tPos.x, 0, myPos.z - tPos.z).normalize()
+            if (canSprint && this.stamina > 15) {
+              wantsSprint = true
+              speed = GAME_CONFIG.movement.sprintSpeed * 0.85
+            } else {
+              wantsSprint = false
+              speed = GAME_CONFIG.movement.walkSpeed * 1.0
+            }
+          } else if (targetEntity) {
+            // Pursuit: Chase intruder trespassing in our home territory!
+            const tPos = targetEntity.getPosition()
             this.patrolDirection.set(tPos.x - myPos.x, 0, tPos.z - myPos.z).normalize()
             if (canSprint && this.stamina >= 20) {
               wantsSprint = true
@@ -632,150 +757,29 @@ export class BotController implements GameplayEntity {
               wantsSprint = false
               speed = GAME_CONFIG.movement.walkSpeed * 1.0
             }
-          }
-        } else if (isImmune) {
-          // SUB-STATE IMMUNE REGROUP: Home is clear, but immunity is still active.
-          // Hold position in home territory and do not rush border until immunity expires
-          const dx = myPos.x - this.patrolCenter.x
-          const dz = myPos.z - this.patrolCenter.z
-          const distFromCenter = Math.sqrt(dx * dx + dz * dz)
-          if (distFromCenter > 2.0) {
-            this.patrolDirection.set(-dx, 0, -dz).normalize()
           } else {
-            this.patrolDirection.set(Math.sin(now * 0.002), 0, Math.cos(now * 0.002)).normalize()
-          }
-          wantsSprint = false
-          speed = GAME_CONFIG.movement.walkSpeed * 0.75
-        } else {
-          // SUB-STATE ATTACKER: Home yard is completely clear and immunity expired! Advance across border
-          if (this.targetObjective) {
-            const dx = this.targetObjective.x - myPos.x
-            const dz = this.targetObjective.z - myPos.z
-            this.patrolDirection.set(dx, 0, dz).normalize()
-          } else {
-            this.patrolDirection.set(-myPos.x * 0.1, 0, enemyDirZ).normalize()
-          }
-          wantsSprint = false
-          speed = GAME_CONFIG.movement.walkSpeed * 1.0
-        }
-      } else if (this.role === 'attacker') {
-        // Attacker prioritizes crossing the center border to attack enemy base
-        let dangerousEnemy: GameplayEntity | null = null
-        for (const t of potentialTargets) {
-          if (t.teamId === this.teamId || t.status === 'jailed') continue
-          const d = GameplayRules.distance3D(myPos, t.getPosition())
-          if (d < 5.0 && now < t.immunityUntil) {
-            dangerousEnemy = t
-            break
-          }
-        }
-
-        if (dangerousEnemy) {
-          const tPos = dangerousEnemy.getPosition()
-          this.patrolDirection.set(myPos.x - tPos.x, 0, myPos.z - tPos.z).normalize()
-          if (canSprint && this.stamina > 15) {
-            wantsSprint = true
-            speed = GAME_CONFIG.movement.sprintSpeed * 0.85
-          } else {
-            wantsSprint = false
-            speed = GAME_CONFIG.movement.walkSpeed * 1.0
-          }
-        } else if (isImmune) {
-          // IMMUNE REGROUP: Hold position in home territory until immunity expires before launching assault
-          const dx = myPos.x - this.patrolCenter.x
-          const dz = myPos.z - this.patrolCenter.z
-          const distFromCenter = Math.sqrt(dx * dx + dz * dz)
-          if (distFromCenter > 2.0) {
-            this.patrolDirection.set(-dx, 0, -dz).normalize()
-          } else {
-            this.patrolDirection.set(Math.sin(now * 0.002), 0, Math.cos(now * 0.002)).normalize()
-          }
-          wantsSprint = false
-          speed = GAME_CONFIG.movement.walkSpeed * 0.75
-        } else {
-          // Drive forward across dividing line towards enemy base objective
-          if (this.targetObjective) {
-            const dx = this.targetObjective.x - myPos.x
-            const dz = this.targetObjective.z - myPos.z
-            this.patrolDirection.set(dx, 0, dz).normalize()
-          } else {
-            this.patrolDirection.set(-myPos.x * 0.1, 0, enemyDirZ).normalize()
-          }
-          wantsSprint = false
-          speed = GAME_CONFIG.movement.walkSpeed * 1.0
-        }
-      } else {
-        // Defender guards home territory and catches intruders
-        let targetEntity: GameplayEntity | null = null
-        let targetDist = Infinity
-        let isTargetDangerous = false
-
-        for (const t of potentialTargets) {
-          if (t.teamId === this.teamId || t.status === 'jailed') continue
-
-          const tPos = t.getPosition()
-          const d = GameplayRules.distance3D(myPos, tPos)
-          if (d < 14.0 && d < targetDist) {
-            const isTrespassing = GameplayRules.isInEnemyTerritory(t)
-            const isImmune = now < t.immunityUntil
-
-            if (isImmune) {
-              targetEntity = t
-              targetDist = d
-              isTargetDangerous = true
-            } else if (isTrespassing) {
-              targetEntity = t
-              targetDist = d
-              isTargetDangerous = false
+            // Normal Patrol logic
+            this.patrolTimer -= dt
+            if (this.patrolTimer <= 0) {
+              this.patrolTimer = 2.0 + Math.random() * 3.0
+              const angle = Math.random() * Math.PI * 2
+              this.patrolDirection.set(Math.sin(angle), 0, Math.cos(angle))
             }
-          }
-        }
 
-        if (targetEntity && isTargetDangerous) {
-          // Flee away from immune opponent!
-          const tPos = targetEntity.getPosition()
-          this.patrolDirection.set(myPos.x - tPos.x, 0, myPos.z - tPos.z).normalize()
-          if (canSprint && this.stamina > 15) {
-            wantsSprint = true
-            speed = GAME_CONFIG.movement.sprintSpeed * 0.85
-          } else {
+            // Leash to patrol area
+            const dx = myPos.x - this.patrolCenter.x
+            const dz = myPos.z - this.patrolCenter.z
+            const distFromCenter = Math.sqrt(dx * dx + dz * dz)
+
+            if (distFromCenter > this.patrolRadius) {
+              this.patrolDirection.set(-dx, 0, -dz).normalize()
+            }
             wantsSprint = false
-            speed = GAME_CONFIG.movement.walkSpeed * 1.0
+            speed = GAME_CONFIG.movement.walkSpeed * 0.75
           }
-        } else if (targetEntity) {
-          // Pursuit: Chase intruder trespassing in our home territory!
-          const tPos = targetEntity.getPosition()
-          this.patrolDirection.set(tPos.x - myPos.x, 0, tPos.z - myPos.z).normalize()
-          if (canSprint && this.stamina >= 20) {
-            wantsSprint = true
-            speed = GAME_CONFIG.movement.sprintSpeed * 1.0
-          } else {
-            wantsSprint = false
-            speed = GAME_CONFIG.movement.walkSpeed * 1.0
-          }
-        } else {
-          // Normal Patrol logic
-          this.patrolTimer -= dt
-          if (this.patrolTimer <= 0) {
-            this.patrolTimer = 2.0 + Math.random() * 3.0
-            const angle = Math.random() * Math.PI * 2
-            this.patrolDirection.set(Math.sin(angle), 0, Math.cos(angle))
-          }
-
-          // Leash to patrol area
-          const dx = myPos.x - this.patrolCenter.x
-          const dz = myPos.z - this.patrolCenter.z
-          const distFromCenter = Math.sqrt(dx * dx + dz * dz)
-
-          if (distFromCenter > this.patrolRadius) {
-            this.patrolDirection.set(-dx, 0, -dz).normalize()
-          }
-          wantsSprint = false
-          speed = GAME_CONFIG.movement.walkSpeed * 0.75
         }
       }
     }
-  }
 
     // 2. Predictive Obstacle Avoidance & Tangent Steering
     this.wallProbeRay.origin.x = myPos.x
@@ -799,8 +803,7 @@ export class BotController implements GameplayEntity {
     let velY = this.body.linvel().y
 
     const isCloseToObjectiveBase =
-      this.targetObjective !== null &&
-      GameplayRules.distance2D(myPos, this.targetObjective) <= 3.2
+      this.targetObjective !== null && GameplayRules.distance2D(myPos, this.targetObjective) <= 3.2
 
     if (!isCloseToObjectiveBase && wallHit !== null && Math.abs(wallHit.normal.y) < 0.4) {
       const nx = wallHit.normal.x
@@ -960,7 +963,9 @@ export class BotController implements GameplayEntity {
 
     // Procedural animation: Smooth forward tilt & cute subtle chibi waddle matching player
     const currentLinVel = this.body.linvel()
-    const horizSpeed = Math.sqrt(currentLinVel.x * currentLinVel.x + currentLinVel.z * currentLinVel.z)
+    const horizSpeed = Math.sqrt(
+      currentLinVel.x * currentLinVel.x + currentLinVel.z * currentLinVel.z,
+    )
     const isMoving = horizSpeed > 0.4 && this.status === 'normal'
 
     if (isMoving) {
@@ -968,7 +973,11 @@ export class BotController implements GameplayEntity {
       this.runAnimCycle += dt * animSpeed
       const targetForwardTilt = this.isSprinting ? 0.14 : 0.07
       const tiltDamping = 1 - Math.exp(-14 * dt)
-      this.bodyMesh.rotation.x = THREE.MathUtils.lerp(this.bodyMesh.rotation.x, targetForwardTilt, tiltDamping)
+      this.bodyMesh.rotation.x = THREE.MathUtils.lerp(
+        this.bodyMesh.rotation.x,
+        targetForwardTilt,
+        tiltDamping,
+      )
 
       const waddleAmp = this.isSprinting ? 0.05 : 0.03
       this.bodyMesh.rotation.z = Math.sin(this.runAnimCycle) * waddleAmp

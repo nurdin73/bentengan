@@ -1,12 +1,5 @@
 <script setup lang="ts">
-import {
-  ScrollText,
-  Split,
-  Target,
-  ShieldAlert,
-  Trophy,
-  CheckCircle2,
-} from 'lucide-vue-next'
+import { ScrollText, Split, Target, ShieldAlert, Trophy, CheckCircle2 } from 'lucide-vue-next'
 import TactileButton from '../ui/TactileButton.vue'
 
 defineProps<{
@@ -31,7 +24,9 @@ const emit = defineEmits<{
         <ScrollText class="w-3.5 h-3.5 text-amber-800" />
         <span>Briefing Aturan Permainan</span>
       </div>
-      <h2 class="font-heading font-black text-xl sm:text-2xl text-neutral-900 tracking-wide uppercase pt-1">
+      <h2
+        class="font-heading font-black text-xl sm:text-2xl text-neutral-900 tracking-wide uppercase pt-1"
+      >
         Aturan Main Bentengan 3D
       </h2>
       <p class="font-sans text-xs text-neutral-500 font-semibold">
@@ -47,14 +42,18 @@ const emit = defineEmits<{
         data-testid="rule-card-territory"
         class="p-3 sm:p-3.5 rounded-2xl bg-neutral-50 border-2 border-neutral-200 flex flex-col gap-1.5 shadow-2xs"
       >
-        <div class="flex items-center gap-2 text-blue-600 font-heading font-bold text-xs sm:text-sm uppercase">
+        <div
+          class="flex items-center gap-2 text-blue-600 font-heading font-bold text-xs sm:text-sm uppercase"
+        >
           <span class="w-6 h-6 rounded-lg bg-blue-100 flex items-center justify-center shrink-0">
             <Split class="w-3.5 h-3.5 text-blue-600" />
           </span>
           <span>1. Garis Tengah Pembatas</span>
         </div>
         <p class="font-sans text-xs text-neutral-600 leading-relaxed">
-          Arena terbagi dua oleh garis tengah. Di area benteng sendiri kamu aman! Tapi begitu nyebrang ke wilayah lawan, kamu jadi buronan dan <span class="font-bold text-rose-600">bisa ditangkap</span>!
+          Arena terbagi dua oleh garis tengah. Di area benteng sendiri kamu aman! Tapi begitu
+          nyebrang ke wilayah lawan, kamu jadi buronan dan
+          <span class="font-bold text-rose-600">bisa ditangkap</span>!
         </p>
       </div>
 
@@ -63,14 +62,17 @@ const emit = defineEmits<{
         data-testid="rule-card-capture"
         class="p-3 sm:p-3.5 rounded-2xl bg-neutral-50 border-2 border-neutral-200 flex flex-col gap-1.5 shadow-2xs"
       >
-        <div class="flex items-center gap-2 text-rose-600 font-heading font-bold text-xs sm:text-sm uppercase">
+        <div
+          class="flex items-center gap-2 text-rose-600 font-heading font-bold text-xs sm:text-sm uppercase"
+        >
           <span class="w-6 h-6 rounded-lg bg-rose-100 flex items-center justify-center shrink-0">
             <Target class="w-3.5 h-3.5 text-rose-600" />
           </span>
           <span>2. Siapa Terakhir Keluar, Menang!</span>
         </div>
         <p class="font-sans text-xs text-neutral-600 leading-relaxed">
-          Pemain yang <span class="font-bold">keluar benteng belakangan</span> berhak mengejar dan menepuk lawan yang keluar lebih dulu. Pantau terus pergerakan musuh!
+          Pemain yang <span class="font-bold">keluar benteng belakangan</span> berhak mengejar dan
+          menepuk lawan yang keluar lebih dulu. Pantau terus pergerakan musuh!
         </p>
       </div>
 
@@ -88,7 +90,9 @@ const emit = defineEmits<{
           <span>3. Selamatkan Teman Satu Tim!</span>
         </div>
         <p class="font-sans text-xs text-neutral-600 leading-relaxed">
-          Teman yang tertangkap akan disandera di tiang lawan. Susup ke sana dan <span class="font-bold text-emerald-600">tepuk mereka</span> untuk membebaskan (+2 detik kebal buat kabur bareng)!
+          Teman yang tertangkap akan disandera di tiang lawan. Susup ke sana dan
+          <span class="font-bold text-emerald-600">tepuk mereka</span> untuk membebaskan (+2 detik
+          kebal buat kabur bareng)!
         </p>
       </div>
 
@@ -106,7 +110,9 @@ const emit = defineEmits<{
           <span>4. Rebut Tiang Benteng Lawan!</span>
         </div>
         <p class="font-sans text-xs text-neutral-600 leading-relaxed">
-          Cukup susup dan <span class="font-bold text-emerald-700">tepuk tiang benteng lawan</span> untuk menang seketika, atau tangkap semua pemain lawan sampai habis!
+          Cukup susup dan
+          <span class="font-bold text-emerald-700">tepuk tiang benteng lawan</span> untuk menang
+          seketika, atau tangkap semua pemain lawan sampai habis!
         </p>
       </div>
     </div>

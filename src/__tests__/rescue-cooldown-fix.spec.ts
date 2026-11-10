@@ -141,4 +141,3 @@ describe('Rescue Cooldown Reactivity & Event Filtering Fix', () => {
     })
   })
 })
-

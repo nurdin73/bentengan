@@ -115,18 +115,18 @@ const getOutfitIcon = (id: number) => {
 <template>
   <div
     data-testid="character-picker-modal-backdrop"
-    class="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/75 backdrop-blur-sm pointer-events-auto"
+    class="character-picker-modal-backdrop fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/75 backdrop-blur-sm pointer-events-auto"
     @click.self="emit('close')"
   >
     <div
       data-testid="character-picker-modal"
-      class="timbul-card w-full max-w-4xl p-4 sm:p-6 flex flex-col gap-4 sm:gap-5 max-h-[94dvh] overflow-y-auto overscroll-contain relative shadow-2xl bg-[#f8f6f0]"
+      class="character-picker-modal-card timbul-card w-full max-w-4xl p-4 sm:p-6 flex flex-col gap-4 sm:gap-5 max-h-[94dvh] overflow-y-auto overscroll-contain relative shadow-2xl bg-[#f8f6f0]"
     >
       <!-- Close Button -->
       <button
         type="button"
         data-testid="close-character-picker-btn"
-        class="absolute top-4 right-4 sm:top-5 sm:right-5 w-8 h-8 rounded-full bg-neutral-100 hover:bg-neutral-200 active:scale-95 text-neutral-600 font-black flex items-center justify-center transition-all cursor-pointer border border-neutral-300"
+        class="character-picker-close-btn absolute top-4 right-4 sm:top-5 sm:right-5 w-8 h-8 rounded-full bg-neutral-100 hover:bg-neutral-200 active:scale-95 text-neutral-600 font-black flex items-center justify-center transition-all cursor-pointer border border-neutral-300 z-10"
         title="Tutup Lemari"
         @click="emit('close')"
       >
@@ -134,38 +134,49 @@ const getOutfitIcon = (id: number) => {
       </button>
 
       <!-- Header -->
-      <div class="flex flex-col gap-1 pr-10">
+      <div class="character-picker-header flex flex-col gap-1 pr-10">
         <div class="flex items-center gap-2">
-          <div class="w-8 h-8 rounded-xl bg-amber-400 text-amber-950 flex items-center justify-center shadow-xs border border-amber-500/50">
+          <div
+            class="w-8 h-8 rounded-xl bg-amber-400 text-amber-950 flex items-center justify-center shadow-xs border border-amber-500/50"
+          >
             <Shirt class="w-4 h-4" />
           </div>
-          <h2 class="font-heading font-black text-lg sm:text-xl text-neutral-900 uppercase tracking-wider">
+          <h2
+            class="font-heading font-black text-lg sm:text-xl text-neutral-900 uppercase tracking-wider"
+          >
             Lemari Busana Karakter
           </h2>
         </div>
-        <p class="font-sans text-xs text-neutral-600">
-          Pilih setelan busana modular untuk karakter 3D Anda. Putar preview karakter untuk melihat detail aksesori.
+        <p class="character-picker-subtitle font-sans text-xs text-neutral-600">
+          Pilih setelan busana modular untuk karakter 3D Anda. Putar preview karakter untuk melihat
+          detail aksesori.
         </p>
       </div>
 
       <!-- Main Content Area: Responsive Split (Desktop 2-columns / Mobile Stack) -->
-      <div class="grid grid-cols-1 md:grid-cols-12 gap-4 sm:gap-5 items-start">
+      <div
+        class="character-picker-body grid grid-cols-1 md:grid-cols-12 gap-4 sm:gap-5 items-start"
+      >
         <!-- Left / Top Column: 3D Pedestal Viewport (md:col-span-5) -->
-        <div class="md:col-span-5 flex flex-col gap-2.5">
-          <div class="h-44 sm:h-52 md:h-[350px] w-full">
-            <CharacterPreviewViewport
-              :outfit-id="selectedOutfitId"
-              :team-id="previewTeam"
-            />
+        <div class="character-picker-left-col md:col-span-5 flex flex-col gap-2.5">
+          <div class="character-picker-viewport-container h-44 sm:h-52 md:h-[350px] w-full">
+            <CharacterPreviewViewport :outfit-id="selectedOutfitId" :team-id="previewTeam" />
           </div>
 
           <!-- Active Selected Outfit Summary Card -->
-          <div class="p-3 rounded-2xl bg-white/90 border border-neutral-300/80 shadow-2xs flex flex-col gap-1">
+          <div
+            class="character-picker-summary-card p-3 rounded-2xl bg-white/90 border border-neutral-300/80 shadow-2xs flex flex-col gap-1"
+          >
             <div class="flex items-center justify-between">
-              <span class="text-[10px] font-heading font-black text-neutral-500 uppercase tracking-wider">
+              <span
+                class="text-[10px] font-heading font-black text-neutral-500 uppercase tracking-wider"
+              >
                 Pratinjau Busana
               </span>
-              <span class="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full border" :class="teamBadgeClass">
+              <span
+                class="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full border"
+                :class="teamBadgeClass"
+              >
                 {{ previewTeam === 'blue' ? 'Tim Biru' : 'Tim Merah' }}
               </span>
             </div>
@@ -179,12 +190,16 @@ const getOutfitIcon = (id: number) => {
         </div>
 
         <!-- Right / Bottom Column: Team Bar & Outfits Grid (md:col-span-7) -->
-        <div class="md:col-span-7 flex flex-col gap-3">
+        <div class="character-picker-right-col md:col-span-7 flex flex-col gap-3">
           <!-- Preview Team Toggle Bar -->
-          <div class="flex items-center justify-between flex-wrap gap-2.5 p-2.5 sm:p-3 rounded-2xl bg-white/80 border border-neutral-300/80 shadow-2xs">
+          <div
+            class="character-picker-team-bar flex items-center justify-between flex-wrap gap-2.5 p-2.5 sm:p-3 rounded-2xl bg-white/80 border border-neutral-300/80 shadow-2xs"
+          >
             <div class="flex items-center gap-2">
               <Shield class="w-4 h-4 text-neutral-500" />
-              <span class="font-heading font-bold text-xs uppercase text-neutral-700">Preview Warna Tim:</span>
+              <span class="font-heading font-bold text-xs uppercase text-neutral-700"
+                >Preview Warna Tim:</span
+              >
             </div>
             <div class="flex items-center gap-1.5">
               <button
@@ -198,7 +213,9 @@ const getOutfitIcon = (id: number) => {
                 "
                 @click="previewTeam = 'blue'"
               >
-                <span class="w-2.5 h-2.5 rounded-full bg-blue-400 border border-white/50 inline-block"></span>
+                <span
+                  class="w-2.5 h-2.5 rounded-full bg-blue-400 border border-white/50 inline-block"
+                ></span>
                 <span>Tim Biru</span>
               </button>
               <button
@@ -212,14 +229,18 @@ const getOutfitIcon = (id: number) => {
                 "
                 @click="previewTeam = 'red'"
               >
-                <span class="w-2.5 h-2.5 rounded-full bg-red-400 border border-white/50 inline-block"></span>
+                <span
+                  class="w-2.5 h-2.5 rounded-full bg-red-400 border border-white/50 inline-block"
+                ></span>
                 <span>Tim Merah</span>
               </button>
             </div>
           </div>
 
           <!-- Outfits Grid: 2 columns on tablet/desktop, 1 on small mobile -->
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-3 max-h-[280px] sm:max-h-[320px] md:max-h-[350px] overflow-y-auto pr-1">
+          <div
+            class="character-picker-outfits-grid grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-3 max-h-[280px] sm:max-h-[320px] md:max-h-[350px] overflow-y-auto pr-1"
+          >
             <div
               v-for="outfit in OUTFIT_PRESETS"
               :key="outfit.id"
@@ -245,7 +266,9 @@ const getOutfitIcon = (id: number) => {
                   >
                     <component :is="getOutfitIcon(outfit.id)" class="w-3.5 h-3.5" />
                   </div>
-                  <span class="font-mono text-[10px] font-black uppercase px-1.5 py-0.5 rounded-md bg-neutral-100 text-neutral-600 border border-neutral-200">
+                  <span
+                    class="font-mono text-[10px] font-black uppercase px-1.5 py-0.5 rounded-md bg-neutral-100 text-neutral-600 border border-neutral-200"
+                  >
                     #{{ outfit.id }}
                   </span>
                 </div>
@@ -268,13 +291,17 @@ const getOutfitIcon = (id: number) => {
 
               <!-- Body Info -->
               <div class="flex flex-col gap-0.5">
-                <div class="font-heading font-black text-xs sm:text-sm text-neutral-900 leading-tight">
+                <div
+                  class="font-heading font-black text-xs sm:text-sm text-neutral-900 leading-tight"
+                >
                   {{ outfit.name }}
                 </div>
                 <div class="font-sans text-[10.5px] font-semibold text-neutral-500">
                   {{ outfit.subtitle }}
                 </div>
-                <p class="font-sans text-[10px] text-neutral-600 mt-0.5 line-clamp-2 leading-relaxed">
+                <p
+                  class="font-sans text-[10px] text-neutral-600 mt-0.5 line-clamp-2 leading-relaxed"
+                >
                   {{ outfit.description }}
                 </p>
               </div>
@@ -282,7 +309,9 @@ const getOutfitIcon = (id: number) => {
               <!-- Visual Color Palettes & Accessories Pills -->
               <div class="pt-1.5 border-t border-neutral-100 flex flex-col gap-1">
                 <!-- Palette chips -->
-                <div class="flex items-center justify-between text-[8.5px] text-neutral-500 font-bold uppercase">
+                <div
+                  class="flex items-center justify-between text-[8.5px] text-neutral-500 font-bold uppercase"
+                >
                   <span>Warna Tim:</span>
                   <div class="flex items-center gap-1">
                     <span
@@ -300,10 +329,14 @@ const getOutfitIcon = (id: number) => {
 
                 <!-- Accessories Chips -->
                 <div class="flex flex-wrap gap-1 text-[8.5px] text-neutral-600 font-sans">
-                  <span class="px-1.5 py-0.5 rounded-md bg-neutral-100 border border-neutral-200/80">
+                  <span
+                    class="px-1.5 py-0.5 rounded-md bg-neutral-100 border border-neutral-200/80"
+                  >
                     🧢 {{ outfit.hatName }}
                   </span>
-                  <span class="px-1.5 py-0.5 rounded-md bg-neutral-100 border border-neutral-200/80">
+                  <span
+                    class="px-1.5 py-0.5 rounded-md bg-neutral-100 border border-neutral-200/80"
+                  >
                     👕 {{ outfit.topName }}
                   </span>
                 </div>
@@ -314,7 +347,9 @@ const getOutfitIcon = (id: number) => {
       </div>
 
       <!-- Action Footer -->
-      <div class="pt-3 border-t border-neutral-200 flex items-center justify-between gap-3 flex-wrap">
+      <div
+        class="character-picker-footer pt-3 border-t border-neutral-200 flex items-center justify-between gap-3 flex-wrap"
+      >
         <div class="text-xs text-neutral-500 font-sans">
           Busana terpilih:
           <strong class="text-neutral-900 font-bold">
@@ -348,3 +383,105 @@ const getOutfitIcon = (id: number) => {
     </div>
   </div>
 </template>
+
+<style scoped>
+@media (orientation: landscape) and (max-height: 520px) {
+  .character-picker-modal-backdrop {
+    padding: 0 !important;
+  }
+
+  .character-picker-modal-card {
+    width: 100vw !important;
+    height: 100vh !important;
+    max-width: 100vw !important;
+    max-height: 100vh !important;
+    border-radius: 0 !important;
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0.5rem 1rem !important;
+    gap: 0.375rem !important;
+    display: flex !important;
+    flex-direction: column !important;
+    overflow: hidden !important;
+  }
+
+  .character-picker-close-btn {
+    top: 0.5rem !important;
+    right: 0.75rem !important;
+    width: 1.75rem !important;
+    height: 1.75rem !important;
+  }
+
+  .character-picker-header {
+    gap: 0 !important;
+    padding-right: 2.5rem !important;
+    flex-shrink: 0 !important;
+  }
+
+  .character-picker-subtitle {
+    display: none !important;
+  }
+
+  .character-picker-body {
+    display: grid !important;
+    grid-template-columns: 5fr 7fr !important;
+    gap: 0.75rem !important;
+    flex: 1 1 auto !important;
+    min-height: 0 !important;
+    overflow: hidden !important;
+    align-items: stretch !important;
+  }
+
+  .character-picker-left-col {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 0.375rem !important;
+    height: 100% !important;
+    min-height: 0 !important;
+  }
+
+  .character-picker-viewport-container {
+    flex: 1 1 auto !important;
+    min-height: 0 !important;
+    height: auto !important;
+    max-height: none !important;
+  }
+
+  .character-picker-summary-card {
+    padding: 0.375rem 0.625rem !important;
+    gap: 0.125rem !important;
+    flex-shrink: 0 !important;
+  }
+
+  .character-picker-right-col {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 0.375rem !important;
+    height: 100% !important;
+    min-height: 0 !important;
+    overflow: hidden !important;
+  }
+
+  .character-picker-team-bar {
+    padding: 0.25rem 0.5rem !important;
+    flex-shrink: 0 !important;
+  }
+
+  .character-picker-outfits-grid {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    flex: 1 1 auto !important;
+    max-height: none !important;
+    min-height: 0 !important;
+    overflow-y: auto !important;
+    gap: 0.375rem !important;
+    padding-right: 0.25rem !important;
+  }
+
+  .character-picker-footer {
+    padding-top: 0.375rem !important;
+    flex-shrink: 0 !important;
+    gap: 0.5rem !important;
+  }
+}
+</style>

@@ -277,8 +277,19 @@ export class RemotePlayerController implements GameplayEntity {
       this.bodyMesh.rotation.z = THREE.MathUtils.lerp(this.bodyMesh.rotation.z, 0, 14 * dt)
     }
 
-    const animSpeed = isMoving ? (this.isSprinting ? GAME_CONFIG.movement.sprintSpeed : GAME_CONFIG.movement.walkSpeed) : 0
-    this.avatar.updateAnimation(dt, animSpeed, true, this.isSprinting, isStunned, this.status === 'jailed')
+    const animSpeed = isMoving
+      ? this.isSprinting
+        ? GAME_CONFIG.movement.sprintSpeed
+        : GAME_CONFIG.movement.walkSpeed
+      : 0
+    this.avatar.updateAnimation(
+      dt,
+      animSpeed,
+      true,
+      this.isSprinting,
+      isStunned,
+      this.status === 'jailed',
+    )
   }
 
   public dispose(scene?: THREE.Scene): void {

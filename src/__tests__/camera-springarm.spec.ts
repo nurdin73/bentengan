@@ -20,7 +20,8 @@ describe('Camera SpringArm Collision & Distance Clamping', () => {
 
     // Case 3: No obstacle hit
     const hitToi3 = null
-    const clampedDist3 = hitToi3 !== null ? Math.max(minDistance, hitToi3 - wallBuffer) : maxDistance
+    const clampedDist3 =
+      hitToi3 !== null ? Math.max(minDistance, hitToi3 - wallBuffer) : maxDistance
     expect(clampedDist3).toBe(4.5)
   })
 
@@ -56,4 +57,3 @@ describe('Camera SpringArm Collision & Distance Clamping', () => {
     expect(fastInFactor).toBeGreaterThan(smoothOutFactor * 2)
   })
 })
-

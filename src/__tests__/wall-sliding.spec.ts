@@ -50,4 +50,3 @@ describe('Wall-Sliding Velocity Deflection & Slope Check', () => {
     expect(isGroundSurface(0.2)).toBe(false)
   })
 })
-

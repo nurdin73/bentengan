@@ -537,8 +537,16 @@ describe('Mobile Touch Controls & Virtual Input Integration', () => {
       const originalInnerHeight = window.innerHeight
 
       // Simulate portrait dimensions in JSDOM
-      Object.defineProperty(window, 'innerWidth', { writable: true, configurable: true, value: 360 })
-      Object.defineProperty(window, 'innerHeight', { writable: true, configurable: true, value: 800 })
+      Object.defineProperty(window, 'innerWidth', {
+        writable: true,
+        configurable: true,
+        value: 360,
+      })
+      Object.defineProperty(window, 'innerHeight', {
+        writable: true,
+        configurable: true,
+        value: 800,
+      })
 
       const wrapper = mount(RotateDevicePrompt, {
         props: { forceMobile: true },
@@ -549,8 +557,16 @@ describe('Mobile Touch Controls & Virtual Input Integration', () => {
       expect(gameStore.isPaused).toBe(true)
 
       // Restore dimensions
-      Object.defineProperty(window, 'innerWidth', { writable: true, configurable: true, value: originalInnerWidth })
-      Object.defineProperty(window, 'innerHeight', { writable: true, configurable: true, value: originalInnerHeight })
+      Object.defineProperty(window, 'innerWidth', {
+        writable: true,
+        configurable: true,
+        value: originalInnerWidth,
+      })
+      Object.defineProperty(window, 'innerHeight', {
+        writable: true,
+        configurable: true,
+        value: originalInnerHeight,
+      })
     })
   })
 })

@@ -96,14 +96,17 @@ onUnmounted(() => {
       </div>
 
       <p class="font-sans text-sm text-neutral-300 font-medium max-w-xs mt-2 leading-relaxed">
-        Bentengan dioptimalkan untuk tampilan mendatar (<span class="text-amber-400 font-bold">Landscape</span>). Silakan putar ponsel Anda untuk mulai bermain.
+        Bentengan dioptimalkan untuk tampilan mendatar (<span class="text-amber-400 font-bold"
+          >Landscape</span
+        >). Silakan putar ponsel Anda untuk mulai bermain.
       </p>
 
-      <div class="mt-6 flex items-center gap-2 text-xs font-mono font-bold text-neutral-400 bg-neutral-900 px-4 py-2 rounded-xl border border-neutral-800">
+      <div
+        class="mt-6 flex items-center gap-2 text-xs font-mono font-bold text-neutral-400 bg-neutral-900 px-4 py-2 rounded-xl border border-neutral-800"
+      >
         <Lightbulb class="w-4 h-4 text-amber-400 shrink-0" />
         <span>Pastikan Kunci Rotasi (Auto-Rotate) aktif</span>
       </div>
     </div>
   </transition>
 </template>
-

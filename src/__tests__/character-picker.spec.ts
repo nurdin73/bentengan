@@ -17,10 +17,12 @@ describe('CharacterPickerModal Component', () => {
     setActivePinia(createPinia())
     storageMap.clear()
     vi.stubGlobal('localStorage', {
-      getItem: vi.fn((key: string) => storageMap.get(key) ?? null),
-      setItem: vi.fn((key: string, value: string) => storageMap.set(key, value)),
-      removeItem: vi.fn((key: string) => storageMap.delete(key)),
-      clear: vi.fn(() => storageMap.clear()),
+      getItem: vi.fn<(key: string) => string | null>((key: string) => storageMap.get(key) ?? null),
+      setItem: vi.fn<(key: string, value: string) => void>((key: string, value: string) =>
+        storageMap.set(key, value),
+      ),
+      removeItem: vi.fn<(key: string) => boolean>((key: string) => storageMap.delete(key)),
+      clear: vi.fn<() => void>(() => storageMap.clear()),
     })
   })
 
@@ -108,6 +110,39 @@ describe('CharacterPickerModal Component', () => {
     await cancelBtn.trigger('click')
     expect(wrapper.emitted('close')).toHaveLength(2)
   })
+
+  it('renders with mobile landscape responsive class hooks and 2-column structure', () => {
+    const wrapper = mount(CharacterPickerModal, {
+      props: {
+        team: 'blue',
+      },
+    })
+
+    const backdrop = wrapper.find('[data-testid="character-picker-modal-backdrop"]')
+    const card = wrapper.find('[data-testid="character-picker-modal"]')
+
+    expect(backdrop.exists()).toBe(true)
+    expect(backdrop.classes()).toContain('character-picker-modal-backdrop')
+
+    expect(card.exists()).toBe(true)
+    expect(card.classes()).toContain('character-picker-modal-card')
+    expect(card.classes()).toContain('max-h-[94dvh]')
+    expect(card.classes()).toContain('overflow-y-auto')
+    expect(card.classes()).toContain('overscroll-contain')
+
+    // Semantic landscape layout elements
+    expect(wrapper.find('.character-picker-header').exists()).toBe(true)
+    expect(wrapper.find('.character-picker-subtitle').exists()).toBe(true)
+    expect(wrapper.find('.character-picker-close-btn').exists()).toBe(true)
+    expect(wrapper.find('.character-picker-body').exists()).toBe(true)
+    expect(wrapper.find('.character-picker-left-col').exists()).toBe(true)
+    expect(wrapper.find('.character-picker-viewport-container').exists()).toBe(true)
+    expect(wrapper.find('.character-picker-summary-card').exists()).toBe(true)
+    expect(wrapper.find('.character-picker-right-col').exists()).toBe(true)
+    expect(wrapper.find('.character-picker-team-bar').exists()).toBe(true)
+    expect(wrapper.find('.character-picker-outfits-grid').exists()).toBe(true)
+    expect(wrapper.find('.character-picker-footer').exists()).toBe(true)
+  })
 })
 
 describe('Room Store Outfit Management & Network Protocol', () => {
@@ -117,10 +152,12 @@ describe('Room Store Outfit Management & Network Protocol', () => {
     setActivePinia(createPinia())
     storageMap.clear()
     vi.stubGlobal('localStorage', {
-      getItem: vi.fn((key: string) => storageMap.get(key) ?? null),
-      setItem: vi.fn((key: string, value: string) => storageMap.set(key, value)),
-      removeItem: vi.fn((key: string) => storageMap.delete(key)),
-      clear: vi.fn(() => storageMap.clear()),
+      getItem: vi.fn<(key: string) => string | null>((key: string) => storageMap.get(key) ?? null),
+      setItem: vi.fn<(key: string, value: string) => void>((key: string, value: string) =>
+        storageMap.set(key, value),
+      ),
+      removeItem: vi.fn<(key: string) => boolean>((key: string) => storageMap.delete(key)),
+      clear: vi.fn<() => void>(() => storageMap.clear()),
     })
   })
 

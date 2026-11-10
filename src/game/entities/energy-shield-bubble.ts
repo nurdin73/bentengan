@@ -88,4 +88,3 @@ export class EnergyShieldBubble {
     this.equatorRingMat.dispose()
   }
 }
-

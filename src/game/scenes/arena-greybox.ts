@@ -130,14 +130,7 @@ export class ArenaGreybox {
     this.createObstacles()
   }
 
-  private createStaticWall(
-    w: number,
-    h: number,
-    d: number,
-    x: number,
-    y: number,
-    z: number,
-  ): void {
+  private createStaticWall(w: number, h: number, d: number, x: number, y: number, z: number): void {
     const geo = new THREE.BoxGeometry(w, h, d)
     const mesh = new THREE.Mesh(geo, this.materials.wall)
     mesh.position.set(x, y, z)

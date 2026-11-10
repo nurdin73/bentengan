@@ -92,7 +92,9 @@ const confirmLeave = () => {
     <div class="flex items-center justify-between border-b border-neutral-200 pb-3 gap-2">
       <div class="flex items-center gap-2 sm:gap-3 flex-wrap">
         <div class="flex flex-col">
-          <span class="font-heading font-black text-[10px] sm:text-[11px] uppercase tracking-wider text-neutral-500">
+          <span
+            class="font-heading font-black text-[10px] sm:text-[11px] uppercase tracking-wider text-neutral-500"
+          >
             KODE RUANGAN
           </span>
           <button
@@ -105,14 +107,18 @@ const confirmLeave = () => {
             <span class="text-neutral-500 flex items-center gap-1 text-xs">
               <Check v-if="copied" class="w-3.5 h-3.5 text-emerald-600" />
               <Copy v-else class="w-3.5 h-3.5" />
-              <span class="text-[10px] font-sans font-bold hidden sm:inline">{{ copied ? 'Disalin' : 'Salin' }}</span>
+              <span class="text-[10px] font-sans font-bold hidden sm:inline">{{
+                copied ? 'Disalin' : 'Salin'
+              }}</span>
             </span>
           </button>
         </div>
 
         <!-- Mode & Capacity Badge (Visible on Mobile & Desktop) -->
         <div class="flex flex-col">
-          <span class="font-heading font-black text-[10px] sm:text-[11px] uppercase tracking-wider text-neutral-500">
+          <span
+            class="font-heading font-black text-[10px] sm:text-[11px] uppercase tracking-wider text-neutral-500"
+          >
             FORMAT GAME
           </span>
           <span
@@ -121,7 +127,9 @@ const confirmLeave = () => {
           >
             <Shield v-if="roomStore.maxPlayers === 12" class="w-3.5 h-3.5 text-blue-600" />
             <Swords v-else class="w-3.5 h-3.5 text-amber-600" />
-            <span>{{ roomStore.maxPlayers === 12 ? '6 vs 6 (Maks. 12)' : '4 vs 4 (Maks. 8)' }}</span>
+            <span>{{
+              roomStore.maxPlayers === 12 ? '6 vs 6 (Maks. 12)' : '4 vs 4 (Maks. 8)'
+            }}</span>
           </span>
         </div>
       </div>
@@ -141,8 +149,16 @@ const confirmLeave = () => {
           v-else
           class="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 bg-neutral-100 border border-neutral-200 rounded-xl font-mono text-xs font-bold text-neutral-600"
         >
-          <Wifi class="w-3.5 h-3.5" :class="roomStore.latencyMs < 100 ? 'text-emerald-500' : 'text-amber-500'" />
-          <span class="hidden sm:inline">{{ roomStore.latencyMs < 100 ? 'Sinyal Lancar' : 'Sinyal Sedang' }} ({{ roomStore.latencyMs }} ms)</span>
+          <Wifi
+            class="w-3.5 h-3.5"
+            :class="roomStore.latencyMs < 100 ? 'text-emerald-500' : 'text-amber-500'"
+          />
+          <span class="hidden sm:inline"
+            >{{ roomStore.latencyMs < 100 ? 'Sinyal Lancar' : 'Sinyal Sedang' }} ({{
+              roomStore.latencyMs
+            }}
+            ms)</span
+          >
           <span class="sm:hidden">{{ roomStore.latencyMs }} ms</span>
         </div>
       </div>
@@ -156,7 +172,9 @@ const confirmLeave = () => {
     >
       <div class="flex items-center gap-2">
         <RefreshCw class="w-4 h-4 animate-spin text-amber-700 shrink-0" />
-        <span>{{ roomStore.reconnectMessage || 'Koneksi terputus. Mencoba menyambung kembali...' }}</span>
+        <span>{{
+          roomStore.reconnectMessage || 'Koneksi terputus. Mencoba menyambung kembali...'
+        }}</span>
       </div>
       <button
         v-if="!roomStore.isHost"
@@ -184,11 +202,15 @@ const confirmLeave = () => {
       class="flex items-center justify-between p-3 rounded-2xl bg-white border border-neutral-300 shadow-2xs gap-3 flex-wrap"
     >
       <div class="flex items-center gap-2.5">
-        <div class="w-8 h-8 rounded-xl bg-purple-100 text-purple-700 flex items-center justify-center shrink-0">
+        <div
+          class="w-8 h-8 rounded-xl bg-purple-100 text-purple-700 flex items-center justify-center shrink-0"
+        >
           <Shirt class="w-4 h-4" />
         </div>
         <div class="flex flex-col">
-          <span class="text-[10px] font-heading font-black text-neutral-500 uppercase tracking-wider">
+          <span
+            class="text-[10px] font-heading font-black text-neutral-500 uppercase tracking-wider"
+          >
             Setelan Busana Karakter
           </span>
           <span class="font-sans font-bold text-xs text-neutral-900">
@@ -258,17 +280,23 @@ const confirmLeave = () => {
         <div class="flex items-center justify-between border-b border-blue-200 pb-2.5">
           <div class="flex items-center gap-2">
             <Castle class="w-4 h-4 text-blue-600 shrink-0" />
-            <span class="font-heading font-black text-xs sm:text-sm uppercase text-blue-900 tracking-wider">
+            <span
+              class="font-heading font-black text-xs sm:text-sm uppercase text-blue-900 tracking-wider"
+            >
               Benteng Biru
             </span>
           </div>
-          <span class="px-2.5 py-0.5 rounded-full bg-blue-200/80 text-blue-800 font-heading font-black text-xs">
+          <span
+            class="px-2.5 py-0.5 rounded-full bg-blue-200/80 text-blue-800 font-heading font-black text-xs"
+          >
             {{ roomStore.bluePlayers.length }} Pemain
           </span>
         </div>
 
         <!-- Daftar Pemain Tim Biru -->
-        <div class="flex flex-col gap-2 min-h-[120px] max-h-[200px] sm:max-h-[220px] overflow-y-auto pr-1">
+        <div
+          class="flex flex-col gap-2 min-h-[120px] max-h-[200px] sm:max-h-[220px] overflow-y-auto pr-1"
+        >
           <div
             v-for="p in roomStore.bluePlayers"
             :key="p.id"
@@ -291,7 +319,9 @@ const confirmLeave = () => {
             <span
               :class="[
                 'text-[10px] font-heading font-black uppercase px-2.5 py-1 rounded-lg tracking-wider flex items-center gap-1 shrink-0',
-                p.isReady ? 'bg-emerald-100 text-emerald-800 border border-emerald-300' : 'bg-neutral-100 text-neutral-500 border border-neutral-200',
+                p.isReady
+                  ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                  : 'bg-neutral-100 text-neutral-500 border border-neutral-200',
               ]"
             >
               <CheckCircle2 v-if="p.isReady" class="w-3 h-3 text-emerald-700" />
@@ -342,17 +372,23 @@ const confirmLeave = () => {
         <div class="flex items-center justify-between border-b border-red-200 pb-2.5">
           <div class="flex items-center gap-2">
             <Castle class="w-4 h-4 text-red-600 shrink-0" />
-            <span class="font-heading font-black text-xs sm:text-sm uppercase text-red-900 tracking-wider">
+            <span
+              class="font-heading font-black text-xs sm:text-sm uppercase text-red-900 tracking-wider"
+            >
               Benteng Merah
             </span>
           </div>
-          <span class="px-2.5 py-0.5 rounded-full bg-red-200/80 text-red-800 font-heading font-black text-xs">
+          <span
+            class="px-2.5 py-0.5 rounded-full bg-red-200/80 text-red-800 font-heading font-black text-xs"
+          >
             {{ roomStore.redPlayers.length }} Pemain
           </span>
         </div>
 
         <!-- Daftar Pemain Tim Merah -->
-        <div class="flex flex-col gap-2 min-h-[120px] max-h-[200px] sm:max-h-[220px] overflow-y-auto pr-1">
+        <div
+          class="flex flex-col gap-2 min-h-[120px] max-h-[200px] sm:max-h-[220px] overflow-y-auto pr-1"
+        >
           <div
             v-for="p in roomStore.redPlayers"
             :key="p.id"
@@ -375,7 +411,9 @@ const confirmLeave = () => {
             <span
               :class="[
                 'text-[10px] font-heading font-black uppercase px-2.5 py-1 rounded-lg tracking-wider flex items-center gap-1 shrink-0',
-                p.isReady ? 'bg-emerald-100 text-emerald-800 border border-emerald-300' : 'bg-neutral-100 text-neutral-500 border border-neutral-200',
+                p.isReady
+                  ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                  : 'bg-neutral-100 text-neutral-500 border border-neutral-200',
               ]"
             >
               <CheckCircle2 v-if="p.isReady" class="w-3 h-3 text-emerald-700" />
@@ -511,9 +549,11 @@ const confirmLeave = () => {
       type="danger"
       data-testid="dialog-leave-room"
       title="Keluar dari Ruangan?"
-      :message="roomStore.isHost
-        ? 'Sebagai Tuan Rumah (Host), jika Anda keluar maka ruangan ini akan ditutup dan seluruh pemain akan terputus.'
-        : 'Anda akan meninggalkan benteng dan kembali ke beranda.'"
+      :message="
+        roomStore.isHost
+          ? 'Sebagai Tuan Rumah (Host), jika Anda keluar maka ruangan ini akan ditutup dan seluruh pemain akan terputus.'
+          : 'Anda akan meninggalkan benteng dan kembali ke beranda.'
+      "
       confirm-text="Ya, Keluar"
       cancel-text="Batal"
       confirm-variant="red"
@@ -537,12 +577,16 @@ const confirmLeave = () => {
       @close="showStartDialog = false"
     >
       <div class="flex items-center justify-center gap-2 py-1 text-xs font-heading font-black">
-        <span class="px-2.5 py-1 rounded-xl bg-blue-100 text-blue-800 border border-blue-200 flex items-center gap-1.5">
+        <span
+          class="px-2.5 py-1 rounded-xl bg-blue-100 text-blue-800 border border-blue-200 flex items-center gap-1.5"
+        >
           <Castle class="w-3.5 h-3.5 text-blue-600" />
           <span>Benteng Biru: {{ roomStore.bluePlayers.length }}</span>
         </span>
         <span class="text-neutral-400">vs</span>
-        <span class="px-2.5 py-1 rounded-xl bg-red-100 text-red-800 border border-red-200 flex items-center gap-1.5">
+        <span
+          class="px-2.5 py-1 rounded-xl bg-red-100 text-red-800 border border-red-200 flex items-center gap-1.5"
+        >
           <Castle class="w-3.5 h-3.5 text-red-600" />
           <span>Benteng Merah: {{ roomStore.redPlayers.length }}</span>
         </span>

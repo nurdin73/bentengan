@@ -403,7 +403,10 @@ describe('Team Elimination & Territory Evasion AI Verification', () => {
 
       // When coast is clear and distance > 5.5m:
       const wantsSprint =
-        !hasDefender && baseDist <= 5.5 && canSprint && stamina >= GAME_CONFIG.stamina.minSprintThreshold
+        !hasDefender &&
+        baseDist <= 5.5 &&
+        canSprint &&
+        stamina >= GAME_CONFIG.stamina.minSprintThreshold
 
       expect(wantsSprint).toBe(false)
       expect(baseDist).toBe(10)
@@ -419,7 +422,10 @@ describe('Team Elimination & Territory Evasion AI Verification', () => {
       const stamina = 50
 
       const wantsSprint =
-        !hasDefender && baseDist <= 5.5 && canSprint && stamina >= GAME_CONFIG.stamina.minSprintThreshold
+        !hasDefender &&
+        baseDist <= 5.5 &&
+        canSprint &&
+        stamina >= GAME_CONFIG.stamina.minSprintThreshold
 
       expect(wantsSprint).toBe(true)
       expect(baseDist).toBe(4)

@@ -71,7 +71,10 @@ const handleExitToHome = () => {
 </script>
 
 <template>
-  <div data-testid="practice-view" class="relative w-screen h-screen overflow-hidden bg-neutral-950 font-sans">
+  <div
+    data-testid="practice-view"
+    class="relative w-screen h-screen overflow-hidden bg-neutral-950 font-sans"
+  >
     <!-- 3D Arena Canvas -->
     <GameCanvas
       v-if="roomStore.status === 'playing' || roomStore.status === 'finished'"
@@ -92,10 +95,7 @@ const handleExitToHome = () => {
     />
 
     <!-- Results Modal on Finish -->
-    <ResultsModal
-      v-if="roomStore.status === 'finished'"
-      @restart="handleRestart"
-    />
+    <ResultsModal v-if="roomStore.status === 'finished'" @restart="handleRestart" />
 
     <!-- Quick Exit Button -->
     <div class="fixed top-4 left-4 z-40">
@@ -109,4 +109,3 @@ const handleExitToHome = () => {
     </div>
   </div>
 </template>
-

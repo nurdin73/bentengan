@@ -62,7 +62,9 @@ const handleLeaveToHome = () => {
     >
       <!-- Winner / Disconnect Banner (Left Column in Mobile Landscape) -->
       <div class="results-landscape-col-left flex flex-col items-center gap-2">
-        <div class="flex items-center justify-center w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-neutral-100 shadow-inner">
+        <div
+          class="flex items-center justify-center w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-neutral-100 shadow-inner"
+        >
           <Unplug v-if="isHostDisconnect" class="w-8 h-8 sm:w-9 sm:h-9 text-rose-500" />
           <Trophy v-else-if="isPlayerWinner" class="w-8 h-8 sm:w-9 sm:h-9 text-amber-500" />
           <Swords v-else class="w-8 h-8 sm:w-9 sm:h-9 text-neutral-600" />
@@ -73,10 +75,12 @@ const handleLeaveToHome = () => {
             'font-heading font-black text-2xl sm:text-4xl tracking-wide uppercase leading-tight',
             isHostDisconnect
               ? 'text-rose-500'
-              : (isPlayerWinner ? 'text-amber-500' : 'text-neutral-700'),
+              : isPlayerWinner
+                ? 'text-amber-500'
+                : 'text-neutral-700',
           ]"
         >
-          {{ isHostDisconnect ? 'KONEKSI TERPUTUS' : (isPlayerWinner ? 'KEMENANGAN!' : 'KEKALAHAN') }}
+          {{ isHostDisconnect ? 'KONEKSI TERPUTUS' : isPlayerWinner ? 'KEMENANGAN!' : 'KEKALAHAN' }}
         </h2>
         <div
           v-if="result?.winner"
@@ -111,22 +115,40 @@ const handleLeaveToHome = () => {
           class="bg-neutral-100 border-2 border-neutral-200 rounded-xl sm:rounded-2xl p-3 sm:p-4 grid grid-cols-3 gap-1.5 sm:gap-2 shadow-2xs"
         >
           <div class="flex flex-col items-center">
-            <span class="text-[10px] sm:text-[11px] font-heading font-bold uppercase tracking-wider text-neutral-500">Durasi</span>
-            <span data-testid="results-stat-duration" class="font-mono font-black text-base sm:text-lg text-neutral-800">
+            <span
+              class="text-[10px] sm:text-[11px] font-heading font-bold uppercase tracking-wider text-neutral-500"
+              >Durasi</span
+            >
+            <span
+              data-testid="results-stat-duration"
+              class="font-mono font-black text-base sm:text-lg text-neutral-800"
+            >
               {{ result?.duration || 0 }}s
             </span>
           </div>
 
           <div class="flex flex-col items-center border-x-2 border-neutral-200">
-            <span class="text-[10px] sm:text-[11px] font-heading font-bold uppercase tracking-wider text-neutral-500">Tangkapan</span>
-            <span data-testid="results-stat-captures" class="font-mono font-black text-base sm:text-lg text-emerald-600">
+            <span
+              class="text-[10px] sm:text-[11px] font-heading font-bold uppercase tracking-wider text-neutral-500"
+              >Tangkapan</span
+            >
+            <span
+              data-testid="results-stat-captures"
+              class="font-mono font-black text-base sm:text-lg text-emerald-600"
+            >
               {{ gameStore.capturesCount }}
             </span>
           </div>
 
           <div class="flex flex-col items-center">
-            <span class="text-[10px] sm:text-[11px] font-heading font-bold uppercase tracking-wider text-neutral-500">Penyelamatan</span>
-            <span data-testid="results-stat-rescues" class="font-mono font-black text-base sm:text-lg text-blue-600">
+            <span
+              class="text-[10px] sm:text-[11px] font-heading font-bold uppercase tracking-wider text-neutral-500"
+              >Penyelamatan</span
+            >
+            <span
+              data-testid="results-stat-rescues"
+              class="font-mono font-black text-base sm:text-lg text-blue-600"
+            >
               {{ gameStore.rescuesCount }}
             </span>
           </div>
@@ -143,7 +165,11 @@ const handleLeaveToHome = () => {
             @click="$emit('restart')"
           >
             <RotateCcw class="w-4 h-4 sm:w-5 sm:h-5 shrink-0" />
-            <span>{{ roomStore.roomCode === 'LOKAL' ? 'Main Lagi (Latihan)' : 'Kembali ke Ruang Tunggu (Main Lagi)' }}</span>
+            <span>{{
+              roomStore.roomCode === 'LOKAL'
+                ? 'Main Lagi (Latihan)'
+                : 'Kembali ke Ruang Tunggu (Main Lagi)'
+            }}</span>
           </TactileButton>
 
           <!-- Guest in multiplayer room: Waiting for Host -->
@@ -223,4 +249,3 @@ const handleLeaveToHome = () => {
   }
 }
 </style>
-

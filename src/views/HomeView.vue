@@ -89,23 +89,37 @@ const openPracticeFromDrawer = () => {
     class="min-h-screen min-h-dvh w-full bg-[#f8f6f0] text-neutral-900 flex flex-col justify-between font-sans selection:bg-amber-200 overflow-y-auto relative"
   >
     <!-- Navbar (Sticky Top) -->
-    <header class="sticky top-0 w-full border-b border-neutral-300/80 bg-white/85 backdrop-blur-md px-3.5 sm:px-8 py-2.5 sm:py-3.5 flex items-center justify-between z-30 shrink-0 transition-all">
+    <header
+      class="sticky top-0 w-full border-b border-neutral-300/80 bg-white/85 backdrop-blur-md px-3.5 sm:px-8 py-2.5 sm:py-3.5 flex items-center justify-between z-30 shrink-0 transition-all"
+    >
       <div class="flex items-center gap-2 sm:gap-3">
-        <div class="w-9 h-9 sm:w-10 sm:h-10 rounded-2xl bg-neutral-900 border border-amber-500/40 p-0.5 flex items-center justify-center shrink-0 shadow-xs overflow-hidden">
-          <img :src="'/icons/icon-192x192.png'" alt="Bentengan 3D Logo" class="w-full h-full object-cover rounded-xl" />
+        <div
+          class="w-9 h-9 sm:w-10 sm:h-10 rounded-2xl bg-neutral-900 border border-amber-500/40 p-0.5 flex items-center justify-center shrink-0 shadow-xs overflow-hidden"
+        >
+          <img
+            :src="'/icons/icon-192x192.png'"
+            alt="Bentengan 3D Logo"
+            class="w-full h-full object-cover rounded-xl"
+          />
         </div>
         <div class="flex flex-col">
-          <span class="font-heading font-black text-lg sm:text-xl text-neutral-900 tracking-wider uppercase leading-none">
+          <span
+            class="font-heading font-black text-lg sm:text-xl text-neutral-900 tracking-wider uppercase leading-none"
+          >
             Bentengan <span class="text-amber-500">3D</span>
           </span>
-          <span class="font-sans text-[9px] sm:text-[10px] text-neutral-500 font-bold uppercase tracking-wider hidden xs:inline">
+          <span
+            class="font-sans text-[9px] sm:text-[10px] text-neutral-500 font-bold uppercase tracking-wider hidden xs:inline"
+          >
             Game Tradisional Online
           </span>
         </div>
       </div>
 
       <!-- Desktop Nav Buttons (sm and up) -->
-      <nav class="hidden sm:flex items-center gap-2 sm:gap-3 text-xs font-heading font-bold uppercase tracking-wider text-neutral-600">
+      <nav
+        class="hidden sm:flex items-center gap-2 sm:gap-3 text-xs font-heading font-bold uppercase tracking-wider text-neutral-600"
+      >
         <button
           type="button"
           data-testid="navbar-rules-btn"
@@ -200,14 +214,22 @@ const openPracticeFromDrawer = () => {
         <!-- Drawer Header -->
         <div class="flex items-center justify-between border-b border-neutral-200 pb-3">
           <div class="flex items-center gap-2.5">
-            <div class="w-9 h-9 rounded-2xl bg-neutral-900 border border-amber-500/40 p-0.5 flex items-center justify-center shrink-0 shadow-xs overflow-hidden">
-              <img :src="'/icons/icon-192x192.png'" alt="Bentengan 3D Logo" class="w-full h-full object-cover rounded-xl" />
+            <div
+              class="w-9 h-9 rounded-2xl bg-neutral-900 border border-amber-500/40 p-0.5 flex items-center justify-center shrink-0 shadow-xs overflow-hidden"
+            >
+              <img
+                :src="'/icons/icon-192x192.png'"
+                alt="Bentengan 3D Logo"
+                class="w-full h-full object-cover rounded-xl"
+              />
             </div>
             <div class="flex flex-col">
               <span class="font-heading font-black text-lg text-neutral-900 uppercase leading-none">
                 Bentengan <span class="text-amber-500">3D</span>
               </span>
-              <span class="font-sans text-[10px] text-neutral-500 font-bold uppercase tracking-wider">
+              <span
+                class="font-sans text-[10px] text-neutral-500 font-bold uppercase tracking-wider"
+              >
                 Menu Utama
               </span>
             </div>
@@ -231,12 +253,18 @@ const openPracticeFromDrawer = () => {
             class="w-full p-3 rounded-2xl bg-white border border-neutral-200 hover:bg-neutral-50 flex items-center gap-3 text-left transition-all shadow-2xs active:scale-[0.99] cursor-pointer"
             @click="openRulesFromDrawer"
           >
-            <div class="w-9 h-9 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center shrink-0">
+            <div
+              class="w-9 h-9 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center shrink-0"
+            >
               <ScrollText class="w-5 h-5" />
             </div>
             <div class="flex flex-col flex-1">
-              <span class="font-heading font-black text-sm text-neutral-900 uppercase">Aturan Permainan</span>
-              <span class="font-sans text-[11px] text-neutral-500 font-medium">Pelajari aturan benteng & tangkap musuh</span>
+              <span class="font-heading font-black text-sm text-neutral-900 uppercase"
+                >Aturan Permainan</span
+              >
+              <span class="font-sans text-[11px] text-neutral-500 font-medium"
+                >Pelajari aturan benteng & tangkap musuh</span
+              >
             </div>
           </button>
 
@@ -247,12 +275,18 @@ const openPracticeFromDrawer = () => {
             class="w-full p-3 rounded-2xl bg-white border border-neutral-200 hover:bg-neutral-50 flex items-center gap-3 text-left transition-all shadow-2xs active:scale-[0.99] cursor-pointer"
             @click="openControlsFromDrawer"
           >
-            <div class="w-9 h-9 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
+            <div
+              class="w-9 h-9 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0"
+            >
               <Gamepad2 class="w-5 h-5" />
             </div>
             <div class="flex flex-col flex-1">
-              <span class="font-heading font-black text-sm text-neutral-900 uppercase">Panduan Kontrol 3D</span>
-              <span class="font-sans text-[11px] text-neutral-500 font-medium">Kontrol sentuh HP & keyboard</span>
+              <span class="font-heading font-black text-sm text-neutral-900 uppercase"
+                >Panduan Kontrol 3D</span
+              >
+              <span class="font-sans text-[11px] text-neutral-500 font-medium"
+                >Kontrol sentuh HP & keyboard</span
+              >
             </div>
           </button>
 
@@ -263,12 +297,18 @@ const openPracticeFromDrawer = () => {
             class="w-full p-3 rounded-2xl bg-white border border-neutral-200 hover:bg-neutral-50 flex items-center gap-3 text-left transition-all shadow-2xs active:scale-[0.99] cursor-pointer"
             @click="openCharacterFromDrawer"
           >
-            <div class="w-9 h-9 rounded-xl bg-purple-100 text-purple-700 flex items-center justify-center shrink-0">
+            <div
+              class="w-9 h-9 rounded-xl bg-purple-100 text-purple-700 flex items-center justify-center shrink-0"
+            >
               <Shirt class="w-5 h-5" />
             </div>
             <div class="flex flex-col flex-1">
-              <span class="font-heading font-black text-sm text-neutral-900 uppercase">Lemari Karakter</span>
-              <span class="font-sans text-[11px] text-neutral-500 font-medium">Ganti busana & setelan 3D</span>
+              <span class="font-heading font-black text-sm text-neutral-900 uppercase"
+                >Lemari Karakter</span
+              >
+              <span class="font-sans text-[11px] text-neutral-500 font-medium"
+                >Ganti busana & setelan 3D</span
+              >
             </div>
           </button>
 
@@ -279,12 +319,18 @@ const openPracticeFromDrawer = () => {
             class="w-full p-3 rounded-2xl bg-white border border-neutral-200 hover:bg-neutral-50 flex items-center gap-3 text-left transition-all shadow-2xs active:scale-[0.99] cursor-pointer"
             @click="openSettingsFromDrawer"
           >
-            <div class="w-9 h-9 rounded-xl bg-amber-100 text-amber-800 flex items-center justify-center shrink-0">
+            <div
+              class="w-9 h-9 rounded-xl bg-amber-100 text-amber-800 flex items-center justify-center shrink-0"
+            >
               <Settings class="w-5 h-5" />
             </div>
             <div class="flex flex-col flex-1">
-              <span class="font-heading font-black text-sm text-neutral-900 uppercase">Pengaturan Game</span>
-              <span class="font-sans text-[11px] text-neutral-500 font-medium">Sensitivitas kamera, suara & grafis</span>
+              <span class="font-heading font-black text-sm text-neutral-900 uppercase"
+                >Pengaturan Game</span
+              >
+              <span class="font-sans text-[11px] text-neutral-500 font-medium"
+                >Sensitivitas kamera, suara & grafis</span
+              >
             </div>
           </button>
 
@@ -295,12 +341,16 @@ const openPracticeFromDrawer = () => {
             class="w-full p-3.5 rounded-2xl bg-amber-400 hover:bg-amber-300 text-amber-950 border border-amber-500 border-b-[4px] border-b-amber-600 flex items-center gap-3 text-left transition-all shadow-xs active:translate-y-[2px] active:border-b-[2px] cursor-pointer"
             @click="openPracticeFromDrawer"
           >
-            <div class="w-9 h-9 rounded-xl bg-amber-500/30 text-amber-950 flex items-center justify-center shrink-0">
+            <div
+              class="w-9 h-9 rounded-xl bg-amber-500/30 text-amber-950 flex items-center justify-center shrink-0"
+            >
               <Play class="w-5 h-5 fill-amber-950" />
             </div>
             <div class="flex flex-col flex-1">
               <span class="font-heading font-black text-sm uppercase">Latihan Sendiri (Solo)</span>
-              <span class="font-sans text-[11px] text-amber-900 font-bold">Uji taktik melawan bot sebelum mabar!</span>
+              <span class="font-sans text-[11px] text-amber-900 font-bold"
+                >Uji taktik melawan bot sebelum mabar!</span
+              >
             </div>
           </button>
         </div>
@@ -308,20 +358,29 @@ const openPracticeFromDrawer = () => {
     </transition>
 
     <!-- Hero Section (Center of Viewport) -->
-    <main class="flex-1 flex flex-col items-center justify-center px-3.5 sm:px-4 py-4 sm:py-6 gap-4 sm:gap-6 max-w-4xl mx-auto w-full">
+    <main
+      class="flex-1 flex flex-col items-center justify-center px-3.5 sm:px-4 py-4 sm:py-6 gap-4 sm:gap-6 max-w-4xl mx-auto w-full"
+    >
       <!-- Title & Headline -->
       <div class="text-center flex flex-col items-center gap-1.5 sm:gap-2">
-        <div class="inline-flex items-center gap-2 px-3 py-0.5 bg-amber-100 border border-amber-300 rounded-full text-[10px] sm:text-[11px] font-heading font-black text-amber-900 uppercase tracking-widest shadow-2xs">
+        <div
+          class="inline-flex items-center gap-2 px-3 py-0.5 bg-amber-100 border border-amber-300 rounded-full text-[10px] sm:text-[11px] font-heading font-black text-amber-900 uppercase tracking-widest shadow-2xs"
+        >
           <IndonesiaFlag class="w-3.5 h-2.5" />
           <span>Permainan Tradisional Indonesia 3D</span>
         </div>
 
-        <h1 class="font-heading font-black text-2xl xs:text-3xl sm:text-5xl text-neutral-950 tracking-tight uppercase leading-[1.15] sm:leading-[1.1]">
+        <h1
+          class="font-heading font-black text-2xl xs:text-3xl sm:text-5xl text-neutral-950 tracking-tight uppercase leading-[1.15] sm:leading-[1.1]"
+        >
           Pertahankan Benteng, <span class="text-amber-500">Taklukkan</span> Lawanmu!
         </h1>
 
-        <p class="font-sans text-xs sm:text-sm text-neutral-600 font-medium max-w-md leading-relaxed px-1">
-          Main bareng teman langsung dari browser HP & laptop! Nggak perlu install aplikasi — cukup buat ruangan, bagikan tautan, dan adu strategi!
+        <p
+          class="font-sans text-xs sm:text-sm text-neutral-600 font-medium max-w-md leading-relaxed px-1"
+        >
+          Main bareng teman langsung dari browser HP & laptop! Nggak perlu install aplikasi — cukup
+          buat ruangan, bagikan tautan, dan adu strategi!
         </p>
       </div>
 
@@ -338,8 +397,12 @@ const openPracticeFromDrawer = () => {
     </main>
 
     <!-- Footer -->
-    <footer class="w-full border-t border-neutral-300/80 bg-white/70 py-2 sm:py-2.5 px-3 sm:px-4 text-center flex flex-col items-center gap-0.5 sm:gap-1 z-10 shrink-0">
-      <div class="flex items-center justify-center gap-1.5 font-heading font-black text-[10px] sm:text-[11px] uppercase tracking-wider text-neutral-600">
+    <footer
+      class="w-full border-t border-neutral-300/80 bg-white/70 py-2 sm:py-2.5 px-3 sm:px-4 text-center flex flex-col items-center gap-0.5 sm:gap-1 z-10 shrink-0"
+    >
+      <div
+        class="flex items-center justify-center gap-1.5 font-heading font-black text-[10px] sm:text-[11px] uppercase tracking-wider text-neutral-600"
+      >
         <span>Dibuat dengan</span>
         <Heart class="w-3 h-3 text-rose-500 fill-rose-500 shrink-0" />
         <span>untuk Melestarikan Permainan Tradisional Indonesia</span>
@@ -350,16 +413,10 @@ const openPracticeFromDrawer = () => {
     </footer>
 
     <!-- Dedicated Modal 1: Aturan Permainan -->
-    <GameRulesModal
-      v-if="showRulesModal"
-      @close="showRulesModal = false"
-    />
+    <GameRulesModal v-if="showRulesModal" @close="showRulesModal = false" />
 
     <!-- Dedicated Modal 2: Panduan Kontrol -->
-    <GameControlsModal
-      v-if="showControlsModal"
-      @close="showControlsModal = false"
-    />
+    <GameControlsModal v-if="showControlsModal" @close="showControlsModal = false" />
 
     <!-- Dialog: Pilih Tim Latihan Solo -->
     <ConfirmDialog
@@ -371,7 +428,9 @@ const openPracticeFromDrawer = () => {
       @close="showPracticePicker = false"
     >
       <template #icon>
-        <div class="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-amber-100 border border-amber-200 flex items-center justify-center text-amber-700 shadow-2xs">
+        <div
+          class="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-amber-100 border border-amber-200 flex items-center justify-center text-amber-700 shadow-2xs"
+        >
           <Play class="w-6 h-6 fill-amber-700" />
         </div>
       </template>
@@ -402,15 +461,9 @@ const openPracticeFromDrawer = () => {
     </ConfirmDialog>
 
     <!-- Modal Pengaturan Game -->
-    <SettingsModal
-      v-if="showSettingsModal"
-      @close="showSettingsModal = false"
-    />
+    <SettingsModal v-if="showSettingsModal" @close="showSettingsModal = false" />
 
     <!-- Modal Lemari Karakter -->
-    <CharacterPickerModal
-      v-if="showCharacterModal"
-      @close="showCharacterModal = false"
-    />
+    <CharacterPickerModal v-if="showCharacterModal" @close="showCharacterModal = false" />
   </div>
 </template>

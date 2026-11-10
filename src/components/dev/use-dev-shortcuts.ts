@@ -48,12 +48,19 @@ export function useDevShortcuts() {
   const handleKeyDown = (e: KeyboardEvent) => {
     // Avoid triggering when user is typing inside an input or textarea
     const target = e.target as HTMLElement | null
-    if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) {
+    if (
+      target &&
+      (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)
+    ) {
       return
     }
 
     // Toggle on Backquote / Tilde (`) or F2 or Ctrl+Shift+D
-    if (e.code === 'Backquote' || e.code === 'F2' || (e.ctrlKey && e.shiftKey && e.code === 'KeyD')) {
+    if (
+      e.code === 'Backquote' ||
+      e.code === 'F2' ||
+      (e.ctrlKey && e.shiftKey && e.code === 'KeyD')
+    ) {
       e.preventDefault()
       devStore.unlockDevMode()
       devStore.togglePanel()
@@ -74,12 +81,16 @@ export function useDevShortcuts() {
       godMode: (enable = true) => {
         devStore.unlockDevMode()
         devStore.setGodMode(enable)
-        console.info(`[BENTENGAN DEV] God Mode: ${enable ? 'ACTIVE (Invulnerable + Infinite Stamina)' : 'OFF'}`)
+        console.info(
+          `[BENTENGAN DEV] God Mode: ${enable ? 'ACTIVE (Invulnerable + Infinite Stamina)' : 'OFF'}`,
+        )
       },
       freezeBots: (enable = true) => {
         devStore.unlockDevMode()
         devStore.setFreezeEnemyBots(enable)
-        console.info(`[BENTENGAN DEV] Freeze Enemy Bots: ${enable ? 'ACTIVE (Bots will not move)' : 'OFF'}`)
+        console.info(
+          `[BENTENGAN DEV] Freeze Enemy Bots: ${enable ? 'ACTIVE (Bots will not move)' : 'OFF'}`,
+        )
       },
       speed: (mult = 2.0) => {
         devStore.unlockDevMode()
@@ -128,4 +139,3 @@ export function useDevShortcuts() {
     devStore,
   }
 }
-

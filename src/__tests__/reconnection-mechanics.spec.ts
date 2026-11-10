@@ -5,10 +5,7 @@ import * as THREE from 'three'
 import type { DataConnection } from 'peerjs'
 import { useRoomStore } from '../stores/room-store'
 import { peerNetworkManager } from '../game/network/peer-network-manager'
-import {
-  parseNetworkMessage,
-  type PeerStatusNotification,
-} from '../game/network/network-protocol'
+import { parseNetworkMessage, type PeerStatusNotification } from '../game/network/network-protocol'
 import GameHUD from '../components/hud/GameHUD.vue'
 import LobbyWaitingRoom from '../components/lobby/LobbyWaitingRoom.vue'
 import { PhysicsWorld } from '../game/physics/physics-world'
@@ -189,7 +186,9 @@ describe('Multiplayer Reconnection & Status Transparency Mechanics', () => {
         timestamp: Date.now(),
       })
 
-      expect(roomStore.activeToasts.some((t) => t.message.includes('Budi terhubung kembali'))).toBe(true)
+      expect(roomStore.activeToasts.some((t) => t.message.includes('Budi terhubung kembali'))).toBe(
+        true,
+      )
     })
 
     it('clears reconnection state and all toasts on leaveRoom', () => {
@@ -218,7 +217,9 @@ describe('Multiplayer Reconnection & Status Transparency Mechanics', () => {
       const wrapper = mount(GameHUD)
 
       expect(wrapper.find('[data-testid="hud-reconnecting-overlay"]').exists()).toBe(true)
-      expect(wrapper.find('[data-testid="hud-reconnecting-overlay"]').text()).toContain('MENYAMBUNG ULANG')
+      expect(wrapper.find('[data-testid="hud-reconnecting-overlay"]').text()).toContain(
+        'MENYAMBUNG ULANG',
+      )
       expect(wrapper.find('[data-testid="hud-toast-stack"]').exists()).toBe(true)
       expect(wrapper.find('[data-testid="hud-toast-warn"]').text()).toContain('Rekan Anda terputus')
     })
@@ -244,7 +245,9 @@ describe('Multiplayer Reconnection & Status Transparency Mechanics', () => {
         'Mencoba menyambung kembali...',
       )
       expect(wrapper.find('[data-testid="lobby-toast-stack"]').exists()).toBe(true)
-      expect(wrapper.find('[data-testid="lobby-toast-success"]').text()).toContain('Pemain 2 bergabung kembali')
+      expect(wrapper.find('[data-testid="lobby-toast-success"]').text()).toContain(
+        'Pemain 2 bergabung kembali',
+      )
     })
   })
 
@@ -264,8 +267,22 @@ describe('Multiplayer Reconnection & Status Transparency Mechanics', () => {
         maxPlayers: 8,
         status: 'playing',
         players: [
-          { id: 'host-id', peerId: 'host-peer', username: 'Host', teamId: 'blue', isReady: true, isHost: true },
-          { id: 'guest-id', peerId: 'guest-peer', username: 'Guest', teamId: 'red', isReady: true, isHost: false },
+          {
+            id: 'host-id',
+            peerId: 'host-peer',
+            username: 'Host',
+            teamId: 'blue',
+            isReady: true,
+            isHost: true,
+          },
+          {
+            id: 'guest-id',
+            peerId: 'guest-peer',
+            username: 'Guest',
+            teamId: 'red',
+            isReady: true,
+            isHost: false,
+          },
         ],
         createdAt: Date.now(),
       }
@@ -282,11 +299,16 @@ describe('Multiplayer Reconnection & Status Transparency Mechanics', () => {
 
       // Trigger the close handler directly
       // @ts-expect-error accessing private property
-      const timers = peerNetworkManager.disconnectGraceTimers as Map<string, ReturnType<typeof setTimeout>>
+      const timers = peerNetworkManager.disconnectGraceTimers as Map<
+        string,
+        ReturnType<typeof setTimeout>
+      >
 
       // Simulate guest close logic
       // @ts-expect-error accessing private property
-      const leftPlayer = peerNetworkManager.currentRoom.players.find((p) => p.peerId === 'guest-peer')
+      const leftPlayer = peerNetworkManager.currentRoom.players.find(
+        (p) => p.peerId === 'guest-peer',
+      )
       expect(leftPlayer).toBeDefined()
 
       // At t=0, timer is set and player is still in currentRoom
@@ -330,20 +352,39 @@ describe('Multiplayer Reconnection & Status Transparency Mechanics', () => {
         maxPlayers: 8,
         status: 'playing',
         players: [
-          { id: 'host-id', peerId: 'host-peer', username: 'Host', teamId: 'blue', isReady: true, isHost: true },
-          { id: 'guest-id', peerId: 'guest-peer', username: 'Guest', teamId: 'red', isReady: true, isHost: false },
+          {
+            id: 'host-id',
+            peerId: 'host-peer',
+            username: 'Host',
+            teamId: 'blue',
+            isReady: true,
+            isHost: true,
+          },
+          {
+            id: 'guest-id',
+            peerId: 'guest-peer',
+            username: 'Guest',
+            teamId: 'red',
+            isReady: true,
+            isHost: false,
+          },
         ],
         createdAt: Date.now(),
       }
 
       // @ts-expect-error accessing private property
-      const timers = peerNetworkManager.disconnectGraceTimers as Map<string, ReturnType<typeof setTimeout>>
+      const timers = peerNetworkManager.disconnectGraceTimers as Map<
+        string,
+        ReturnType<typeof setTimeout>
+      >
       const mockTimer = setTimeout(() => {}, 15000)
       timers.set('guest-id', mockTimer)
 
       // Simulate guest sends JOIN_REQUEST with same playerId
       // @ts-expect-error accessing private property
-      const existingIdx = peerNetworkManager.currentRoom.players.findIndex((p) => p.id === 'guest-id')
+      const existingIdx = peerNetworkManager.currentRoom.players.findIndex(
+        (p) => p.id === 'guest-id',
+      )
       expect(existingIdx).not.toBe(-1)
 
       const existingTimer = timers.get('guest-id')
@@ -552,9 +593,7 @@ describe('Multiplayer Reconnection & Status Transparency Mechanics', () => {
       expect(engine.remotePlayers.size).toBe(1)
 
       // Count remote player meshes in scene
-      const meshes = engine.scene.children.filter(
-        (c) => c.userData?.playerId === 'p-opponent-host',
-      )
+      const meshes = engine.scene.children.filter((c) => c.userData?.playerId === 'p-opponent-host')
       expect(meshes.length).toBe(1)
 
       engine.dispose()

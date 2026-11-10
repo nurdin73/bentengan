@@ -138,10 +138,13 @@ export class GameEngine {
     this.cameraController = new ThirdPersonCameraController(this.camera)
 
     // 2. WebGL Renderer with Shadow Map
-    this.renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' })
+    this.renderer = new THREE.WebGLRenderer({
+      antialias: true,
+      powerPreference: 'high-performance',
+    })
     this.renderer.setSize(container.clientWidth, container.clientHeight)
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
-    
+
     let shadowsEnabled = true
     try {
       const settings = useSettingsStore()
@@ -184,16 +187,15 @@ export class GameEngine {
     this.scene.add(sunLight)
   }
 
-  public async init(
-    optionsOrTeam: TeamId | GameEngineInitOptions = 'blue',
-  ): Promise<void> {
+  public async init(optionsOrTeam: TeamId | GameEngineInitOptions = 'blue'): Promise<void> {
     const options: GameEngineInitOptions =
       typeof optionsOrTeam === 'string' ? { teamId: optionsOrTeam } : optionsOrTeam
 
     const teamId = options.teamId ?? 'blue'
     this.playerTeam = teamId
     this.isMatchFinished = false
-    this.isPractice = options.isPractice ?? (options.roomPlayers && options.roomPlayers.length > 1 ? false : true)
+    this.isPractice =
+      options.isPractice ?? (options.roomPlayers && options.roomPlayers.length > 1 ? false : true)
     this.isHost = options.isHost ?? false
     this.localPlayerId = options.localPlayerId ?? 'local-player'
     this.localPlayerUsername = options.localPlayerUsername ?? 'Anda'
@@ -247,7 +249,10 @@ export class GameEngine {
 
       // A. Spawn Local Player
       const myTeamPlayers = teamId === 'blue' ? bluePlayers : redPlayers
-      const myIdx = Math.max(0, myTeamPlayers.findIndex((p) => p.id === this.localPlayerId))
+      const myIdx = Math.max(
+        0,
+        myTeamPlayers.findIndex((p) => p.id === this.localPlayerId),
+      )
       const myRoomPlayer = roomPlayers.find((p) => p.id === this.localPlayerId)
       const localSpawnPos = calculateSpawnPosition(teamId, myIdx, Math.max(1, myTeamPlayers.length))
 
@@ -256,7 +261,7 @@ export class GameEngine {
         name: this.localPlayerUsername,
         teamId,
         initialPosition: localSpawnPos,
-        outfitId: myRoomPlayer?.outfitId ?? options.outfitId ?? ((myIdx % 6) + 1),
+        outfitId: myRoomPlayer?.outfitId ?? options.outfitId ?? (myIdx % 6) + 1,
       })
 
       // B. Spawn Remote Players (Opponents & Teammates)
@@ -264,7 +269,10 @@ export class GameEngine {
         if (p.id === this.localPlayerId) continue
 
         const pTeamPlayers = p.teamId === 'blue' ? bluePlayers : redPlayers
-        const pIdx = Math.max(0, pTeamPlayers.findIndex((tp) => tp.id === p.id))
+        const pIdx = Math.max(
+          0,
+          pTeamPlayers.findIndex((tp) => tp.id === p.id),
+        )
         const pSpawnPos = calculateSpawnPosition(p.teamId, pIdx, Math.max(1, pTeamPlayers.length))
 
         const remote = new RemotePlayerController(this.scene, this.physics, {
@@ -272,7 +280,7 @@ export class GameEngine {
           name: p.username,
           teamId: p.teamId,
           initialPosition: pSpawnPos,
-          outfitId: p.outfitId ?? ((pIdx % 6) + 1),
+          outfitId: p.outfitId ?? (pIdx % 6) + 1,
         })
 
         // Orient remote player towards the opposing fortress
@@ -299,24 +307,16 @@ export class GameEngine {
 
     // A. Ally Bot spawned inside Enemy territory Jail (starts 'jailed' for rescue test)
     const allyJailPos =
-      playerTeam === 'blue'
-        ? this.arena.zones.blueJailPosition
-        : this.arena.zones.redJailPosition
+      playerTeam === 'blue' ? this.arena.zones.blueJailPosition : this.arena.zones.redJailPosition
 
     const playerBasePos =
-      playerTeam === 'blue'
-        ? this.arena.zones.blueBasePosition
-        : this.arena.zones.redBasePosition
+      playerTeam === 'blue' ? this.arena.zones.blueBasePosition : this.arena.zones.redBasePosition
 
     const enemyBasePos =
-      enemyTeam === 'blue'
-        ? this.arena.zones.blueBasePosition
-        : this.arena.zones.redBasePosition
+      enemyTeam === 'blue' ? this.arena.zones.blueBasePosition : this.arena.zones.redBasePosition
 
     const enemyJailPos =
-      enemyTeam === 'blue'
-        ? this.arena.zones.blueJailPosition
-        : this.arena.zones.redJailPosition
+      enemyTeam === 'blue' ? this.arena.zones.blueJailPosition : this.arena.zones.redJailPosition
 
     // A. Jailed Ally Bot (starts in enemy jail; when rescued, attacks enemy base)
     const allyBot = new BotController(this.scene, this.physics, {
@@ -604,9 +604,7 @@ export class GameEngine {
     }
 
     // Clean up any lingering/orphaned 3D mesh for this player in the scene
-    const orphanedMesh = this.scene.children.find(
-      (c) => c.userData?.playerId === player.id,
-    )
+    const orphanedMesh = this.scene.children.find((c) => c.userData?.playerId === player.id)
     if (orphanedMesh) {
       this.scene.remove(orphanedMesh)
     }
@@ -615,8 +613,11 @@ export class GameEngine {
     const spawnPos: [number, number, number] = initialPos ?? [0, 1, defaultZ]
 
     const sameTeamPlayers = this.roomPlayers.filter((p) => p.teamId === player.teamId)
-    const pIdx = Math.max(0, sameTeamPlayers.findIndex((p) => p.id === player.id))
-    const outfitId = player.outfitId ?? ((pIdx % 6) + 1)
+    const pIdx = Math.max(
+      0,
+      sameTeamPlayers.findIndex((p) => p.id === player.id),
+    )
+    const outfitId = player.outfitId ?? (pIdx % 6) + 1
 
     const remote = new RemotePlayerController(this.scene, this.physics, {
       id: player.id,
@@ -654,7 +655,8 @@ export class GameEngine {
       }
     }
     if (remote) {
-      const targetImmunityUntil = update.state.immunityUntil > 0 ? now + update.state.immunityUntil : 0
+      const targetImmunityUntil =
+        update.state.immunityUntil > 0 ? now + update.state.immunityUntil : 0
       const targetStunUntil = update.state.stunUntil > 0 ? now + update.state.stunUntil : 0
       remote.setTargetTransform(
         update.state.position,
@@ -784,9 +786,7 @@ export class GameEngine {
     let dest = { x: 0, y: 1, z: 0 }
     if (target === 'enemy_base') {
       const basePos =
-        enemyTeam === 'blue'
-          ? this.arena.zones.blueBasePosition
-          : this.arena.zones.redBasePosition
+        enemyTeam === 'blue' ? this.arena.zones.blueBasePosition : this.arena.zones.redBasePosition
       dest = { x: basePos.x, y: 1, z: basePos.z }
     } else if (target === 'own_base') {
       const basePos =
@@ -796,9 +796,7 @@ export class GameEngine {
       dest = { x: basePos.x, y: 1, z: basePos.z }
     } else if (target === 'enemy_jail') {
       const jailPos =
-        enemyTeam === 'blue'
-          ? this.arena.zones.blueJailPosition
-          : this.arena.zones.redJailPosition
+        enemyTeam === 'blue' ? this.arena.zones.blueJailPosition : this.arena.zones.redJailPosition
       dest = { x: jailPos.x, y: 1, z: jailPos.z }
     } else if (target === 'own_jail') {
       const jailPos =
@@ -864,9 +862,7 @@ export class GameEngine {
 
       const targetTeam: TeamId = entity.teamId === 'blue' ? 'red' : 'blue'
       const targetBasePos =
-        targetTeam === 'blue'
-          ? this.arena.zones.blueBasePosition
-          : this.arena.zones.redBasePosition
+        targetTeam === 'blue' ? this.arena.zones.blueBasePosition : this.arena.zones.redBasePosition
 
       if (GameplayRules.canCaptureBase(entity, targetTeam, targetBasePos)) {
         this.endMatch(entity.teamId, 'base_capture')
@@ -886,7 +882,10 @@ export class GameEngine {
     ) {
       for (const entity of allEntities) {
         if (entity.teamId === this.playerTeam && entity.status === 'jailed') {
-          const dist = GameplayRules.distance3D(this.localPlayer.getPosition(), entity.getPosition())
+          const dist = GameplayRules.distance3D(
+            this.localPlayer.getPosition(),
+            entity.getPosition(),
+          )
           if (dist <= GAME_CONFIG.gameplay.rescueRadius) {
             isNearJailedAlly = true
           }
@@ -895,8 +894,7 @@ export class GameEngine {
             canRescueAny = true
             // Rescue triggers on pressing 'E' / rescue button OR direct proximity touch ("tempel")
             if (input.interact || inRescueRadius) {
-              this.localPlayer.rescueCooldownUntil =
-                now + GAME_CONFIG.gameplay.rescueCooldownMs
+              this.localPlayer.rescueCooldownUntil = now + GAME_CONFIG.gameplay.rescueCooldownMs
               entity.status = 'normal'
               entity.immunityUntil = now + GAME_CONFIG.gameplay.immunityDurationMs
               if (entity instanceof PlayerController) {
@@ -1018,14 +1016,10 @@ export class GameEngine {
     for (const team of teams) {
       const freeMembers = allEntities.filter((e) => e.teamId === team && e.status !== 'jailed')
       const targetBasePos =
-        team === 'blue'
-          ? this.arena.zones.redBasePosition
-          : this.arena.zones.blueBasePosition
+        team === 'blue' ? this.arena.zones.redBasePosition : this.arena.zones.blueBasePosition
 
       const allyJailPos =
-        team === 'blue'
-          ? this.arena.zones.blueJailPosition
-          : this.arena.zones.redJailPosition
+        team === 'blue' ? this.arena.zones.blueJailPosition : this.arena.zones.redJailPosition
 
       // Rule: If a team has only 1 active free member left, any surviving bot adopts the 'hybrid' dual-role!
       if (freeMembers.length === 1) {
@@ -1063,9 +1057,7 @@ export class GameEngine {
 
     if (reason === 'base_capture' && this.arena) {
       const basePos =
-        winner === 'blue'
-          ? this.arena.zones.redBasePosition
-          : this.arena.zones.blueBasePosition
+        winner === 'blue' ? this.arena.zones.redBasePosition : this.arena.zones.blueBasePosition
       this.vfx.triggerBaseBeacon(basePos, winner === 'blue' ? 0x3b82f6 : 0xef4444)
       soundManager.playBaseTouch()
     }

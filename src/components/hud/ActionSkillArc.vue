@@ -43,16 +43,10 @@ try {
 }
 
 const dashSkill = computed(
-  () =>
-    props.skills?.dash ??
-    gameStore?.skills.dash ??
-    createDefaultSkill('dash', 'Kilat', 'Q'),
+  () => props.skills?.dash ?? gameStore?.skills.dash ?? createDefaultSkill('dash', 'Kilat', 'Q'),
 )
 const smokeSkill = computed(
-  () =>
-    props.skills?.smoke ??
-    gameStore?.skills.smoke ??
-    createDefaultSkill('smoke', 'Asap', 'F'),
+  () => props.skills?.smoke ?? gameStore?.skills.smoke ?? createDefaultSkill('smoke', 'Asap', 'F'),
 )
 const adrenalineSkill = computed(
   () =>
@@ -73,11 +67,7 @@ const getStrokeDashoffset = (progress: number): number => {
 
 const handleSkillTrigger = (id: SkillId) => {
   const skill =
-    id === 'dash'
-      ? dashSkill.value
-      : id === 'smoke'
-        ? smokeSkill.value
-        : adrenalineSkill.value
+    id === 'dash' ? dashSkill.value : id === 'smoke' ? smokeSkill.value : adrenalineSkill.value
   if (!skill.ready) return
   emit('trigger-skill', id)
 }
@@ -126,7 +116,7 @@ const handleJumpClick = () => {
     <!-- 1. SKILL 1: KILAT / DASH (Position Jam 9:00 - Straight Left) -->
     <div
       class="pointer-events-auto absolute -translate-x-1/2 -translate-y-1/2"
-      style="left: calc(50% - 110px); top: 50%;"
+      style="left: calc(50% - 110px); top: 50%"
     >
       <button
         data-testid="hud-skill-btn-dash"
@@ -166,7 +156,9 @@ const handleJumpClick = () => {
 
         <template v-if="dashSkill.ready">
           <Zap class="h-6 w-6 stroke-[2.2] text-sky-300 drop-shadow-sm" />
-          <span class="font-heading text-[8px] font-black tracking-wider uppercase text-sky-200 mt-0.5 leading-none">
+          <span
+            class="font-heading text-[8px] font-black tracking-wider uppercase text-sky-200 mt-0.5 leading-none"
+          >
             {{ dashSkill.name }}
           </span>
         </template>
@@ -181,7 +173,7 @@ const handleJumpClick = () => {
     <!-- 2. SKILL 2: ASAP / SMOKE (Position Jam 10:30 - Diagonal 45° Top-Left) -->
     <div
       class="pointer-events-auto absolute -translate-x-1/2 -translate-y-1/2"
-      style="left: calc(50% - 78px); top: calc(50% - 78px);"
+      style="left: calc(50% - 78px); top: calc(50% - 78px)"
     >
       <button
         data-testid="hud-skill-btn-smoke"
@@ -220,7 +212,9 @@ const handleJumpClick = () => {
 
         <template v-if="smokeSkill.ready">
           <Cloud class="h-6 w-6 stroke-[2.2] text-sky-300 drop-shadow-sm" />
-          <span class="font-heading text-[8px] font-black tracking-wider uppercase text-sky-200 mt-0.5 leading-none">
+          <span
+            class="font-heading text-[8px] font-black tracking-wider uppercase text-sky-200 mt-0.5 leading-none"
+          >
             {{ smokeSkill.name }}
           </span>
         </template>
@@ -235,7 +229,7 @@ const handleJumpClick = () => {
     <!-- 3. SKILL 3: ADRENALIN / SURGE (Position Jam 12:00 - Straight Top) -->
     <div
       class="pointer-events-auto absolute -translate-x-1/2 -translate-y-1/2"
-      style="left: 50%; top: calc(50% - 110px);"
+      style="left: 50%; top: calc(50% - 110px)"
     >
       <button
         data-testid="hud-skill-btn-adrenaline"
@@ -274,7 +268,9 @@ const handleJumpClick = () => {
 
         <template v-if="adrenalineSkill.ready">
           <Flame class="h-6 w-6 stroke-[2.2] text-sky-300 drop-shadow-sm" />
-          <span class="font-heading text-[8px] font-black tracking-wider uppercase text-sky-200 mt-0.5 leading-none">
+          <span
+            class="font-heading text-[8px] font-black tracking-wider uppercase text-sky-200 mt-0.5 leading-none"
+          >
             {{ adrenalineSkill.name }}
           </span>
         </template>
@@ -289,7 +285,7 @@ const handleJumpClick = () => {
     <!-- 4. LOMPAT / JUMP (Stacked directly above Skill 3 with widened spacing on Jam 12:00 axis) -->
     <div
       class="pointer-events-auto absolute -translate-x-1/2 -translate-y-1/2"
-      style="left: 50%; top: calc(50% - 188px);"
+      style="left: 50%; top: calc(50% - 188px)"
     >
       <button
         data-testid="hud-touch-jump-btn"
@@ -308,7 +304,9 @@ const handleJumpClick = () => {
         @click="handleJumpClick"
       >
         <ChevronsUp class="h-6.5 w-6.5 stroke-[2.5] drop-shadow-sm" />
-        <span class="font-heading text-[8px] font-black tracking-wider uppercase mt-0.5 leading-none">
+        <span
+          class="font-heading text-[8px] font-black tracking-wider uppercase mt-0.5 leading-none"
+        >
           LOMPAT
         </span>
       </button>

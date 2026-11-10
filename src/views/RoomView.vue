@@ -23,7 +23,7 @@ onBeforeRouteLeave(() => {
 
 const roomCode = computed(() => {
   const c = route.params.code
-  const str = Array.isArray(c) ? c[0] ?? '' : c ?? ''
+  const str = Array.isArray(c) ? (c[0] ?? '') : (c ?? '')
   return str.toUpperCase()
 })
 
@@ -104,7 +104,10 @@ const handleLeaveToHome = () => {
 </script>
 
 <template>
-  <div data-testid="room-view" class="relative w-screen h-screen overflow-hidden bg-neutral-950 font-sans">
+  <div
+    data-testid="room-view"
+    class="relative w-screen h-screen overflow-hidden bg-neutral-950 font-sans"
+  >
     <!-- Active 3D Gameplay Viewport -->
     <GameCanvas
       v-if="roomStore.status === 'playing' || roomStore.status === 'finished'"
@@ -124,10 +127,7 @@ const handleLeaveToHome = () => {
     />
 
     <!-- Results Modal on Finish -->
-    <ResultsModal
-      v-if="roomStore.status === 'finished'"
-      @restart="handleRestart"
-    />
+    <ResultsModal v-if="roomStore.status === 'finished'" @restart="handleRestart" />
 
     <!-- Waiting Stage (Lobby or Onboarding Rules Gate) -->
     <div
@@ -152,7 +152,10 @@ const handleLeaveToHome = () => {
         </div>
 
         <div class="flex flex-col gap-1.5 pb-2 border-b border-neutral-200">
-          <label for="directUsername" class="font-heading font-black text-xs uppercase tracking-wider text-neutral-800">
+          <label
+            for="directUsername"
+            class="font-heading font-black text-xs uppercase tracking-wider text-neutral-800"
+          >
             Nama Panggilanmu
           </label>
           <input
@@ -166,10 +169,7 @@ const handleLeaveToHome = () => {
         </div>
 
         <!-- Rules Briefing View -->
-        <RulesBriefingView
-          :room-code="roomCode"
-          @acknowledge="handleJoinAcknowledge"
-        />
+        <RulesBriefingView :room-code="roomCode" @acknowledge="handleJoinAcknowledge" />
 
         <button
           type="button"

@@ -36,4 +36,3 @@ export interface SmokeEventPayload {
   durationMs: number
   sourceTeamId: 'blue' | 'red'
 }
-
