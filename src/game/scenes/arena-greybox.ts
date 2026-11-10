@@ -1,6 +1,7 @@
 import * as THREE from 'three'
 import type { PhysicsWorld } from '../physics/physics-world'
 import { GAME_CONFIG } from '../core/constants'
+import { getArenaModelTemplate } from './arena-model-loader'
 
 export interface ArenaZones {
   blueBasePosition: THREE.Vector3
@@ -74,6 +75,29 @@ export class ArenaGreybox {
     }
 
     this.build()
+    this.applyArenaModel(getArenaModelTemplate())
+  }
+
+  /**
+   * Swaps greybox visuals for the Blender arena model when it has been preloaded.
+   * Rapier colliders created in build() are untouched, so gameplay is identical.
+   */
+  private applyArenaModel(template: THREE.Group | null): void {
+    if (!template) return
+    this.disposeGreyboxVisuals()
+    // Clone shares geometry/materials with the cached template; never dispose them here.
+    this.group.add(template.clone(true))
+  }
+
+  private disposeGreyboxVisuals(): void {
+    const sharedMaterials = new Set<THREE.Material>(Object.values(this.materials))
+    this.group.traverse((node) => {
+      if (!(node instanceof THREE.Mesh || node instanceof THREE.Line)) return
+      node.geometry.dispose()
+      const materials: THREE.Material[] = Array.isArray(node.material) ? node.material : [node.material]
+      materials.filter((m) => !sharedMaterials.has(m)).forEach((m) => m.dispose())
+    })
+    this.group.clear()
   }
 
   private build(): void {

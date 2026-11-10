@@ -1,6 +1,7 @@
 import * as THREE from 'three'
 import { PhysicsWorld } from '../physics/physics-world'
 import { ArenaGreybox } from '../scenes/arena-greybox'
+import { preloadArenaModel } from '../scenes/arena-model-loader'
 import { InputManager } from '../input/input-manager'
 import { ThirdPersonCameraController } from '../camera/third-person'
 import { PlayerController } from '../entities/player-controller'
@@ -204,8 +205,11 @@ export class GameEngine {
     soundManager.init()
     this.physics = await PhysicsWorld.create()
 
-    // Preload 3D character modular model
-    await preloadCharacterModel().catch(() => null)
+    // Preload 3D character + arena models in parallel (null -> procedural fallback)
+    await Promise.all([
+      preloadCharacterModel().catch(() => null),
+      preloadArenaModel().catch(() => null),
+    ])
 
     // 2. Create Symmetrical Arena
     this.arena = new ArenaGreybox(this.scene, this.physics)
