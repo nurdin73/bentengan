@@ -88,39 +88,75 @@ export class SoundManager {
   }
 
   /**
-   * Footstep: Subtle, muffled ground patter (Low-pass 160Hz, soft gain).
-   * Designed to be pleasant and unobtrusive over long gameplay sessions.
+   * Footstep: Ground patter on turf/dirt with body resonance + textured transient.
+   * Distinct characteristics for walking vs sprinting.
    */
-  public playFootstep(): void {
+  public playFootstep(isSprinting = false): void {
     const now = performance.now()
-    if (now - this.lastFootstepTime < 190) return
+    const minInterval = isSprinting ? 140 : 220
+    if (now - this.lastFootstepTime < minInterval) return
     this.lastFootstepTime = now
 
     if (!this.ensureReady() || !this.ctx || !this.masterGain) return
 
     const t = this.ctx.currentTime
+    const effectiveVol = this.getEffectiveVolume()
+    const pitchJitter = 1 + (Math.random() * 0.12 - 0.06)
+
+    // 1. Resonant Body Thud
     const osc = this.ctx.createOscillator()
-    const gain = this.ctx.createGain()
-    const filter = this.ctx.createBiquadFilter()
+    const oscGain = this.ctx.createGain()
+    const oscFilter = this.ctx.createBiquadFilter()
 
-    filter.type = 'lowpass'
-    filter.frequency.setValueAtTime(160, t)
+    oscFilter.type = 'lowpass'
+    oscFilter.frequency.setValueAtTime(isSprinting ? 320 : 220, t)
 
-    const pitchJitter = 1 + (Math.random() * 0.1 - 0.05)
+    const startFreq = (isSprinting ? 260 : 180) * pitchJitter
+    const endFreq = (isSprinting ? 110 : 90) * pitchJitter
+    const thudDuration = isSprinting ? 0.065 : 0.05
+
     osc.type = 'sine'
-    osc.frequency.setValueAtTime(95 * pitchJitter, t)
-    osc.frequency.exponentialRampToValueAtTime(38 * pitchJitter, t + 0.038)
+    osc.frequency.setValueAtTime(startFreq, t)
+    osc.frequency.exponentialRampToValueAtTime(endFreq, t + thudDuration)
 
-    // Soft volume level to avoid ear fatigue
-    gain.gain.setValueAtTime(0.09 * this.getEffectiveVolume(), t)
-    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.04)
+    const baseVolume = isSprinting ? 0.28 : 0.18
+    oscGain.gain.setValueAtTime(baseVolume * effectiveVol, t)
+    oscGain.gain.exponentialRampToValueAtTime(0.001, t + thudDuration)
 
-    osc.connect(filter)
-    filter.connect(gain)
-    gain.connect(this.masterGain)
+    osc.connect(oscFilter)
+    oscFilter.connect(oscGain)
+    oscGain.connect(this.masterGain)
 
     osc.start(t)
-    osc.stop(t + 0.045)
+    osc.stop(t + thudDuration + 0.005)
+
+    // 2. Light Grass / Dirt Texture Puff (using noiseBuffer if available)
+    if (this.noiseBuffer) {
+      const noise = this.ctx.createBufferSource()
+      noise.buffer = this.noiseBuffer
+
+      const noiseFilter = this.ctx.createBiquadFilter()
+      noiseFilter.type = 'bandpass'
+      noiseFilter.Q.setValueAtTime(1.2, t)
+
+      const noiseFreq = isSprinting ? 1600 : 900
+      noiseFilter.frequency.setValueAtTime(noiseFreq * pitchJitter, t)
+      noiseFilter.frequency.exponentialRampToValueAtTime(
+        (isSprinting ? 600 : 400) * pitchJitter,
+        t + thudDuration,
+      )
+
+      const noiseGain = this.ctx.createGain()
+      noiseGain.gain.setValueAtTime(baseVolume * 0.45 * effectiveVol, t)
+      noiseGain.gain.exponentialRampToValueAtTime(0.001, t + thudDuration)
+
+      noise.connect(noiseFilter)
+      noiseFilter.connect(noiseGain)
+      noiseGain.connect(this.masterGain)
+
+      noise.start(t)
+      noise.stop(t + thudDuration + 0.005)
+    }
   }
 
   /**

@@ -180,7 +180,8 @@ describe('Milestone 6 — Audio System & Game Settings', () => {
       const sm = new SoundManager()
       expect(() => {
         sm.init()
-        sm.playFootstep()
+        sm.playFootstep(false)
+        sm.playFootstep(true)
         sm.playSprintWhoosh()
         sm.playJump()
         sm.playLand()

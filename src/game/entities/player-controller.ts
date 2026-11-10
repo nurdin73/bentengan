@@ -416,7 +416,7 @@ export class PlayerController implements GameplayEntity {
       this.footstepTimer += dt
       const interval = this.isSprinting ? 0.22 : 0.36
       if (this.footstepTimer >= interval) {
-        soundManager.playFootstep()
+        soundManager.playFootstep(this.isSprinting)
         this.footstepTimer = 0
       }
       if (this.isSprinting) {
