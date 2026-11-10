@@ -41,6 +41,7 @@ export interface GameEngineInitOptions {
   localPlayerId?: string
   localPlayerUsername?: string
   teamId?: TeamId
+  outfitId?: number
   roomPlayers?: RoomPlayer[]
   isPractice?: boolean
   isHost?: boolean
@@ -234,7 +235,7 @@ export class GameEngine {
         name: this.localPlayerUsername,
         teamId,
         initialPosition: [0, 1, spawnZ],
-        outfitId: 1,
+        outfitId: options.outfitId ?? 1,
       })
 
       // 4. Spawn Milestone 2 Simulated Roster (Solo Practice against AI)
@@ -247,6 +248,7 @@ export class GameEngine {
       // A. Spawn Local Player
       const myTeamPlayers = teamId === 'blue' ? bluePlayers : redPlayers
       const myIdx = Math.max(0, myTeamPlayers.findIndex((p) => p.id === this.localPlayerId))
+      const myRoomPlayer = roomPlayers.find((p) => p.id === this.localPlayerId)
       const localSpawnPos = calculateSpawnPosition(teamId, myIdx, Math.max(1, myTeamPlayers.length))
 
       this.localPlayer = new PlayerController(this.scene, this.physics, {
@@ -254,7 +256,7 @@ export class GameEngine {
         name: this.localPlayerUsername,
         teamId,
         initialPosition: localSpawnPos,
-        outfitId: (myIdx % 6) + 1,
+        outfitId: myRoomPlayer?.outfitId ?? options.outfitId ?? ((myIdx % 6) + 1),
       })
 
       // B. Spawn Remote Players (Opponents & Teammates)
@@ -270,7 +272,7 @@ export class GameEngine {
           name: p.username,
           teamId: p.teamId,
           initialPosition: pSpawnPos,
-          outfitId: (pIdx % 6) + 1,
+          outfitId: p.outfitId ?? ((pIdx % 6) + 1),
         })
 
         // Orient remote player towards the opposing fortress
@@ -614,7 +616,7 @@ export class GameEngine {
 
     const sameTeamPlayers = this.roomPlayers.filter((p) => p.teamId === player.teamId)
     const pIdx = Math.max(0, sameTeamPlayers.findIndex((p) => p.id === player.id))
-    const outfitId = (pIdx % 6) + 1
+    const outfitId = player.outfitId ?? ((pIdx % 6) + 1)
 
     const remote = new RemotePlayerController(this.scene, this.physics, {
       id: player.id,

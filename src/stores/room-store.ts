@@ -16,6 +16,18 @@ function getOrGeneratePlayerId(): string {
   }
 }
 
+function getOrLoadOutfitId(): number {
+  try {
+    if (typeof localStorage === 'undefined') return 1
+    const stored = localStorage.getItem('bentengan_player_outfit')
+    if (!stored) return 1
+    const val = parseInt(stored, 10)
+    return isNaN(val) ? 1 : Math.max(1, Math.min(6, val))
+  } catch {
+    return 1
+  }
+}
+
 export const useRoomStore = defineStore('room', {
   state: () => ({
     roomCode: '',
@@ -24,6 +36,7 @@ export const useRoomStore = defineStore('room', {
     myPlayerId: getOrGeneratePlayerId(),
     myUsername: 'Pemain ' + Math.floor(10 + Math.random() * 90),
     myTeam: 'blue' as TeamId,
+    myOutfitId: getOrLoadOutfitId(),
     players: [] as RoomPlayer[],
     maxPlayers: 8 as 8 | 12,
 
@@ -166,6 +179,7 @@ export const useRoomStore = defineStore('room', {
           teamId: team,
           isReady: true,
           isHost: true,
+          outfitId: this.myOutfitId,
         },
       ]
     },
@@ -194,6 +208,7 @@ export const useRoomStore = defineStore('room', {
             username: this.myUsername,
             teamId: team,
             isReady: true,
+            outfitId: this.myOutfitId,
           },
           maxPlayers,
         )
@@ -216,10 +231,31 @@ export const useRoomStore = defineStore('room', {
           id: this.myPlayerId,
           username: this.myUsername,
           teamId: team,
+          outfitId: this.myOutfitId,
         })
       } catch (err) {
         this.isConnecting = false
         this.connectionError = err instanceof Error ? err.message : 'Gagal bergabung ke room.'
+      }
+    },
+
+    setOutfit(outfitId: number) {
+      const validId = Math.max(1, Math.min(6, outfitId))
+      this.myOutfitId = validId
+
+      try {
+        if (typeof localStorage !== 'undefined') {
+          localStorage.setItem('bentengan_player_outfit', validId.toString())
+        }
+      } catch {
+        // Ignore storage errors in restricted contexts
+      }
+
+      const me = this.players.find((p) => p.id === this.myPlayerId)
+      if (me) me.outfitId = validId
+
+      if (this.roomCode !== 'LOKAL') {
+        peerNetworkManager.setOutfit(validId)
       }
     },
 

@@ -17,10 +17,14 @@ import {
   AlertCircle,
   X,
   Castle,
+  Shirt,
 } from 'lucide-vue-next'
+import { computed } from 'vue'
 import { useRoomStore } from '../../stores/room-store'
 import TactileButton from '../ui/TactileButton.vue'
 import ConfirmDialog from '../ui/ConfirmDialog.vue'
+import CharacterPickerModal from '../wardrobe/CharacterPickerModal.vue'
+import { OUTFIT_PRESETS } from '../../game/entities/character-avatar'
 import type { TeamId } from '../../types/game.types'
 
 const router = useRouter()
@@ -29,6 +33,12 @@ const copied = ref(false)
 const activeMobileTab = ref<TeamId>(roomStore.myTeam || 'blue')
 const showLeaveDialog = ref(false)
 const showStartDialog = ref(false)
+const showWardrobeModal = ref(false)
+
+const currentOutfitName = computed(() => {
+  const outfitId = roomStore.myPlayer?.outfitId ?? roomStore.myOutfitId ?? 1
+  return OUTFIT_PRESETS.find((o) => o.id === outfitId)?.name ?? 'Casual Striker'
+})
 
 const emit = defineEmits<{
   (e: 'leave'): void
@@ -168,6 +178,36 @@ const confirmLeave = () => {
       <span>{{ roomStore.connectionError }}</span>
     </div>
 
+    <!-- Personal Wardrobe Bar -->
+    <div
+      data-testid="lobby-wardrobe-bar"
+      class="flex items-center justify-between p-3 rounded-2xl bg-white border border-neutral-300 shadow-2xs gap-3 flex-wrap"
+    >
+      <div class="flex items-center gap-2.5">
+        <div class="w-8 h-8 rounded-xl bg-purple-100 text-purple-700 flex items-center justify-center shrink-0">
+          <Shirt class="w-4 h-4" />
+        </div>
+        <div class="flex flex-col">
+          <span class="text-[10px] font-heading font-black text-neutral-500 uppercase tracking-wider">
+            Setelan Busana Karakter
+          </span>
+          <span class="font-sans font-bold text-xs text-neutral-900">
+            {{ currentOutfitName }}
+          </span>
+        </div>
+      </div>
+
+      <button
+        type="button"
+        data-testid="lobby-open-wardrobe-btn"
+        class="px-3 py-1.5 rounded-xl bg-neutral-100 hover:bg-neutral-200 active:scale-95 text-neutral-800 border border-neutral-300 font-heading font-bold text-xs uppercase tracking-wider flex items-center gap-1.5 transition-all cursor-pointer shadow-2xs"
+        @click="showWardrobeModal = true"
+      >
+        <Shirt class="w-3.5 h-3.5 text-neutral-600" />
+        <span>Ganti Busana</span>
+      </button>
+    </div>
+
     <!-- Mobile-Only Team Tabs (< md) -->
     <div
       data-testid="mobile-team-tab-selector"
@@ -240,6 +280,12 @@ const confirmLeave = () => {
               <User v-else class="w-4 h-4 text-neutral-400 shrink-0" />
               <span class="font-sans font-bold text-xs text-neutral-800 truncate">
                 {{ p.username }} {{ p.id === roomStore.myPlayerId ? '(Anda)' : '' }}
+              </span>
+              <span
+                class="text-[9px] font-mono px-1 py-0.5 rounded bg-blue-100/80 text-blue-800 border border-blue-200/60 shrink-0"
+                :title="`Busana: #${p.outfitId ?? 1}`"
+              >
+                #{{ p.outfitId ?? 1 }}
               </span>
             </div>
             <span
@@ -318,6 +364,12 @@ const confirmLeave = () => {
               <User v-else class="w-4 h-4 text-neutral-400 shrink-0" />
               <span class="font-sans font-bold text-xs text-neutral-800 truncate">
                 {{ p.username }} {{ p.id === roomStore.myPlayerId ? '(Anda)' : '' }}
+              </span>
+              <span
+                class="text-[9px] font-mono px-1 py-0.5 rounded bg-blue-100/80 text-blue-800 border border-blue-200/60 shrink-0"
+                :title="`Busana: #${p.outfitId ?? 1}`"
+              >
+                #{{ p.outfitId ?? 1 }}
               </span>
             </div>
             <span
@@ -533,5 +585,11 @@ const confirmLeave = () => {
         </div>
       </transition-group>
     </div>
+    <!-- Modal Lemari Busana Karakter -->
+    <CharacterPickerModal
+      v-if="showWardrobeModal"
+      :team="roomStore.myTeam"
+      @close="showWardrobeModal = false"
+    />
   </div>
 </template>

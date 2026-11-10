@@ -4,6 +4,80 @@ import type { TeamId } from '../../types/game.types'
 
 export type OutfitPresetId = 1 | 2 | 3 | 4 | 5 | 6
 
+export interface OutfitPresetMeta {
+  id: OutfitPresetId
+  name: string
+  subtitle: string
+  description: string
+  hatName: string
+  topName: string
+  bottomName: string
+  shoesName: string
+}
+
+export const OUTFIT_PRESETS: OutfitPresetMeta[] = [
+  {
+    id: 1,
+    name: 'Casual Striker',
+    subtitle: 'Street Casual',
+    description: 'Topi trucker dua warna, kaos santai boxy, celana jeans rolled-cuff, dan sepatu boot chunky.',
+    hatName: 'Trucker Cap',
+    topName: 'Boxy Tee',
+    bottomName: 'Rolled Jeans',
+    shoesName: 'Chunky Boots',
+  },
+  {
+    id: 2,
+    name: 'Jawara Nusantara',
+    subtitle: 'Pendekar Tradisional',
+    description: 'Udeng ikat kepala batik, baju pangsi pesilat, sabuk emas nusantara, dan celana komprang.',
+    hatName: 'Udeng Tradisional',
+    topName: 'Baju Pangsi & Sabuk',
+    bottomName: 'Celana Komprang',
+    shoesName: 'Sandal Jawara',
+  },
+  {
+    id: 3,
+    name: 'Street Sprinter',
+    subtitle: 'Urban Runner',
+    description: 'Topi terbalik dengan jambul rambut, hoodie santai saku kanguru, dan celana training garis samping.',
+    hatName: 'Backwards Cap & Tuft',
+    topName: 'Kangaroo Hoodie',
+    bottomName: 'Trackpants',
+    shoesName: 'Running Kicks',
+  },
+  {
+    id: 4,
+    name: 'Athletic Runner',
+    subtitle: 'Sporty Sprinter',
+    description: 'Rambut spike energik, sweatband dahi, tank top tanpa lengan, dan celana pendek atletik.',
+    hatName: 'Sweatband & Hair',
+    topName: 'Athletic Tank',
+    bottomName: 'Sport Shorts',
+    shoesName: 'Sport Shoes',
+  },
+  {
+    id: 5,
+    name: 'Bocil Pramuka',
+    subtitle: 'Seragam Sekolah',
+    description: 'Baret miring emblem emas garuda, kemeja kacu merah-putih, celana pendek seragam, dan kaus kaki tinggi.',
+    hatName: 'Baret Pramuka',
+    topName: 'Kemeja Kacu',
+    bottomName: 'Celana Seragam',
+    shoesName: 'High Socks & Shoes',
+  },
+  {
+    id: 6,
+    name: 'Urban Puffer',
+    subtitle: 'Musim Dingin Kota',
+    description: 'Kupluk pom-pom beanie tebal, rompi puffer ber-zipper modern, dan celana kargo saku samping.',
+    hatName: 'Pom-Pom Beanie',
+    topName: 'Puffer Vest',
+    bottomName: 'Cargo Pants',
+    shoesName: 'Winter Boots',
+  },
+]
+
 export interface CharacterAvatarOptions {
   teamId: TeamId
   outfitId?: number

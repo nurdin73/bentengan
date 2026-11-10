@@ -82,6 +82,7 @@ onMounted(async () => {
     localPlayerId: roomStore.myPlayerId,
     localPlayerUsername: roomStore.myUsername,
     teamId: roomStore.myTeam,
+    outfitId: roomStore.myOutfitId,
     roomPlayers: roomStore.players,
     isPractice: roomStore.roomCode === 'LOKAL',
     isHost: roomStore.isHost,

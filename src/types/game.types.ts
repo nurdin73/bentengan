@@ -64,6 +64,7 @@ export interface RoomPlayer {
   teamId: TeamId
   isReady: boolean
   isHost: boolean
+  outfitId?: number
 }
 
 export interface Room {

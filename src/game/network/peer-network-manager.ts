@@ -116,6 +116,7 @@ export class PeerNetworkManager {
                 teamId: player.teamId,
                 isReady: false,
                 isHost: true,
+                outfitId: player.outfitId ?? 1,
               },
             ],
             createdAt: Date.now(),
@@ -202,6 +203,7 @@ export class PeerNetworkManager {
               playerId: player.id,
               username: player.username,
               teamId: player.teamId,
+              outfitId: player.outfitId,
             }
             conn.send(joinMsg)
             this.startPingHeartbeat()
@@ -299,6 +301,34 @@ export class PeerNetworkManager {
         }
       } catch (err) {
         console.warn('Gagal kirim SET_READY:', err)
+      }
+    }
+  }
+
+  /**
+   * Player selects modular outfit (1..6).
+   */
+  public setOutfit(outfitId: number): void {
+    if (!this.currentRoom) return
+
+    if (this.isHost) {
+      const me = this.currentRoom.players.find((p) => p.id === this.localPlayerId)
+      if (me) {
+        me.outfitId = outfitId
+        this.broadcastRoomState()
+      }
+    } else if (this.hostConnection) {
+      const msg: NetworkMessage = {
+        type: 'SET_OUTFIT',
+        playerId: this.localPlayerId,
+        outfitId,
+      }
+      try {
+        if (this.hostConnection.open) {
+          this.hostConnection.send(msg)
+        }
+      } catch (err) {
+        console.warn('Gagal kirim SET_OUTFIT:', err)
       }
     }
   }
@@ -533,6 +563,7 @@ export class PeerNetworkManager {
             playerId: player.id,
             username: player.username,
             teamId: player.teamId,
+            outfitId: player.outfitId,
           }
           conn.send(joinMsg)
           this.startPingHeartbeat()
@@ -615,6 +646,7 @@ export class PeerNetworkManager {
             teamId: msg.teamId,
             isReady: false,
             isHost: false,
+            outfitId: msg.outfitId ?? 1,
           }
 
           // Replace existing if reconnecting or add new
@@ -670,6 +702,15 @@ export class PeerNetworkManager {
           const player = this.currentRoom.players.find((p) => p.id === msg.playerId)
           if (player) {
             player.isReady = msg.isReady
+            this.broadcastRoomState()
+          }
+          break
+        }
+
+        case 'SET_OUTFIT': {
+          const player = this.currentRoom.players.find((p) => p.id === msg.playerId)
+          if (player) {
+            player.outfitId = msg.outfitId
             this.broadcastRoomState()
           }
           break
