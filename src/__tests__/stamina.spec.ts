@@ -128,4 +128,38 @@ describe('Stamina and Stun State Mechanics', () => {
     // Stamina drained ~4.16 points from 36 -> ~31.8
     expect(stamina).toBeGreaterThan(30)
   })
+
+  it('should require both stun duration to elapse and stamina >= recoveryThreshold (30%) before releasing stun', () => {
+    let stamina = 0
+    let status: 'normal' | 'stunned' = 'stunned'
+    const stunUntil = 2000
+    const recoveryThreshold = GAME_CONFIG.stamina.recoveryThreshold // 30 points
+
+    // Case A: Stun duration elapsed (now = 2001ms), but stamina is only 15 (< 30) -> Still STUNNED
+    let now = 2001
+    stamina = 15
+    const canRecoverLowStamina = now >= stunUntil && stamina >= recoveryThreshold
+    if (canRecoverLowStamina) {
+      status = 'normal'
+    }
+    expect(status).toBe('stunned')
+
+    // Case B: Stamina recovered to 35 (>= 30), but stun duration has not elapsed (now = 1500ms) -> Still STUNNED
+    now = 1500
+    stamina = 35
+    const canRecoverEarlyTime = now >= stunUntil && stamina >= recoveryThreshold
+    if (canRecoverEarlyTime) {
+      status = 'normal'
+    }
+    expect(status).toBe('stunned')
+
+    // Case C: Both stun duration elapsed (now = 2001ms) AND stamina recovered (stamina = 30) -> Released to NORMAL
+    now = 2001
+    stamina = 30
+    const canRecoverValid = now >= stunUntil && stamina >= recoveryThreshold
+    if (canRecoverValid) {
+      status = 'normal'
+    }
+    expect(status).toBe('normal')
+  })
 })

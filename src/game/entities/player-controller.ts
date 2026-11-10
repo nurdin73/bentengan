@@ -227,7 +227,11 @@ export class PlayerController implements GameplayEntity {
       if (this.stamina >= GAME_CONFIG.stamina.minSprintThreshold) {
         this.isExhausted = false
       }
-      if (now >= this.stunUntil) {
+
+      const hasElapsedStunDuration = now >= this.stunUntil
+      const hasRecoveredStamina = this.stamina >= GAME_CONFIG.stamina.recoveryThreshold
+
+      if (hasElapsedStunDuration && hasRecoveredStamina) {
         this.status = 'normal'
       } else {
         const currentLinVel = this.body.linvel()
@@ -285,6 +289,10 @@ export class PlayerController implements GameplayEntity {
         this.stunUntil = now + GAME_CONFIG.gameplay.stunDurationMs
         this.isSprinting = false
         this.isExhausted = true
+        const currentLinVel = this.body.linvel()
+        this.body.setLinvel({ x: 0, y: currentLinVel.y, z: 0 }, true)
+        this.wasJumpPressed = input.jump
+        return
       }
     } else {
       this.stamina = Math.min(

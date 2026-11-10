@@ -390,6 +390,107 @@ describe('Mobile Touch Controls & Virtual Input Integration', () => {
         deltaY: -15,
       })
     })
+
+    it('allows joystick knob to drag in UI but suppresses virtual-move when isStunned is true', async () => {
+      const wrapper = mount(MobileTouchControls, {
+        props: { forceShow: true, isStunned: true },
+      })
+
+      const joystick = wrapper.find('[data-testid="hud-virtual-joystick"]')
+      const knob = wrapper.find('[data-testid="hud-joystick-knob"]')
+      const baseEl = joystick.element as HTMLElement
+
+      vi.spyOn(baseEl, 'getBoundingClientRect').mockReturnValue({
+        left: 50,
+        top: 500,
+        width: 100,
+        height: 100,
+        right: 150,
+        bottom: 600,
+        x: 50,
+        y: 500,
+        toJSON: () => ({}),
+      })
+
+      // Center is at (100, 550)
+      // Drag upwards (Y = 510): knob moves in UI (translate3d should be set)
+      await joystick.trigger('touchstart', {
+        changedTouches: [{ identifier: 10, clientX: 100, clientY: 510 }],
+      })
+
+      // UI knob is moved (dy = -40)
+      expect(knob.attributes('style')).toContain('translate3d(0px, -40px, 0)')
+
+      // But virtual-move must emit all false
+      const moveEvents = wrapper.emitted('virtual-move')
+      expect(moveEvents).toBeDefined()
+      expect(moveEvents?.[0]?.[0]).toEqual({
+        forward: false,
+        backward: false,
+        left: false,
+        right: false,
+      })
+    })
+
+    it('clears virtual-move if isStunned becomes true while joystick was being dragged', async () => {
+      const wrapper = mount(MobileTouchControls, {
+        props: { forceShow: true, isStunned: false },
+      })
+
+      const joystick = wrapper.find('[data-testid="hud-virtual-joystick"]')
+      const baseEl = joystick.element as HTMLElement
+
+      vi.spyOn(baseEl, 'getBoundingClientRect').mockReturnValue({
+        left: 50,
+        top: 500,
+        width: 100,
+        height: 100,
+        right: 150,
+        bottom: 600,
+        x: 50,
+        y: 500,
+        toJSON: () => ({}),
+      })
+
+      // Start drag forward
+      await joystick.trigger('touchstart', {
+        changedTouches: [{ identifier: 11, clientX: 100, clientY: 510 }],
+      })
+
+      expect(wrapper.emitted('virtual-move')?.[0]?.[0]).toEqual({
+        forward: true,
+        backward: false,
+        left: false,
+        right: false,
+      })
+
+      // Stun occurs dynamically
+      await wrapper.setProps({ isStunned: true })
+
+      const moveEvents = wrapper.emitted('virtual-move')
+      const lastEvent = moveEvents?.[moveEvents.length - 1]?.[0]
+      expect(lastEvent).toEqual({
+        forward: false,
+        backward: false,
+        left: false,
+        right: false,
+      })
+    })
+
+    it('disables sprint button and prevents virtual-sprint activation when isStunned is true', async () => {
+      const wrapper = mount(MobileTouchControls, {
+        props: { forceShow: true, isStunned: true },
+      })
+
+      const sprintBtn = wrapper.find('[data-testid="hud-touch-sprint-btn"]')
+      expect(sprintBtn.attributes('disabled')).toBeDefined()
+
+      await sprintBtn.trigger('touchstart', {
+        changedTouches: [{ identifier: 12, clientX: 300, clientY: 600 }],
+      })
+
+      expect(wrapper.emitted('virtual-sprint')).toBeUndefined()
+    })
   })
 
   describe('RotateDevicePrompt Component', () => {

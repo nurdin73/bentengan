@@ -278,6 +278,11 @@ export const useRoomStore = defineStore('room', {
     },
 
     returnToLobbyForRematch() {
+      // Only the Host or a solo practice player can initiate returning room to lobby
+      if (!this.isHost && this.roomCode !== 'LOKAL') {
+        return
+      }
+
       this.status = 'waiting'
       for (const p of this.players) {
         p.isReady = false

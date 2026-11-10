@@ -336,6 +336,7 @@ defineEmits<{
     <MobileTouchControls
       :force-show="forceShowMobileHUD"
       :can-rescue="gameStore.canRescueNearby"
+      :is-stunned="gameStore.isStunned"
       :stamina-percentage="gameStore.staminaPercentage"
       :rescue-cooldown-seconds="gameStore.rescueCooldownRemainingSeconds"
       @virtual-move="$emit('virtual-move', $event)"

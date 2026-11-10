@@ -614,13 +614,18 @@ export class GameEngine {
         if (pState.id === this.localPlayerId && this.localPlayer) {
           // Authoritative reconciliation for local player if jailed or stunned
           if (pState.status !== this.localPlayer.status) {
-            this.localPlayer.status = pState.status
-            if (pState.status === 'jailed') {
-              const jailPos =
-                this.playerTeam === 'blue'
-                  ? this.arena.zones.blueJailPosition
-                  : this.arena.zones.redJailPosition
-              this.localPlayer.teleportTo(jailPos.x, jailPos.y, jailPos.z)
+            // Prevent remote snapshot from prematurely clearing active local stamina stun
+            if (this.localPlayer.status === 'stunned' && pState.status === 'normal') {
+              // Local stamina stun remains authoritative until local timer and stamina recovery complete
+            } else {
+              this.localPlayer.status = pState.status
+              if (pState.status === 'jailed') {
+                const jailPos =
+                  this.playerTeam === 'blue'
+                    ? this.arena.zones.blueJailPosition
+                    : this.arena.zones.redJailPosition
+                this.localPlayer.teleportTo(jailPos.x, jailPos.y, jailPos.z)
+              }
             }
           }
         }

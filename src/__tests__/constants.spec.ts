@@ -13,6 +13,8 @@ describe('Game Configuration & Baseline Rules', () => {
     expect(GAME_CONFIG.stamina.max).toBe(100)
     expect(GAME_CONFIG.stamina.sprintDrainPerSecond).toBe(25)
     expect(GAME_CONFIG.stamina.regenerationPerSecond).toBe(18)
+    expect(GAME_CONFIG.stamina.minSprintThreshold).toBe(20)
+    expect(GAME_CONFIG.stamina.recoveryThreshold).toBe(30)
     expect(GAME_CONFIG.gameplay.stunDurationMs).toBe(2000)
     expect(GAME_CONFIG.gameplay.immunityDurationMs).toBe(2000)
     expect(GAME_CONFIG.gameplay.rescueCooldownMs).toBe(30000)

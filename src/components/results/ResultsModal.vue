@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useRouter } from 'vue-router'
-import { Trophy, Unplug, Swords, RotateCcw } from 'lucide-vue-next'
+import { Trophy, Unplug, Swords, RotateCcw, Clock } from 'lucide-vue-next'
 import { useGameStore } from '../../stores/game-store'
 import { useRoomStore } from '../../stores/room-store'
 import TactileButton from '../ui/TactileButton.vue'
@@ -11,6 +11,10 @@ const gameStore = useGameStore()
 const roomStore = useRoomStore()
 
 const result = computed(() => gameStore.matchResult)
+
+const canRestart = computed(() => {
+  return roomStore.roomCode === 'LOKAL' || roomStore.isHost
+})
 
 const isPlayerWinner = computed(() => {
   if (!result.value || !result.value.winner) return false
@@ -130,8 +134,9 @@ const handleLeaveToHome = () => {
 
         <!-- Action Buttons -->
         <div class="flex flex-col gap-2.5 sm:gap-3 pt-0.5 sm:pt-2">
+          <!-- Host or Solo Practice: Can restart match or return room to lobby -->
           <TactileButton
-            v-if="!isHostDisconnect"
+            v-if="!isHostDisconnect && canRestart"
             variant="amber"
             data-testid="results-restart-btn"
             class="w-full text-sm sm:text-base py-2.5 sm:py-3 flex items-center justify-center gap-2"
@@ -140,6 +145,16 @@ const handleLeaveToHome = () => {
             <RotateCcw class="w-4 h-4 sm:w-5 sm:h-5 shrink-0" />
             <span>{{ roomStore.roomCode === 'LOKAL' ? 'Main Lagi (Latihan)' : 'Kembali ke Ruang Tunggu (Main Lagi)' }}</span>
           </TactileButton>
+
+          <!-- Guest in multiplayer room: Waiting for Host -->
+          <div
+            v-else-if="!isHostDisconnect && !canRestart"
+            data-testid="results-waiting-host-box"
+            class="w-full text-xs sm:text-sm py-2.5 sm:py-3 px-4 rounded-xl sm:rounded-2xl bg-neutral-100 border-2 border-neutral-300 text-neutral-600 font-heading font-bold flex items-center justify-center gap-2 shadow-2xs"
+          >
+            <Clock class="w-4 h-4 sm:w-5 sm:h-5 shrink-0 animate-spin text-neutral-400" />
+            <span>Menunggu Host Kembali ke Ruang Tunggu...</span>
+          </div>
 
           <TactileButton
             v-if="isHostDisconnect"

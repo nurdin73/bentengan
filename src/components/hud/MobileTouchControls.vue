@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { Maximize2 } from 'lucide-vue-next'
 import type { VirtualMovementInput } from '../../game/input/input-manager'
 import type { SkillId } from '../../game/skills/skill-types'
@@ -15,6 +15,7 @@ import ActionUtilityCluster from './ActionUtilityCluster.vue'
 export interface MobileTouchControlsProps {
   forceShow?: boolean
   canRescue?: boolean
+  isStunned?: boolean
   staminaPercentage?: number
   rescueCooldownSeconds?: number
   showRestore?: boolean
@@ -23,6 +24,7 @@ export interface MobileTouchControlsProps {
 const props = withDefaults(defineProps<MobileTouchControlsProps>(), {
   forceShow: false,
   canRescue: false,
+  isStunned: false,
   staminaPercentage: 100,
   rescueCooldownSeconds: 0,
   showRestore: false,
@@ -54,6 +56,29 @@ const knobX = ref(0)
 const knobY = ref(0)
 const maxRadius = 45
 let joystickTouchId: number | null = null
+
+watch(
+  () => props.isStunned,
+  (stunned) => {
+    if (stunned) {
+      emit('virtual-move', {
+        forward: false,
+        backward: false,
+        left: false,
+        right: false,
+      })
+    } else if (joystickTouchId !== null) {
+      const normX = knobX.value / maxRadius
+      const normY = knobY.value / maxRadius
+      emit('virtual-move', {
+        forward: normY < -0.25,
+        backward: normY > 0.25,
+        left: normX < -0.25,
+        right: normX > 0.25,
+      })
+    }
+  },
+)
 
 const handleJoystickStart = (e: TouchEvent) => {
   triggerAutoFullscreen()
@@ -115,6 +140,16 @@ const updateJoystickFromTouch = (clientX: number, clientY: number) => {
 
   knobX.value = dx
   knobY.value = dy
+
+  if (props.isStunned) {
+    emit('virtual-move', {
+      forward: false,
+      backward: false,
+      left: false,
+      right: false,
+    })
+    return
+  }
 
   const normX = dx / maxRadius
   const normY = dy / maxRadius
@@ -225,7 +260,12 @@ onUnmounted(() => {
       <div
         ref="baseRef"
         data-testid="hud-virtual-joystick"
-        class="relative flex h-32 w-32 items-center justify-center rounded-full border-2 border-neutral-700/80 bg-neutral-950/70 shadow-2xl backdrop-blur-md"
+        :class="[
+          'relative flex h-32 w-32 items-center justify-center rounded-full border-2 bg-neutral-950/70 shadow-2xl backdrop-blur-md transition-colors',
+          props.isStunned
+            ? 'border-amber-500/80 shadow-[0_0_20px_rgba(245,158,11,0.25)]'
+            : 'border-neutral-700/80',
+        ]"
         @touchstart.prevent="handleJoystickStart"
         @touchmove.prevent="handleJoystickMove"
         @touchend.prevent="handleJoystickEnd"
@@ -239,7 +279,12 @@ onUnmounted(() => {
         <!-- Center Knob -->
         <div
           data-testid="hud-joystick-knob"
-          class="absolute flex h-14 w-14 items-center justify-center rounded-full border border-neutral-400/80 bg-gradient-to-b from-neutral-200 to-neutral-400 shadow-lg transition-transform duration-75"
+          :class="[
+            'absolute flex h-14 w-14 items-center justify-center rounded-full border shadow-lg transition-transform duration-75',
+            props.isStunned
+              ? 'border-amber-400/80 bg-gradient-to-b from-amber-200/80 to-amber-400/80 opacity-75'
+              : 'border-neutral-400/80 bg-gradient-to-b from-neutral-200 to-neutral-400',
+          ]"
           :style="{
             transform: `translate3d(${knobX}px, ${knobY}px, 0)`,
           }"
@@ -284,6 +329,7 @@ onUnmounted(() => {
         <!-- Component 3: Sprint Anchor Button (Central Primary Button with Circular Stamina Ring) -->
         <SprintAnchorButton
           :stamina-percentage="props.staminaPercentage"
+          :is-stunned="props.isStunned"
           @virtual-sprint="emit('virtual-sprint', $event)"
         />
       </div>

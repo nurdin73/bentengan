@@ -270,7 +270,11 @@ export class BotController implements GameplayEntity {
       if (this.stamina >= GAME_CONFIG.stamina.minSprintThreshold) {
         this.isExhausted = false
       }
-      if (now >= this.stunUntil) {
+
+      const hasElapsedStunDuration = now >= this.stunUntil
+      const hasRecoveredStamina = this.stamina >= GAME_CONFIG.stamina.recoveryThreshold
+
+      if (hasElapsedStunDuration && hasRecoveredStamina) {
         this.status = 'normal'
       } else {
         const vel = this.body.linvel()
@@ -845,6 +849,9 @@ export class BotController implements GameplayEntity {
         this.isSprinting = false
         this.isExhausted = true
         speed = 0
+        const vel = this.body.linvel()
+        this.body.setLinvel({ x: 0, y: vel.y, z: 0 }, true)
+        return
       }
     } else {
       this.isSprinting = false

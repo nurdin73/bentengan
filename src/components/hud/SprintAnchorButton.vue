@@ -1,13 +1,15 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { Zap } from 'lucide-vue-next'
 
 const props = withDefaults(
   defineProps<{
     staminaPercentage?: number
+    isStunned?: boolean
   }>(),
   {
     staminaPercentage: 100,
+    isStunned: false,
   },
 )
 
@@ -18,6 +20,16 @@ const emit = defineEmits<{
 const isSprintActive = ref(false)
 let sprintTouchId: number | null = null
 
+watch(
+  () => props.isStunned,
+  (stunned) => {
+    if (stunned && isSprintActive.value) {
+      isSprintActive.value = false
+      emit('virtual-sprint', false)
+    }
+  },
+)
+
 const circumference = 289.03 // 2 * Math.PI * 46
 const strokeDashoffset = computed(() => {
   const clamped = Math.max(0, Math.min(100, props.staminaPercentage))
@@ -25,15 +37,17 @@ const strokeDashoffset = computed(() => {
 })
 
 const staminaRingColor = computed(() => {
+  if (props.isStunned) return 'stroke-rose-600'
   if (props.staminaPercentage > 50) return 'stroke-amber-400'
   if (props.staminaPercentage > 25) return 'stroke-orange-500'
   return 'stroke-rose-500'
 })
 
-const isLowStamina = computed(() => props.staminaPercentage < 25)
+const isLowStamina = computed(() => props.staminaPercentage < 25 || props.isStunned)
 
 const handleSprintStart = (e: TouchEvent) => {
   e.preventDefault()
+  if (props.isStunned) return
   if (sprintTouchId !== null) return
   const touch = e.changedTouches[0]
   if (!touch) return
@@ -59,6 +73,7 @@ const handleSprintEnd = (e: TouchEvent) => {
 
 // Support desktop mouse click & hold
 const handleMouseDown = () => {
+  if (props.isStunned) return
   isSprintActive.value = true
   emit('virtual-sprint', true)
   window.addEventListener('mouseup', handleMouseUp, { once: true })
@@ -115,11 +130,14 @@ const handleMouseUp = () => {
     <button
       data-testid="hud-touch-sprint-btn"
       type="button"
+      :disabled="props.isStunned"
       :class="[
-        'z-10 flex h-[82px] w-[82px] aspect-square cursor-pointer flex-col items-center justify-center rounded-full border-2 transition-all duration-75 select-none backdrop-blur-md',
-        isSprintActive
-          ? 'border-amber-400 bg-amber-500/50 text-amber-200 ring-4 ring-amber-300/80 scale-90 translate-y-0.5'
-          : 'border-white/30 bg-neutral-950/85 text-neutral-200 hover:text-white shadow-2xl active:scale-90',
+        'z-10 flex h-[82px] w-[82px] aspect-square flex-col items-center justify-center rounded-full border-2 transition-all duration-75 select-none backdrop-blur-md',
+        props.isStunned
+          ? 'opacity-50 cursor-not-allowed border-rose-500/50 bg-neutral-950/80 text-rose-300'
+          : isSprintActive
+            ? 'cursor-pointer border-amber-400 bg-amber-500/50 text-amber-200 ring-4 ring-amber-300/80 scale-90 translate-y-0.5'
+            : 'cursor-pointer border-white/30 bg-neutral-950/85 text-neutral-200 hover:text-white shadow-2xl active:scale-90',
       ]"
       @touchstart="handleSprintStart"
       @touchend="handleSprintEnd"
