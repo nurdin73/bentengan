@@ -10,11 +10,13 @@ import {
   X,
   Menu,
   Heart,
+  Settings,
 } from 'lucide-vue-next'
 import { useRoomStore } from '../stores/room-store'
 import LobbyModeSelector from '../components/lobby/LobbyModeSelector.vue'
 import GameRulesModal from '../components/guide/GameRulesModal.vue'
 import GameControlsModal from '../components/guide/GameControlsModal.vue'
+import SettingsModal from '../components/settings/SettingsModal.vue'
 import ConfirmDialog from '../components/ui/ConfirmDialog.vue'
 import TactileButton from '../components/ui/TactileButton.vue'
 import IndonesiaFlag from '../components/ui/IndonesiaFlag.vue'
@@ -25,6 +27,7 @@ const roomStore = useRoomStore()
 
 const showRulesModal = ref(false)
 const showControlsModal = ref(false)
+const showSettingsModal = ref(false)
 const showPracticePicker = ref(false)
 const isMobileMenuOpen = ref(false)
 
@@ -59,6 +62,11 @@ const openRulesFromDrawer = () => {
 const openControlsFromDrawer = () => {
   isMobileMenuOpen.value = false
   showControlsModal.value = true
+}
+
+const openSettingsFromDrawer = () => {
+  isMobileMenuOpen.value = false
+  showSettingsModal.value = true
 }
 
 const openPracticeFromDrawer = () => {
@@ -107,6 +115,15 @@ const openPracticeFromDrawer = () => {
         >
           <Gamepad2 class="w-3.5 h-3.5 text-neutral-600" />
           <span>Kontrol</span>
+        </button>
+        <button
+          type="button"
+          data-testid="navbar-settings-btn"
+          class="px-3 py-1.5 rounded-xl hover:bg-neutral-100 text-neutral-700 transition-colors cursor-pointer flex items-center gap-1.5"
+          @click="showSettingsModal = true"
+        >
+          <Settings class="w-3.5 h-3.5 text-neutral-600" />
+          <span>Pengaturan</span>
         </button>
         <!-- Tombol Latihan Solo -->
         <button
@@ -222,7 +239,23 @@ const openPracticeFromDrawer = () => {
             </div>
           </button>
 
-          <!-- Item 3: Latihan Sendiri Solo -->
+          <!-- Item 3: Pengaturan Game -->
+          <button
+            type="button"
+            data-testid="mobile-drawer-settings-btn"
+            class="w-full p-3 rounded-2xl bg-white border border-neutral-200 hover:bg-neutral-50 flex items-center gap-3 text-left transition-all shadow-2xs active:scale-[0.99] cursor-pointer"
+            @click="openSettingsFromDrawer"
+          >
+            <div class="w-9 h-9 rounded-xl bg-amber-100 text-amber-800 flex items-center justify-center shrink-0">
+              <Settings class="w-5 h-5" />
+            </div>
+            <div class="flex flex-col flex-1">
+              <span class="font-heading font-black text-sm text-neutral-900 uppercase">Pengaturan Game</span>
+              <span class="font-sans text-[11px] text-neutral-500 font-medium">Sensitivitas kamera, suara & grafis</span>
+            </div>
+          </button>
+
+          <!-- Item 4: Latihan Sendiri Solo -->
           <button
             type="button"
             data-testid="mobile-drawer-practice-btn"
@@ -334,5 +367,11 @@ const openPracticeFromDrawer = () => {
         </div>
       </template>
     </ConfirmDialog>
+
+    <!-- Modal Pengaturan Game -->
+    <SettingsModal
+      v-if="showSettingsModal"
+      @close="showSettingsModal = false"
+    />
   </div>
 </template>

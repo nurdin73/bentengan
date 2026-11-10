@@ -4,6 +4,7 @@ import type { PhysicsWorld } from '../physics/physics-world'
 import type { GameplayEntity, MovementInput, PlayerStatus, TeamId } from '../../types/game.types'
 import { GAME_CONFIG } from '../core/constants'
 import { EnergyShieldBubble } from './energy-shield-bubble'
+import { soundManager } from '../audio/sound-manager'
 
 function drawRoundedRect(
   ctx: CanvasRenderingContext2D,
@@ -39,6 +40,7 @@ export class PlayerController implements GameplayEntity {
   public readonly name: string
   public readonly teamId: TeamId
   public readonly mesh: THREE.Group
+  public readonly bodyMesh: THREE.Mesh
   public readonly body: RAPIER.RigidBody
   public readonly collider: RAPIER.Collider
 
@@ -50,6 +52,10 @@ export class PlayerController implements GameplayEntity {
   public isSprinting = false
   public isExhausted = false
   public isGrounded = false
+  private wasGrounded = true
+  private footstepTimer = 0
+  private runAnimCycle = 0
+  private readonly normalScale = new THREE.Vector3(1, 1, 1)
   public immunityUntil = 0
   public immunitySource: 'skill' | 'rescue' | null = null
   public stunUntil = 0
@@ -127,9 +133,9 @@ export class PlayerController implements GameplayEntity {
       roughness: 0.4,
       metalness: 0.1,
     })
-    const bodyMesh = new THREE.Mesh(bodyGeo, this.bodyMat)
-    bodyMesh.castShadow = true
-    this.mesh.add(bodyMesh)
+    this.bodyMesh = new THREE.Mesh(bodyGeo, this.bodyMat)
+    this.bodyMesh.castShadow = true
+    this.mesh.add(this.bodyMesh)
 
     // Face / eye direction visor
     const visorGeo = new THREE.BoxGeometry(0.35, 0.15, 0.2)
@@ -233,6 +239,7 @@ export class PlayerController implements GameplayEntity {
 
       if (hasElapsedStunDuration && hasRecoveredStamina) {
         this.status = 'normal'
+        soundManager.stopStun()
       } else {
         const currentLinVel = this.body.linvel()
         this.body.setLinvel({ x: 0, y: currentLinVel.y, z: 0 }, true)
@@ -289,6 +296,7 @@ export class PlayerController implements GameplayEntity {
         this.stunUntil = now + GAME_CONFIG.gameplay.stunDurationMs
         this.isSprinting = false
         this.isExhausted = true
+        soundManager.startStun()
         const currentLinVel = this.body.linvel()
         this.body.setLinvel({ x: 0, y: currentLinVel.y, z: 0 }, true)
         this.wasJumpPressed = input.jump
@@ -381,8 +389,29 @@ export class PlayerController implements GameplayEntity {
 
     const currentLinVel = this.body.linvel()
     // Grounded requires physical ray hit on an upward slope (normal.y >= 0.5) and no upward jump velocity
-    this.isGrounded =
+    const newlyGrounded =
       groundHit !== null && groundHit.normal.y >= 0.5 && currentLinVel.y <= 0.2
+
+    if (!this.wasGrounded && newlyGrounded) {
+      soundManager.playLand()
+    }
+    this.isGrounded = newlyGrounded
+    this.wasGrounded = newlyGrounded
+
+    // Footsteps & Sprint audio rhythm
+    if (isMoving && this.isGrounded) {
+      this.footstepTimer += dt
+      const interval = this.isSprinting ? 0.22 : 0.36
+      if (this.footstepTimer >= interval) {
+        soundManager.playFootstep()
+        this.footstepTimer = 0
+      }
+      if (this.isSprinting) {
+        soundManager.playSprintWhoosh()
+      }
+    } else {
+      this.footstepTimer = 0
+    }
 
     // 6. Strict Single Jump Restriction (Edge Trigger)
     const isNewJumpPress = input.jump && !this.wasJumpPressed
@@ -391,6 +420,8 @@ export class PlayerController implements GameplayEntity {
     if (isNewJumpPress && this.isGrounded) {
       targetVelY = GAME_CONFIG.movement.jumpImpulse
       this.isGrounded = false
+      this.wasGrounded = false
+      soundManager.playJump()
     }
 
     this.wasJumpPressed = input.jump
@@ -408,6 +439,7 @@ export class PlayerController implements GameplayEntity {
     this.previousPosition.set(x, targetY, z)
     this.currentPosition.set(x, targetY, z)
     this.mesh.position.set(x, targetY, z)
+    soundManager.stopStun()
   }
 
   public syncVisuals(alpha = 1.0, now = performance.now()): void {
@@ -418,6 +450,34 @@ export class PlayerController implements GameplayEntity {
     const diff = this.targetRotationY - this.mesh.rotation.y
     const normalizedDiff = Math.atan2(Math.sin(diff), Math.cos(diff))
     this.mesh.rotation.y += normalizedDiff * 0.3
+
+    // Procedural animation: Running bobbing & tilt
+    const currentLinVel = this.body.linvel()
+    const horizSpeed = Math.sqrt(currentLinVel.x * currentLinVel.x + currentLinVel.z * currentLinVel.z)
+
+    if (horizSpeed > 0.5 && this.isGrounded) {
+      this.runAnimCycle += 0.25
+      const tiltAngle = this.isSprinting ? 0.12 : 0.06
+      this.bodyMesh.rotation.x = Math.sin(this.runAnimCycle) * 0.05 + tiltAngle
+      this.bodyMesh.position.y = Math.abs(Math.sin(this.runAnimCycle * 2)) * 0.08
+    } else {
+      this.bodyMesh.rotation.x *= 0.8
+      this.bodyMesh.position.y *= 0.8
+    }
+
+    // Procedural Jump Squash & Stretch
+    if (!this.isGrounded) {
+      if (currentLinVel.y > 0.5) {
+        // Ascending stretch
+        this.bodyMesh.scale.set(0.92, 1.12, 0.92)
+      } else if (currentLinVel.y < -0.5) {
+        // Descending stretch
+        this.bodyMesh.scale.set(0.95, 1.05, 0.95)
+      }
+    } else {
+      // Smoothly return scale to 1 (zero allocation)
+      this.bodyMesh.scale.lerp(this.normalScale, 0.25)
+    }
 
     // Immunity energy shield bubble visualization
     const isImmune = now < this.immunityUntil
@@ -431,6 +491,9 @@ export class PlayerController implements GameplayEntity {
     this.stunStarsGroup.visible = isStunned
     if (isStunned) {
       this.stunStarsGroup.rotation.y += 0.08
+      this.bodyMesh.rotation.z = Math.sin(now * 0.01) * 0.1
+    } else {
+      this.bodyMesh.rotation.z = 0
     }
 
     // Overhead 3D nameplate & stamina bar update

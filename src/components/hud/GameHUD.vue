@@ -9,6 +9,7 @@ import {
   Crosshair,
   HelpCircle,
   Timer,
+  Settings,
 } from 'lucide-vue-next'
 import { useGameStore } from '../../stores/game-store'
 import { useRoomStore } from '../../stores/room-store'
@@ -16,6 +17,7 @@ import MobileTouchControls from './MobileTouchControls.vue'
 import RotateDevicePrompt from './RotateDevicePrompt.vue'
 import SkillActionBar from './SkillActionBar.vue'
 import GameControlsModal from '../guide/GameControlsModal.vue'
+import SettingsModal from '../settings/SettingsModal.vue'
 import DevDebugPanel from '../dev/DevDebugPanel.vue'
 import { checkIsMobileTouchDevice } from './mobile-device.utils'
 import type { VirtualMovementInput } from '../../game/input/input-manager'
@@ -61,6 +63,7 @@ const toggleMobileHUD = () => {
 }
 
 const showControlsModal = ref(false)
+const showSettingsModal = ref(false)
 
 const openControlsModal = () => {
   document.exitPointerLock?.()
@@ -69,6 +72,15 @@ const openControlsModal = () => {
 
 const closeControlsModal = () => {
   showControlsModal.value = false
+}
+
+const openSettingsModal = () => {
+  document.exitPointerLock?.()
+  showSettingsModal.value = true
+}
+
+const closeSettingsModal = () => {
+  showSettingsModal.value = false
 }
 
 defineEmits<{
@@ -108,8 +120,19 @@ defineEmits<{
           &bull; {{ roomStore.roomCode }}
         </span>
       </div>
-      <!-- Top Right: Desktop Controls & HUD HP Toggle (Desktop Only) -->
+      <!-- Top Right: Desktop Controls, Settings & HUD HP Toggle (Desktop Only) -->
       <div v-if="!isMobile" class="flex items-center gap-2 pointer-events-auto">
+        <!-- Settings Modal Button (Gear) -->
+        <button
+          data-testid="hud-settings-btn"
+          type="button"
+          class="flex items-center justify-center w-8 h-8 rounded-full bg-neutral-900/80 hover:bg-neutral-800 active:scale-95 border border-neutral-700/80 backdrop-blur-md shadow-md text-neutral-300 hover:text-white transition-all cursor-pointer"
+          title="Pengaturan Game (Kamera, Audio & Grafis)"
+          @click="openSettingsModal"
+        >
+          <Settings class="w-4 h-4" />
+        </button>
+
         <!-- Controls Guide Help Button (?) -->
         <button
           data-testid="hud-controls-help-btn"
@@ -141,7 +164,17 @@ defineEmits<{
         <!-- Developer Mode Toggle Button (Aligned side-by-side with Help and HUD HP) -->
         <DevDebugPanel />
       </div>
-      <div v-else class="pointer-events-auto">
+      <div v-else class="flex items-center gap-2 pointer-events-auto">
+        <!-- Settings Modal Button Mobile -->
+        <button
+          data-testid="hud-settings-btn-mobile"
+          type="button"
+          class="flex items-center justify-center w-8 h-8 rounded-full bg-neutral-900/80 hover:bg-neutral-800 active:scale-95 border border-neutral-700/80 backdrop-blur-md shadow-md text-neutral-300 hover:text-white transition-all cursor-pointer"
+          title="Pengaturan Game"
+          @click="openSettingsModal"
+        >
+          <Settings class="w-4 h-4" />
+        </button>
         <DevDebugPanel />
       </div>
     </div>
@@ -347,11 +380,15 @@ defineEmits<{
       @trigger-skill="$emit('trigger-skill', $event)"
     />
 
-    <!-- Controls Guide Modal (Teleported to body to escape HUD pointer-events-none) -->
+    <!-- Modals (Teleported to body to escape HUD pointer-events-none) -->
     <Teleport to="body">
       <GameControlsModal
         v-if="showControlsModal"
         @close="closeControlsModal"
+      />
+      <SettingsModal
+        v-if="showSettingsModal"
+        @close="closeSettingsModal"
       />
     </Teleport>
   </div>

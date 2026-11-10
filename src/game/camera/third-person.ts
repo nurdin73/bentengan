@@ -2,6 +2,7 @@ import * as THREE from 'three'
 import type RAPIER from '@dimforge/rapier3d-compat'
 import type { PhysicsWorld } from '../physics/physics-world'
 import { GAME_CONFIG } from '../core/constants'
+import { useSettingsStore } from '../../stores/settings-store'
 
 export class ThirdPersonCameraController {
   public readonly camera: THREE.PerspectiveCamera
@@ -36,9 +37,20 @@ export class ThirdPersonCameraController {
     const { sensitivity, minPitch, maxPitch, distance: maxDistance, minDistance, wallBuffer } =
       GAME_CONFIG.camera
 
-    // 1. Accumulate mouse rotations
-    this.yaw -= deltaX * sensitivity
-    this.pitch -= deltaY * sensitivity
+    // 1. Accumulate mouse rotations with user settings
+    let userSensitivity = 1.0
+    let invertY = false
+    try {
+      const settings = useSettingsStore()
+      userSensitivity = settings.mouseSensitivity
+      invertY = settings.invertY
+    } catch {
+      // In headless test environments where Pinia store is not active
+    }
+
+    const effectiveSens = sensitivity * userSensitivity
+    this.yaw -= deltaX * effectiveSens
+    this.pitch += (invertY ? deltaY : -deltaY) * effectiveSens
     this.pitch = Math.max(minPitch, Math.min(maxPitch, this.pitch))
 
     // 2. Compute camera target (player head / focal point)

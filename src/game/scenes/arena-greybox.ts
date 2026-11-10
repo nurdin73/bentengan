@@ -99,11 +99,17 @@ export class ArenaGreybox {
     gridHelper.position.y = 0.01
     this.group.add(gridHelper)
 
-    // Center dividing line
-    const centerLineGeo = new THREE.BoxGeometry(width, 0.05, 0.4)
-    const centerLineMat = new THREE.MeshBasicMaterial({ color: 0xd08770 })
+    // Center dividing line with distinct territory separation
+    const centerLineGeo = new THREE.BoxGeometry(width, 0.08, 0.5)
+    const centerLineMat = new THREE.MeshStandardMaterial({
+      color: 0xf59e0b,
+      emissive: 0xd97706,
+      emissiveIntensity: 0.35,
+      roughness: 0.3,
+    })
     const centerLine = new THREE.Mesh(centerLineGeo, centerLineMat)
-    centerLine.position.set(0, 0.02, 0)
+    centerLine.position.set(0, 0.04, 0)
+    centerLine.receiveShadow = true
     this.group.add(centerLine)
 
     // 3. Perimeter Boundary Walls
@@ -185,13 +191,34 @@ export class ArenaGreybox {
     material: THREE.MeshStandardMaterial,
     _name: string,
   ): void {
+    // 1. Lower stepped pedestal
+    const pedestalGeo = new THREE.CylinderGeometry(1.6, 1.8, 0.4, 16)
+    const pedestal = new THREE.Mesh(pedestalGeo, material)
+    pedestal.position.set(pos.x, 0.2, pos.z)
+    pedestal.receiveShadow = true
+    this.group.add(pedestal)
+
+    // 2. Main Fortress Pillar
     const pillarGeo = new THREE.CylinderGeometry(1.2, 1.4, 2.5, 16)
     const pillar = new THREE.Mesh(pillarGeo, material)
     pillar.position.set(pos.x, 1.25, pos.z)
     pillar.castShadow = true
     this.group.add(pillar)
 
-    const ringGeo = new THREE.RingGeometry(1.6, 2.2, 32)
+    // 3. Fortress Crown & Glowing Crest
+    const crownGeo = new THREE.OctahedronGeometry(0.45, 0)
+    const crownMat = new THREE.MeshStandardMaterial({
+      color: material.color,
+      emissive: material.color,
+      emissiveIntensity: 0.8,
+      roughness: 0.1,
+    })
+    const crown = new THREE.Mesh(crownGeo, crownMat)
+    crown.position.set(pos.x, 2.8, pos.z)
+    this.group.add(crown)
+
+    // 4. Territory Floor Ring Marker
+    const ringGeo = new THREE.RingGeometry(1.9, 2.5, 32)
     const ringMat = new THREE.MeshBasicMaterial({
       color: material.color,
       side: THREE.DoubleSide,
@@ -201,7 +228,7 @@ export class ArenaGreybox {
     ring.position.set(pos.x, 0.03, pos.z)
     this.group.add(ring)
 
-    // Base pillar solid physics collider
+    // Base pillar solid physics collider (Preserved exact coordinates)
     this.physics.createStaticBox({
       translation: { x: pos.x, y: 1.25, z: pos.z },
       halfExtents: { x: 1.2, y: 1.25, z: 1.2 },
@@ -213,10 +240,25 @@ export class ArenaGreybox {
     material: THREE.MeshStandardMaterial,
     _name: string,
   ): void {
+    // Wireframe jail boundary cube
     const jailGeo = new THREE.BoxGeometry(4, 2.5, 4)
     const jailMesh = new THREE.Mesh(jailGeo, material)
     jailMesh.position.set(pos.x, 1.25, pos.z)
     this.group.add(jailMesh)
+
+    // Illuminated Floor Perimeter Outline
+    const floorOutlineGeo = new THREE.RingGeometry(2.4, 2.6, 4)
+    const floorOutlineMat = new THREE.MeshBasicMaterial({
+      color: material.color,
+      side: THREE.DoubleSide,
+      transparent: true,
+      opacity: 0.6,
+    })
+    const floorOutline = new THREE.Mesh(floorOutlineGeo, floorOutlineMat)
+    floorOutline.rotation.x = -Math.PI / 2
+    floorOutline.rotation.z = Math.PI / 4 // Rotate to form square boundary
+    floorOutline.position.set(pos.x, 0.03, pos.z)
+    this.group.add(floorOutline)
   }
 
   public dispose(): void {

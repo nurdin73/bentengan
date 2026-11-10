@@ -11,6 +11,9 @@ import { GAME_CONFIG } from './constants'
 import { peerNetworkManager } from '../network/peer-network-manager'
 import { SkillManager } from '../skills/skill-manager'
 import { useDevStore, type TeleportTarget } from '../../stores/dev-store'
+import { useSettingsStore } from '../../stores/settings-store'
+import { soundManager } from '../audio/sound-manager'
+import { VFXManager } from '../vfx/vfx-manager'
 import type {
   SkillId,
   SkillsStateMap,
@@ -95,6 +98,7 @@ export class GameEngine {
   public readonly remotePlayers = new Map<string, RemotePlayerController>()
   public roomPlayers: RoomPlayer[] = []
   public skillManager!: SkillManager
+  public readonly vfx: VFXManager
 
   // Network & Multiplayer State
   public isHost = false
@@ -135,14 +139,25 @@ export class GameEngine {
     this.renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' })
     this.renderer.setSize(container.clientWidth, container.clientHeight)
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
-    this.renderer.shadowMap.enabled = true
+    
+    let shadowsEnabled = true
+    try {
+      const settings = useSettingsStore()
+      shadowsEnabled = settings.shadowsEnabled
+    } catch {
+      // In headless test environments
+    }
+    this.renderer.shadowMap.enabled = shadowsEnabled
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap
     container.appendChild(this.renderer.domElement)
 
     // 3. Lighting Setup
     this.setupLighting()
 
-    // 4. Input Manager
+    // 4. VFX Manager Setup
+    this.vfx = new VFXManager(this.scene)
+
+    // 5. Input Manager
     this.input = new InputManager()
     this.input.attach(this.renderer.domElement)
 
@@ -181,7 +196,8 @@ export class GameEngine {
     this.localPlayerId = options.localPlayerId ?? 'local-player'
     this.localPlayerUsername = options.localPlayerUsername ?? 'Anda'
 
-    // 1. Initialize Rapier Physics World
+    // 1. Initialize Audio and Rapier Physics World
+    soundManager.init()
     this.physics = await PhysicsWorld.create()
 
     // 2. Create Symmetrical Arena
@@ -483,6 +499,12 @@ export class GameEngine {
       }
     }
 
+    // Update VFX Particles & Sprint Dust
+    this.vfx.update(frameTime)
+    if (this.localPlayer && this.localPlayer.isSprinting && this.localPlayer.isGrounded) {
+      this.vfx.spawnSprintDust(this.localPlayer.mesh.position)
+    }
+
     // Render frame
     this.renderer.render(this.scene, this.camera)
 
@@ -656,8 +678,10 @@ export class GameEngine {
 
   public onGameEvent(event: GameEventMessage): void {
     if (event.event === 'capture') {
+      soundManager.playCapture()
       this.callbacks.onCapture(event.sourceId ?? '', event.targetId ?? '')
     } else if (event.event === 'rescue') {
+      soundManager.playRescue()
       if (
         this.localPlayer &&
         (event.sourceId === 'Anda' || event.sourceId === this.localPlayer.name)
@@ -820,6 +844,8 @@ export class GameEngine {
               if (entity instanceof BotController) {
                 entity.isRetreating = true
               }
+              this.vfx.spawnRescueSparkles(entity.getPosition())
+              soundManager.playRescue()
               this.callbacks.onRescue('Anda', entity.name)
               if (this.isHost && !this.isPractice) {
                 peerNetworkManager.broadcastGameEvent({
@@ -850,6 +876,8 @@ export class GameEngine {
             if (target instanceof BotController) {
               target.isRetreating = true
             }
+            this.vfx.spawnRescueSparkles(target.getPosition())
+            soundManager.playRescue()
             const rescuerName = rescuer.name
             const targetName = target === this.localPlayer ? 'Anda' : target.name
             this.callbacks.onRescue(rescuerName, targetName)
@@ -880,6 +908,8 @@ export class GameEngine {
               ? this.arena.zones.blueJailPosition
               : this.arena.zones.redJailPosition
           target.teleportTo(jailPos.x, jailPos.y, jailPos.z)
+          this.vfx.spawnCaptureRing(target.getPosition())
+          soundManager.playCapture()
 
           const hunterName = hunter === this.localPlayer ? 'Anda' : hunter.name
           const targetName = target === this.localPlayer ? 'Anda' : target.name
@@ -968,6 +998,21 @@ export class GameEngine {
         winner,
         reason,
       })
+    }
+
+    if (reason === 'base_capture' && this.arena) {
+      const basePos =
+        winner === 'blue'
+          ? this.arena.zones.redBasePosition
+          : this.arena.zones.blueBasePosition
+      this.vfx.triggerBaseBeacon(basePos, winner === 'blue' ? 0x3b82f6 : 0xef4444)
+      soundManager.playBaseTouch()
+    }
+
+    if (winner === this.playerTeam) {
+      soundManager.playVictory()
+    } else if (winner) {
+      soundManager.playDefeat()
     }
 
     const durationSeconds = Math.round((performance.now() - this.matchStartTime) / 1000)
@@ -1089,6 +1134,11 @@ export class GameEngine {
     if (this.physics) {
       this.physics.dispose()
     }
+
+    if (this.vfx) {
+      this.vfx.dispose()
+    }
+    soundManager.dispose()
 
     this.renderer.dispose()
     if (this.renderer.domElement.parentElement) {
