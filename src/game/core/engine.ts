@@ -58,6 +58,7 @@ export interface GameEngineStateCallback {
     rescueCooldownUntil: number
     rescueCooldownRemainingSeconds?: number
     immunitySource?: 'skill' | 'rescue' | null
+    smokeBlindIntensity?: number
   }) => void
   onSkillStateChange?: (skills: SkillsStateMap) => void
   onRosterUpdate: (roster: {
@@ -492,6 +493,8 @@ export class GameEngine {
       const remainingRescueMs = Math.max(0, this.localPlayer.rescueCooldownUntil - now)
       const rescueCooldownRemainingSeconds = Math.ceil(remainingRescueMs / 1000)
 
+      const smokeBlindIntensity = this.updateSmokeVisibility()
+
       // Emit player state to Pinia
       this.callbacks.onPlayerStateChange({
         stamina: this.localPlayer.stamina,
@@ -502,6 +505,7 @@ export class GameEngine {
         rescueCooldownUntil: this.localPlayer.rescueCooldownUntil,
         rescueCooldownRemainingSeconds,
         immunitySource: this.localPlayer.immunitySource,
+        smokeBlindIntensity,
       })
     }
 
@@ -756,13 +760,20 @@ export class GameEngine {
     } else if (event.event === 'smoke' && event.position) {
       const [sx, sy, sz] = event.position
       const duration = event.durationMs ?? GAME_CONFIG.skills.smoke.durationMs
+      const radius = event.radius ?? GAME_CONFIG.skills.smoke.radius
       // Replicate 3D visual smoke volume if event originated from a remote player/opponent
       if (event.sourceId !== this.localPlayerId) {
-        this.skillManager?.spawnSmokeVisual(sx, sy, sz, duration)
+        this.skillManager?.spawnSmokeVisual(
+          sx,
+          sy,
+          sz,
+          duration,
+          radius,
+          event.sourceTeamId ?? (this.localPlayer?.teamId === 'blue' ? 'red' : 'blue'),
+        )
       }
       // If host, confound enemy bots within smoke radius
       if (this.isHost) {
-        const radius = event.radius ?? GAME_CONFIG.skills.smoke.radius
         for (const bot of this.bots) {
           if (bot.status !== 'jailed') {
             const d = GameplayRules.distance3D({ x: sx, y: sy, z: sz }, bot.getPosition())
@@ -1164,8 +1175,111 @@ export class GameEngine {
         position: [payload.x, payload.y, payload.z],
         radius: payload.radius,
         durationMs: payload.durationMs,
+        sourceTeamId: payload.sourceTeamId,
       })
     }
+  }
+
+  private updateSmokeVisibility(): number {
+    if (!this.skillManager) return 0
+    const smokeZones = this.skillManager.getActiveSmokeZones()
+    if (smokeZones.length === 0) {
+      for (const remote of this.remotePlayers.values()) {
+        remote.setNameplateVisible(true)
+        remote.setVisualOpacity(1.0)
+      }
+      for (const bot of this.bots) {
+        bot.setNameplateVisible(true)
+        bot.setVisualOpacity(1.0)
+      }
+      return 0
+    }
+
+    const localTeam = this.localPlayer?.teamId ?? 'blue'
+    const localPos = this.localPlayer?.getPosition()
+
+    // 1. Calculate local player screen blind intensity when inside enemy smoke
+    let maxBlindIntensity = 0
+    if (localPos) {
+      for (const zone of smokeZones) {
+        if (zone.sourceTeamId !== localTeam) {
+          const dx = localPos.x - zone.x
+          const dy = (localPos.y - zone.y) * 0.5
+          const dz = localPos.z - zone.z
+          const dist = Math.sqrt(dx * dx + dy * dy + dz * dz)
+          if (dist <= zone.radius) {
+            const factor = Math.max(0, 1 - dist / zone.radius)
+            // Inner core reaches up to 0.88 intensity
+            const intensity = 0.35 + factor * 0.53
+            if (intensity > maxBlindIntensity) {
+              maxBlindIntensity = intensity
+            }
+          }
+        }
+      }
+    }
+
+    // 2. Update Remote Players stealth / nameplate visibility
+    for (const remote of this.remotePlayers.values()) {
+      const pos = remote.getPosition()
+      let isInAnySmoke = false
+      for (const zone of smokeZones) {
+        const dx = pos.x - zone.x
+        const dy = (pos.y - zone.y) * 0.5
+        const dz = pos.z - zone.z
+        if (dx * dx + dy * dy + dz * dz <= zone.radius * zone.radius) {
+          isInAnySmoke = true
+          break
+        }
+      }
+
+      if (isInAnySmoke) {
+        const isEnemy = remote.teamId !== localTeam
+        if (isEnemy) {
+          // Hide enemy nametag and dim avatar heavily
+          remote.setNameplateVisible(false)
+          remote.setVisualOpacity(0.18)
+        } else {
+          // Friendly in smoke: keep nametag visible, slightly translucent avatar
+          remote.setNameplateVisible(true)
+          remote.setVisualOpacity(0.65)
+        }
+      } else {
+        remote.setNameplateVisible(true)
+        remote.setVisualOpacity(1.0)
+      }
+    }
+
+    // 3. Update Bots stealth / nameplate visibility
+    for (const bot of this.bots) {
+      const pos = bot.getPosition()
+      let isInAnySmoke = false
+      for (const zone of smokeZones) {
+        const dx = pos.x - zone.x
+        const dy = (pos.y - zone.y) * 0.5
+        const dz = pos.z - zone.z
+        if (dx * dx + dy * dy + dz * dz <= zone.radius * zone.radius) {
+          isInAnySmoke = true
+          break
+        }
+      }
+
+      if (isInAnySmoke) {
+        const isEnemy = bot.teamId !== localTeam
+        if (isEnemy) {
+          bot.setNameplateVisible(false)
+          bot.setVisualOpacity(0.18)
+        } else {
+          bot.setNameplateVisible(true)
+          bot.setVisualOpacity(0.65)
+        }
+      } else {
+        bot.setNameplateVisible(true)
+        bot.setVisualOpacity(1.0)
+      }
+    }
+
+    return maxBlindIntensity
   }
 
   public triggerSkill(skillId: SkillId): SkillActivationResult {

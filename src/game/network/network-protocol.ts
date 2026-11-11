@@ -123,6 +123,7 @@ export const GameEventMessageSchema = z.object({
   position: z.tuple([z.number(), z.number(), z.number()]).optional(),
   radius: z.number().optional(),
   durationMs: z.number().optional(),
+  sourceTeamId: TeamIdSchema.optional(),
   timestamp: z.number(),
 })
 

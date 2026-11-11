@@ -99,6 +99,20 @@ defineEmits<{
     data-testid="game-hud"
     class="pointer-events-none absolute inset-0 flex flex-col justify-between p-3 sm:p-5"
   >
+    <!-- Smoke Screen Blind Vignette Overlay -->
+    <div
+      v-if="gameStore.smokeBlindIntensity > 0"
+      data-testid="hud-smoke-blind-overlay"
+      class="pointer-events-none fixed inset-0 z-20 transition-opacity duration-300 ease-out"
+      :style="{
+        opacity: Math.min(0.92, gameStore.smokeBlindIntensity),
+        background:
+          'radial-gradient(circle at center, rgba(241, 245, 249, 0.96) 0%, rgba(203, 213, 225, 0.88) 50%, rgba(100, 116, 139, 0.75) 100%)',
+        backdropFilter: `blur(${Math.round(gameStore.smokeBlindIntensity * 8)}px)`,
+        WebkitBackdropFilter: `blur(${Math.round(gameStore.smokeBlindIntensity * 8)}px)`,
+      }"
+    />
+
     <!-- Top Bar: Network Signal on Left -->
     <div class="flex items-center justify-between w-full z-30">
       <div

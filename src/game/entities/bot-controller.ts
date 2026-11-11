@@ -1210,6 +1210,12 @@ export class BotController implements GameplayEntity {
     }
   }
 
+  public setNameplateVisible(visible: boolean): void {
+    if (this.overheadSprite) {
+      this.overheadSprite.visible = visible
+    }
+  }
+
   public applySmokeConfound(durationMs: number): void {
     const now = performance.now()
     this.confoundedUntil = Math.max(this.confoundedUntil, now + durationMs)

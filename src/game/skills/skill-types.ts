@@ -36,3 +36,13 @@ export interface SmokeEventPayload {
   durationMs: number
   sourceTeamId: 'blue' | 'red'
 }
+
+export interface ActiveSmokeZone {
+  x: number
+  y: number
+  z: number
+  radius: number
+  durationMs: number
+  createdAt: number
+  sourceTeamId: 'blue' | 'red'
+}

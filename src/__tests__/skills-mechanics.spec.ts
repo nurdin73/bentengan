@@ -160,6 +160,29 @@ describe('Tactical Active Skills & Bot Status Simulation', () => {
       expect(scene.children.length).toBeGreaterThan(initialSceneChildrenCount)
       manager.dispose()
     })
+
+    it('tracks active smoke zones and detects positions inside smoke', () => {
+      const manager = new SkillManager(scene)
+
+      manager.spawnSmokeVisual(5, 0, 10, 3000, 7.0, 'blue')
+      const zones = manager.getActiveSmokeZones()
+
+      expect(zones.length).toBe(1)
+      expect(zones[0]?.x).toBe(5)
+      expect(zones[0]?.z).toBe(10)
+      expect(zones[0]?.radius).toBe(7.0)
+      expect(zones[0]?.sourceTeamId).toBe('blue')
+
+      const inside = manager.isPositionInSmoke({ x: 6, y: 0, z: 11 })
+      expect(inside).not.toBeNull()
+      expect(inside?.sourceTeamId).toBe('blue')
+
+      const outside = manager.isPositionInSmoke({ x: 25, y: 0, z: 30 })
+      expect(outside).toBeNull()
+
+      manager.dispose()
+      expect(manager.getActiveSmokeZones().length).toBe(0)
+    })
   })
 
   describe('SkillActionBar Vue Component Presentation', () => {

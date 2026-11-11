@@ -621,6 +621,10 @@ export class PlayerController implements GameplayEntity {
     }
   }
 
+  public setNameplateVisible(visible: boolean): void {
+    this.overheadSprite.visible = visible
+  }
+
   public applyDash(durationMs: number, speedMultiplier: number): void {
     const now = performance.now()
     this.dashUntil = now + durationMs

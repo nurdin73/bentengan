@@ -293,6 +293,22 @@ export class RemotePlayerController implements GameplayEntity {
     )
   }
 
+  public setVisualOpacity(opacity: number): void {
+    const isTransparent = opacity < 0.99
+    this.bodyMat.transparent = isTransparent
+    this.bodyMat.opacity = opacity
+    this.visorMat.transparent = isTransparent
+    this.visorMat.opacity = opacity
+    this.avatar.setOpacity(opacity)
+    if (this.nameplateSprite.material) {
+      this.nameplateSprite.material.opacity = opacity
+    }
+  }
+
+  public setNameplateVisible(visible: boolean): void {
+    this.nameplateSprite.visible = visible
+  }
+
   public dispose(scene?: THREE.Scene): void {
     if (this.mesh.parent) {
       this.mesh.parent.remove(this.mesh)

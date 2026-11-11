@@ -609,6 +609,24 @@ describe('Mobile Responsive Layout & Icon Integration', () => {
       await wrapper.vm.$nextTick()
       expect(wrapper.find('[data-testid="hud-immunity-alert"]').exists()).toBe(false)
     })
+
+    it('renders and hides smoke blind overlay based on gameStore.smokeBlindIntensity', async () => {
+      const gameStore = useGameStore()
+      gameStore.smokeBlindIntensity = 0
+      const wrapper = mount(GameHUD)
+
+      expect(wrapper.find('[data-testid="hud-smoke-blind-overlay"]').exists()).toBe(false)
+
+      gameStore.smokeBlindIntensity = 0.75
+      await wrapper.vm.$nextTick()
+
+      const overlay = wrapper.find('[data-testid="hud-smoke-blind-overlay"]')
+      expect(overlay.exists()).toBe(true)
+
+      gameStore.smokeBlindIntensity = 0
+      await wrapper.vm.$nextTick()
+      expect(wrapper.find('[data-testid="hud-smoke-blind-overlay"]').exists()).toBe(false)
+    })
   })
 
   describe('ResultsModal Mobile Landscape & Fullscreen Responsiveness', () => {
