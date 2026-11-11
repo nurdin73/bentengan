@@ -236,6 +236,48 @@ describe('Mobile Touch Controls & Virtual Input Integration', () => {
       })
     })
 
+    it('removes transition lag while dragging joystick and restores ease-out on release', async () => {
+      const wrapper = mount(MobileTouchControls, {
+        props: { forceShow: true },
+      })
+
+      const joystick = wrapper.find('[data-testid="hud-virtual-joystick"]')
+      const knob = wrapper.find('[data-testid="hud-joystick-knob"]')
+      const baseEl = joystick.element as HTMLElement
+
+      vi.spyOn(baseEl, 'getBoundingClientRect').mockReturnValue({
+        left: 50,
+        top: 500,
+        width: 100,
+        height: 100,
+        right: 150,
+        bottom: 600,
+        x: 50,
+        y: 500,
+        toJSON: () => ({}),
+      })
+
+      // Initially resting: has ease-out transition
+      expect(knob.classes()).toContain('transition-transform')
+      expect(knob.classes()).toContain('duration-100')
+      expect(knob.classes()).not.toContain('transition-none')
+
+      // Start dragging: transition must be disabled for instant 0ms response
+      await joystick.trigger('touchstart', {
+        changedTouches: [{ identifier: 1, clientX: 100, clientY: 520 }],
+      })
+      expect(knob.classes()).toContain('transition-none')
+      expect(knob.classes()).not.toContain('transition-transform')
+
+      // Release: snappy ease-out snap back is restored
+      await joystick.trigger('touchend', {
+        changedTouches: [{ identifier: 1, clientX: 100, clientY: 520 }],
+      })
+      expect(knob.classes()).toContain('transition-transform')
+      expect(knob.classes()).toContain('duration-100')
+      expect(knob.classes()).not.toContain('transition-none')
+    })
+
     it('dispatches virtual-sprint events on sprint button touch interaction', async () => {
       const wrapper = mount(MobileTouchControls, {
         props: { forceShow: true },

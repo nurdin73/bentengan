@@ -55,6 +55,8 @@ const baseRef = ref<HTMLDivElement | null>(null)
 const knobX = ref(0)
 const knobY = ref(0)
 const maxRadius = 45
+const JOYSTICK_DEADZONE = 0.2
+const isDraggingJoystick = ref(false)
 let joystickTouchId: number | null = null
 
 watch(
@@ -71,10 +73,10 @@ watch(
       const normX = knobX.value / maxRadius
       const normY = knobY.value / maxRadius
       emit('virtual-move', {
-        forward: normY < -0.25,
-        backward: normY > 0.25,
-        left: normX < -0.25,
-        right: normX > 0.25,
+        forward: normY < -JOYSTICK_DEADZONE,
+        backward: normY > JOYSTICK_DEADZONE,
+        left: normX < -JOYSTICK_DEADZONE,
+        right: normX > JOYSTICK_DEADZONE,
       })
     }
   },
@@ -87,6 +89,7 @@ const handleJoystickStart = (e: TouchEvent) => {
   if (!touch || !baseRef.value) return
 
   joystickTouchId = touch.identifier
+  isDraggingJoystick.value = true
   updateJoystickFromTouch(touch.clientX, touch.clientY)
 }
 
@@ -109,6 +112,7 @@ const handleJoystickEnd = (e: TouchEvent) => {
     const touch = e.changedTouches[i]
     if (touch && touch.identifier === joystickTouchId) {
       joystickTouchId = null
+      isDraggingJoystick.value = false
       knobX.value = 0
       knobY.value = 0
       emit('virtual-move', {
@@ -155,10 +159,10 @@ const updateJoystickFromTouch = (clientX: number, clientY: number) => {
   const normY = dy / maxRadius
 
   emit('virtual-move', {
-    forward: normY < -0.25,
-    backward: normY > 0.25,
-    left: normX < -0.25,
-    right: normX > 0.25,
+    forward: normY < -JOYSTICK_DEADZONE,
+    backward: normY > JOYSTICK_DEADZONE,
+    left: normX < -JOYSTICK_DEADZONE,
+    right: normX > JOYSTICK_DEADZONE,
   })
 }
 
@@ -222,6 +226,7 @@ onUnmounted(() => {
   window.removeEventListener('resize', updateDeviceDetection)
   window.removeEventListener('orientationchange', updateDeviceDetection)
   joystickTouchId = null
+  isDraggingJoystick.value = false
   lookTouchId = null
 })
 </script>
@@ -285,7 +290,8 @@ onUnmounted(() => {
         <div
           data-testid="hud-joystick-knob"
           :class="[
-            'absolute flex h-14 w-14 items-center justify-center rounded-full shadow-2xl transition-transform duration-75 select-none',
+            'absolute flex h-14 w-14 items-center justify-center rounded-full shadow-2xl select-none',
+            isDraggingJoystick ? 'transition-none' : 'transition-transform duration-100 ease-out',
             props.isStunned ? 'ring-2 ring-amber-400/80 opacity-80' : 'ring-1 ring-sky-400/40',
           ]"
           :style="{
