@@ -258,10 +258,6 @@ export class RemotePlayerController implements GameplayEntity {
       this.bodyMat.opacity = 0.45
       this.visorMat.opacity = 0.45
       this.avatar.setOpacity(0.45)
-    } else if (this.status === 'stunned') {
-      this.bodyMat.opacity = 0.75
-      this.visorMat.opacity = 0.75
-      this.avatar.setOpacity(0.75)
     } else {
       this.bodyMat.opacity = 1.0
       this.visorMat.opacity = 1.0

@@ -176,7 +176,7 @@ describe('Multiplayer Gameplay Real-Time Synchronization', () => {
     remoteRed.dispose(scene)
   })
 
-  it('displays orbiting stun stars when remote player is stunned', () => {
+  it('displays orbiting stun stars and keeps opacity solid (opaque) when remote player is stunned', () => {
     const remote = new RemotePlayerController(scene, physics, {
       id: 'remote-stun-test',
       name: 'Bob',
@@ -191,12 +191,35 @@ describe('Multiplayer Gameplay Real-Time Synchronization', () => {
     remote.updateInterpolation(0.05, 1000)
 
     expect(remote.stunStarsGroup.visible).toBe(true)
+    // Verify player avatar is NOT transparent when stunned
+    remote.avatar.rootGroup.traverse((obj) => {
+      if (obj instanceof THREE.Mesh && obj.material) {
+        const mat = Array.isArray(obj.material) ? obj.material[0] : obj.material
+        expect(mat.opacity).toBe(1.0)
+      }
+    })
 
     // Return to normal
     remote.setTargetTransform([0, 1, 20], 0, 'normal', false, 0, 0)
     remote.updateInterpolation(0.05, 6000)
 
     expect(remote.stunStarsGroup.visible).toBe(false)
+    remote.avatar.rootGroup.traverse((obj) => {
+      if (obj instanceof THREE.Mesh && obj.material) {
+        const mat = Array.isArray(obj.material) ? obj.material[0] : obj.material
+        expect(mat.opacity).toBe(1.0)
+      }
+    })
+
+    // Verify jailed state does apply transparency
+    remote.status = 'jailed'
+    remote.updateInterpolation(0.05, 7000)
+    remote.avatar.rootGroup.traverse((obj) => {
+      if (obj instanceof THREE.Mesh && obj.material) {
+        const mat = Array.isArray(obj.material) ? obj.material[0] : obj.material
+        expect(mat.opacity).toBe(0.45)
+      }
+    })
 
     remote.dispose(scene)
   })
