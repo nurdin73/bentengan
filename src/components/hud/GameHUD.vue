@@ -99,7 +99,7 @@ defineEmits<{
     data-testid="game-hud"
     class="pointer-events-none absolute inset-0 flex flex-col justify-between p-3 sm:p-5"
   >
-    <!-- Smoke Screen Blind Vignette Overlay -->
+    <!-- Smoke Screen Blind Vignette Overlay (Enemy Smoke) -->
     <div
       v-if="gameStore.smokeBlindIntensity > 0"
       data-testid="hud-smoke-blind-overlay"
@@ -110,6 +110,19 @@ defineEmits<{
           'radial-gradient(circle at center, rgba(241, 245, 249, 0.96) 0%, rgba(203, 213, 225, 0.88) 50%, rgba(100, 116, 139, 0.75) 100%)',
         backdropFilter: `blur(${Math.round(gameStore.smokeBlindIntensity * 8)}px)`,
         WebkitBackdropFilter: `blur(${Math.round(gameStore.smokeBlindIntensity * 8)}px)`,
+      }"
+    />
+
+    <!-- Smoke Screen Tactical Camera Vignette Overlay (Friendly/Caster Smoke) -->
+    <div
+      v-if="gameStore.smokeVignetteIntensity > 0"
+      data-testid="hud-smoke-vignette-overlay"
+      class="pointer-events-none fixed inset-0 z-20 transition-opacity duration-300 ease-out"
+      :style="{
+        opacity: Math.min(0.95, gameStore.smokeVignetteIntensity),
+        background:
+          'radial-gradient(ellipse 75% 70% at center, rgba(0, 0, 0, 0) 50%, rgba(15, 23, 42, 0.3) 68%, rgba(15, 23, 42, 0.72) 85%, rgba(2, 6, 23, 0.95) 100%)',
+        boxShadow: 'inset 0 0 100px 30px rgba(0, 0, 0, 0.7)',
       }"
     />
 

@@ -59,6 +59,7 @@ export interface GameEngineStateCallback {
     rescueCooldownRemainingSeconds?: number
     immunitySource?: 'skill' | 'rescue' | null
     smokeBlindIntensity?: number
+    smokeVignetteIntensity?: number
   }) => void
   onSkillStateChange?: (skills: SkillsStateMap) => void
   onRosterUpdate: (roster: {
@@ -400,7 +401,7 @@ export class GameEngine {
       for (const skillId of triggeredSkills) {
         this.skillManager.triggerSkill(skillId, this.localPlayer, now)
       }
-      this.skillManager.update(frameTime, now)
+      this.skillManager.update(frameTime, now, this.localPlayer.teamId)
       this.callbacks.onSkillStateChange?.(this.skillManager.getAllSkillsState(now))
     }
 
@@ -493,7 +494,8 @@ export class GameEngine {
       const remainingRescueMs = Math.max(0, this.localPlayer.rescueCooldownUntil - now)
       const rescueCooldownRemainingSeconds = Math.ceil(remainingRescueMs / 1000)
 
-      const smokeBlindIntensity = this.updateSmokeVisibility()
+      const { blindIntensity: smokeBlindIntensity, vignetteIntensity: smokeVignetteIntensity } =
+        this.updateSmokeVisibility()
 
       // Emit player state to Pinia
       this.callbacks.onPlayerStateChange({
@@ -506,6 +508,7 @@ export class GameEngine {
         rescueCooldownRemainingSeconds,
         immunitySource: this.localPlayer.immunitySource,
         smokeBlindIntensity,
+        smokeVignetteIntensity,
       })
     }
 
@@ -1180,8 +1183,8 @@ export class GameEngine {
     }
   }
 
-  private updateSmokeVisibility(): number {
-    if (!this.skillManager) return 0
+  private updateSmokeVisibility(): { blindIntensity: number; vignetteIntensity: number } {
+    if (!this.skillManager) return { blindIntensity: 0, vignetteIntensity: 0 }
     const smokeZones = this.skillManager.getActiveSmokeZones()
     if (smokeZones.length === 0) {
       for (const remote of this.remotePlayers.values()) {
@@ -1192,27 +1195,34 @@ export class GameEngine {
         bot.setNameplateVisible(true)
         bot.setVisualOpacity(1.0)
       }
-      return 0
+      return { blindIntensity: 0, vignetteIntensity: 0 }
     }
 
     const localTeam = this.localPlayer?.teamId ?? 'blue'
     const localPos = this.localPlayer?.getPosition()
 
-    // 1. Calculate local player screen blind intensity when inside enemy smoke
+    // 1. Calculate local player screen blind (enemy smoke) and tactical vignette (friendly/self smoke)
     let maxBlindIntensity = 0
+    let maxVignetteIntensity = 0
     if (localPos) {
       for (const zone of smokeZones) {
-        if (zone.sourceTeamId !== localTeam) {
-          const dx = localPos.x - zone.x
-          const dy = (localPos.y - zone.y) * 0.5
-          const dz = localPos.z - zone.z
-          const dist = Math.sqrt(dx * dx + dy * dy + dz * dz)
-          if (dist <= zone.radius) {
-            const factor = Math.max(0, 1 - dist / zone.radius)
-            // Inner core reaches up to 0.88 intensity
+        const dx = localPos.x - zone.x
+        const dy = (localPos.y - zone.y) * 0.5
+        const dz = localPos.z - zone.z
+        const dist = Math.sqrt(dx * dx + dy * dy + dz * dz)
+        if (dist <= zone.radius) {
+          const factor = Math.max(0, 1 - dist / zone.radius)
+          if (zone.sourceTeamId !== localTeam) {
+            // Enemy smoke: Inner core reaches up to 0.88 intensity
             const intensity = 0.35 + factor * 0.53
             if (intensity > maxBlindIntensity) {
               maxBlindIntensity = intensity
+            }
+          } else {
+            // Friendly / Self smoke: Tactical camera vignette with clear center
+            const vignette = 0.35 + factor * 0.45
+            if (vignette > maxVignetteIntensity) {
+              maxVignetteIntensity = vignette
             }
           }
         }
@@ -1279,7 +1289,10 @@ export class GameEngine {
       }
     }
 
-    return maxBlindIntensity
+    return {
+      blindIntensity: maxBlindIntensity,
+      vignetteIntensity: maxVignetteIntensity,
+    }
   }
 
   public triggerSkill(skillId: SkillId): SkillActivationResult {

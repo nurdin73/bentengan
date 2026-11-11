@@ -183,6 +183,26 @@ describe('Tactical Active Skills & Bot Status Simulation', () => {
       manager.dispose()
       expect(manager.getActiveSmokeZones().length).toBe(0)
     })
+
+    it('renders friendly smoke 3D meshes as translucent and enemy smoke as dense', () => {
+      const manager = new SkillManager(scene)
+      manager.spawnSmokeVisual(0, 0, 0, 3000, 7.0, 'blue')
+
+      const now = performance.now()
+      // Update for friendly viewer ('blue')
+      manager.update(0.016, now + 100, 'blue')
+      const smokeGroup = scene.children.find((c) => c instanceof THREE.Group) as THREE.Group
+      expect(smokeGroup).toBeDefined()
+      const firstMesh = smokeGroup.children[0] as THREE.Mesh
+      const firstMat = firstMesh.material as THREE.MeshBasicMaterial
+      expect(firstMat.opacity).toBeCloseTo(0.2, 1)
+
+      // Update for enemy viewer ('red')
+      manager.update(0.016, now + 100, 'red')
+      expect(firstMat.opacity).toBeCloseTo(0.94, 1)
+
+      manager.dispose()
+    })
   })
 
   describe('SkillActionBar Vue Component Presentation', () => {

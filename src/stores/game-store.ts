@@ -19,6 +19,7 @@ export const useGameStore = defineStore('game', {
     isPaused: false,
     gameTimeSeconds: 0,
     smokeBlindIntensity: 0,
+    smokeVignetteIntensity: 0,
 
     // Milestone 2 Core Gameplay State
     canRescueNearby: false,
@@ -97,6 +98,7 @@ export const useGameStore = defineStore('game', {
       rescueCooldownRemainingSeconds?: number
       immunitySource?: 'skill' | 'rescue' | null
       smokeBlindIntensity?: number
+      smokeVignetteIntensity?: number
     }) {
       this.stamina = payload.stamina
       this.isSprinting = payload.isSprinting
@@ -114,6 +116,9 @@ export const useGameStore = defineStore('game', {
       }
       if (payload.smokeBlindIntensity !== undefined) {
         this.smokeBlindIntensity = payload.smokeBlindIntensity
+      }
+      if (payload.smokeVignetteIntensity !== undefined) {
+        this.smokeVignetteIntensity = payload.smokeVignetteIntensity
       }
     },
 
@@ -175,6 +180,7 @@ export const useGameStore = defineStore('game', {
       this.rescueCooldownUntil = 0
       this.rescueCooldownRemainingSeconds = 0
       this.smokeBlindIntensity = 0
+      this.smokeVignetteIntensity = 0
       this.isInEnemyTerritory = false
       this.blueJailedCount = 0
       this.redJailedCount = 0

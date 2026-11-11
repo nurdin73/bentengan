@@ -261,7 +261,7 @@ export class SkillManager {
     return null
   }
 
-  public update(dt: number, now: number = performance.now()): void {
+  public update(dt: number, now: number = performance.now(), viewerTeam?: 'blue' | 'red'): void {
     // 1. Update active smoke cloud visuals
     for (let i = this.activeSmokeEffects.length - 1; i >= 0; i--) {
       const effect = this.activeSmokeEffects[i]!
@@ -278,11 +278,15 @@ export class SkillManager {
         const scale = 1.0 + lifeRatio * 1.5
         effect.meshGroup.scale.set(scale, 1.0 + lifeRatio * 0.7, scale)
 
-        // Maintain dense opacity during early-to-mid duration (first 60%), then smoothly fade out
-        let opacity = 0.94
+        // For friendly/self smoke, keep 3D meshes translucent (0.20) so players can see the arena ahead
+        // For enemy smoke, maintain dense opaque concealment (0.94)
+        const isFriendly = viewerTeam !== undefined && effect.sourceTeamId === viewerTeam
+        const baseOpacity = isFriendly ? 0.2 : 0.94
+
+        let opacity = baseOpacity
         if (lifeRatio >= 0.6) {
           const fadePhase = (lifeRatio - 0.6) / 0.4
-          opacity = Math.max(0, 0.94 * (1.0 - fadePhase))
+          opacity = Math.max(0, baseOpacity * (1.0 - fadePhase))
         }
         for (const mat of effect.materials) {
           mat.opacity = opacity

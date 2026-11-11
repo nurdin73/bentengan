@@ -627,6 +627,26 @@ describe('Mobile Responsive Layout & Icon Integration', () => {
       await wrapper.vm.$nextTick()
       expect(wrapper.find('[data-testid="hud-smoke-blind-overlay"]').exists()).toBe(false)
     })
+
+    it('renders and hides smoke tactical vignette overlay based on gameStore.smokeVignetteIntensity', async () => {
+      const gameStore = useGameStore()
+      gameStore.smokeVignetteIntensity = 0
+      const wrapper = mount(GameHUD)
+
+      expect(wrapper.find('[data-testid="hud-smoke-vignette-overlay"]').exists()).toBe(false)
+
+      gameStore.smokeVignetteIntensity = 0.65
+      await wrapper.vm.$nextTick()
+
+      const vignette = wrapper.find('[data-testid="hud-smoke-vignette-overlay"]')
+      expect(vignette.exists()).toBe(true)
+      // Verify blind overlay is not triggered when only vignette is active
+      expect(wrapper.find('[data-testid="hud-smoke-blind-overlay"]').exists()).toBe(false)
+
+      gameStore.smokeVignetteIntensity = 0
+      await wrapper.vm.$nextTick()
+      expect(wrapper.find('[data-testid="hud-smoke-vignette-overlay"]').exists()).toBe(false)
+    })
   })
 
   describe('ResultsModal Mobile Landscape & Fullscreen Responsiveness', () => {
