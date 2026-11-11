@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { Zap, Cloud, Flame } from 'lucide-vue-next'
 import { useGameStore } from '../../stores/game-store'
 import type { SkillId } from '../../game/skills/skill-types'
 
@@ -50,22 +49,32 @@ const getStrokeDashoffset = (progress: number): number => {
       data-testid="skill-btn-dash"
       :disabled="!dashSkill.ready"
       :class="[
-        'relative group flex flex-col items-center justify-center rounded-2xl transition-all cursor-pointer shadow-lg outline-none border border-sky-400/70',
+        'relative group flex flex-col items-center justify-center rounded-2xl transition-all cursor-pointer shadow-lg outline-none border border-sky-400/70 overflow-hidden',
         props.isMobile ? 'w-13 h-13' : 'w-15 h-15',
         dashSkill.isActive
           ? 'bg-cyan-500/50 border-cyan-300 ring-4 ring-cyan-300/80 scale-105 animate-pulse'
           : dashSkill.ready
-            ? 'bg-gradient-to-b from-sky-950/90 via-neutral-900 to-neutral-950 hover:border-sky-300 border-b-[4px] border-b-sky-700 active:border-b-[2px] active:translate-y-[2px] shadow-sky-950/40 text-sky-200'
+            ? 'bg-neutral-950 hover:border-sky-300 border-b-[4px] border-b-sky-700 active:border-b-[2px] active:translate-y-[2px] shadow-sky-950/40 text-sky-200'
             : 'bg-neutral-900/90 border-white/10 border-b-[3px] border-b-neutral-950 cursor-not-allowed opacity-80 text-neutral-400',
       ]"
       title="Kilat (Q) - Dash Cepat"
       @click="handleSkillClick('dash')"
     >
+      <!-- Full-bleed Skill Icon Image -->
+      <img
+        :src="'/assets/ui/skills/skill-dash.png'"
+        alt="Kilat"
+        :class="[
+          'absolute inset-0 h-full w-full object-cover p-1.5 select-none pointer-events-none transition-all duration-150 group-hover:scale-105',
+          dashSkill.ready ? 'opacity-100 drop-shadow-sm' : 'opacity-25 grayscale',
+        ]"
+      />
+
       <!-- Cooldown Radial SVG Overlay -->
       <svg
         v-if="!dashSkill.ready"
         data-testid="skill-dash-cooldown-ring"
-        class="absolute inset-0 w-full h-full -rotate-90 pointer-events-none p-1"
+        class="absolute inset-0 w-full h-full -rotate-90 pointer-events-none p-1 z-10"
         viewBox="0 0 44 44"
       >
         <circle cx="22" cy="22" r="19" class="stroke-black/60 fill-transparent stroke-[4px]" />
@@ -80,36 +89,20 @@ const getStrokeDashoffset = (progress: number): number => {
         />
       </svg>
 
-      <!-- Center Icon & Cooldown Count -->
-      <div class="relative z-10 flex flex-col items-center justify-center">
-        <template v-if="dashSkill.ready">
-          <Zap
-            :class="[
-              'text-sky-300 drop-shadow-xs transition-transform group-hover:scale-110',
-              props.isMobile ? 'w-5 h-5' : 'w-6 h-6',
-            ]"
-          />
-          <span
-            class="font-heading font-black text-[9px] text-sky-200 uppercase tracking-wider leading-none mt-0.5"
-          >
-            {{ dashSkill.name }}
-          </span>
-        </template>
-        <template v-else>
-          <span
-            data-testid="skill-dash-cooldown-text"
-            class="font-heading font-black text-sky-300 text-sm leading-none drop-shadow-md"
-          >
-            {{ dashSkill.cooldownRemainingSec }}s
-          </span>
-        </template>
-      </div>
+      <!-- Center Cooldown Count -->
+      <span
+        v-if="!dashSkill.ready"
+        data-testid="skill-dash-cooldown-text"
+        class="relative z-20 font-heading font-black text-sky-300 text-sm leading-none drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)]"
+      >
+        {{ dashSkill.cooldownRemainingSec }}s
+      </span>
 
       <!-- Hotkey Badge (Desktop) -->
       <span
         v-if="!props.isMobile"
         data-testid="skill-dash-hotkey"
-        class="absolute -top-2 -right-2 px-1.5 py-0.5 rounded-md bg-neutral-900 text-sky-300 border border-sky-500/50 font-mono font-bold text-[10px] shadow-sm"
+        class="absolute -top-2 -right-2 px-1.5 py-0.5 rounded-md bg-neutral-900 text-sky-300 border border-sky-500/50 font-mono font-bold text-[10px] shadow-sm z-30"
       >
         Q
       </span>
@@ -121,22 +114,32 @@ const getStrokeDashoffset = (progress: number): number => {
       data-testid="skill-btn-smoke"
       :disabled="!smokeSkill.ready"
       :class="[
-        'relative group flex flex-col items-center justify-center rounded-2xl transition-all cursor-pointer shadow-lg outline-none border border-sky-400/70',
+        'relative group flex flex-col items-center justify-center rounded-2xl transition-all cursor-pointer shadow-lg outline-none border border-sky-400/70 overflow-hidden',
         props.isMobile ? 'w-13 h-13' : 'w-15 h-15',
         smokeSkill.isActive
           ? 'bg-cyan-500/50 border-cyan-300 ring-4 ring-cyan-300/80 scale-105 animate-pulse'
           : smokeSkill.ready
-            ? 'bg-gradient-to-b from-sky-950/90 via-neutral-900 to-neutral-950 hover:border-sky-300 border-b-[4px] border-b-sky-700 active:border-b-[2px] active:translate-y-[2px] shadow-sky-950/40 text-sky-200'
+            ? 'bg-neutral-950 hover:border-sky-300 border-b-[4px] border-b-sky-700 active:border-b-[2px] active:translate-y-[2px] shadow-sky-950/40 text-sky-200'
             : 'bg-neutral-900/90 border-white/10 border-b-[3px] border-b-neutral-950 cursor-not-allowed opacity-80 text-neutral-400',
       ]"
       title="Asap (F) - Pengabur Pandangan Lawan"
       @click="handleSkillClick('smoke')"
     >
+      <!-- Full-bleed Skill Icon Image -->
+      <img
+        :src="'/assets/ui/skills/skill-smoke.png'"
+        alt="Asap"
+        :class="[
+          'absolute inset-0 h-full w-full object-cover p-1.5 select-none pointer-events-none transition-all duration-150 group-hover:scale-105',
+          smokeSkill.ready ? 'opacity-100 drop-shadow-sm' : 'opacity-25 grayscale',
+        ]"
+      />
+
       <!-- Cooldown Radial SVG Overlay -->
       <svg
         v-if="!smokeSkill.ready"
         data-testid="skill-smoke-cooldown-ring"
-        class="absolute inset-0 w-full h-full -rotate-90 pointer-events-none p-1"
+        class="absolute inset-0 w-full h-full -rotate-90 pointer-events-none p-1 z-10"
         viewBox="0 0 44 44"
       >
         <circle cx="22" cy="22" r="19" class="stroke-black/60 fill-transparent stroke-[4px]" />
@@ -151,36 +154,20 @@ const getStrokeDashoffset = (progress: number): number => {
         />
       </svg>
 
-      <!-- Center Icon & Cooldown Count -->
-      <div class="relative z-10 flex flex-col items-center justify-center">
-        <template v-if="smokeSkill.ready">
-          <Cloud
-            :class="[
-              'text-sky-300 drop-shadow-xs transition-transform group-hover:scale-110',
-              props.isMobile ? 'w-5 h-5' : 'w-6 h-6',
-            ]"
-          />
-          <span
-            class="font-heading font-black text-[9px] text-sky-200 uppercase tracking-wider leading-none mt-0.5"
-          >
-            {{ smokeSkill.name }}
-          </span>
-        </template>
-        <template v-else>
-          <span
-            data-testid="skill-smoke-cooldown-text"
-            class="font-heading font-black text-sky-300 text-sm leading-none drop-shadow-md"
-          >
-            {{ smokeSkill.cooldownRemainingSec }}s
-          </span>
-        </template>
-      </div>
+      <!-- Center Cooldown Count -->
+      <span
+        v-if="!smokeSkill.ready"
+        data-testid="skill-smoke-cooldown-text"
+        class="relative z-20 font-heading font-black text-sky-300 text-sm leading-none drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)]"
+      >
+        {{ smokeSkill.cooldownRemainingSec }}s
+      </span>
 
       <!-- Hotkey Badge (Desktop) -->
       <span
         v-if="!props.isMobile"
         data-testid="skill-smoke-hotkey"
-        class="absolute -top-2 -right-2 px-1.5 py-0.5 rounded-md bg-neutral-900 text-sky-300 border border-sky-500/50 font-mono font-bold text-[10px] shadow-sm"
+        class="absolute -top-2 -right-2 px-1.5 py-0.5 rounded-md bg-neutral-900 text-sky-300 border border-sky-500/50 font-mono font-bold text-[10px] shadow-sm z-30"
       >
         F
       </span>
@@ -192,22 +179,32 @@ const getStrokeDashoffset = (progress: number): number => {
       data-testid="skill-btn-adrenaline"
       :disabled="!adrenalineSkill.ready"
       :class="[
-        'relative group flex flex-col items-center justify-center rounded-2xl transition-all cursor-pointer shadow-lg outline-none border border-sky-400/70',
+        'relative group flex flex-col items-center justify-center rounded-2xl transition-all cursor-pointer shadow-lg outline-none border border-sky-400/70 overflow-hidden',
         props.isMobile ? 'w-13 h-13' : 'w-15 h-15',
         adrenalineSkill.isActive
           ? 'bg-cyan-500/50 border-cyan-300 ring-4 ring-cyan-300/80 scale-105 animate-pulse'
           : adrenalineSkill.ready
-            ? 'bg-gradient-to-b from-sky-950/90 via-neutral-900 to-neutral-950 hover:border-sky-300 border-b-[4px] border-b-sky-700 active:border-b-[2px] active:translate-y-[2px] shadow-sky-950/40 text-sky-200'
+            ? 'bg-neutral-950 hover:border-sky-300 border-b-[4px] border-b-sky-700 active:border-b-[2px] active:translate-y-[2px] shadow-sky-950/40 text-sky-200'
             : 'bg-neutral-900/90 border-white/10 border-b-[3px] border-b-neutral-950 cursor-not-allowed opacity-80 text-neutral-400',
       ]"
       title="Adrenalin (C) - Stamina Penuh & Mini-Immunity"
       @click="handleSkillClick('adrenaline')"
     >
+      <!-- Full-bleed Skill Icon Image -->
+      <img
+        :src="'/assets/ui/skills/skill-adrenaline.png'"
+        alt="Adrenalin"
+        :class="[
+          'absolute inset-0 h-full w-full object-cover p-1.5 select-none pointer-events-none transition-all duration-150 group-hover:scale-105',
+          adrenalineSkill.ready ? 'opacity-100 drop-shadow-sm' : 'opacity-25 grayscale',
+        ]"
+      />
+
       <!-- Cooldown Radial SVG Overlay -->
       <svg
         v-if="!adrenalineSkill.ready"
         data-testid="skill-adrenaline-cooldown-ring"
-        class="absolute inset-0 w-full h-full -rotate-90 pointer-events-none p-1"
+        class="absolute inset-0 w-full h-full -rotate-90 pointer-events-none p-1 z-10"
         viewBox="0 0 44 44"
       >
         <circle cx="22" cy="22" r="19" class="stroke-black/60 fill-transparent stroke-[4px]" />
@@ -222,36 +219,20 @@ const getStrokeDashoffset = (progress: number): number => {
         />
       </svg>
 
-      <!-- Center Icon & Cooldown Count -->
-      <div class="relative z-10 flex flex-col items-center justify-center">
-        <template v-if="adrenalineSkill.ready">
-          <Flame
-            :class="[
-              'text-sky-300 drop-shadow-xs transition-transform group-hover:scale-110',
-              props.isMobile ? 'w-5 h-5' : 'w-6 h-6',
-            ]"
-          />
-          <span
-            class="font-heading font-black text-[9px] text-sky-200 uppercase tracking-wider leading-none mt-0.5"
-          >
-            {{ adrenalineSkill.name }}
-          </span>
-        </template>
-        <template v-else>
-          <span
-            data-testid="skill-adrenaline-cooldown-text"
-            class="font-heading font-black text-sky-300 text-sm leading-none drop-shadow-md"
-          >
-            {{ adrenalineSkill.cooldownRemainingSec }}s
-          </span>
-        </template>
-      </div>
+      <!-- Center Cooldown Count -->
+      <span
+        v-if="!adrenalineSkill.ready"
+        data-testid="skill-adrenaline-cooldown-text"
+        class="relative z-20 font-heading font-black text-sky-300 text-sm leading-none drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)]"
+      >
+        {{ adrenalineSkill.cooldownRemainingSec }}s
+      </span>
 
       <!-- Hotkey Badge (Desktop) -->
       <span
         v-if="!props.isMobile"
         data-testid="skill-adrenaline-hotkey"
-        class="absolute -top-2 -right-2 px-1.5 py-0.5 rounded-md bg-neutral-900 text-sky-300 border border-sky-500/50 font-mono font-bold text-[10px] shadow-sm"
+        class="absolute -top-2 -right-2 px-1.5 py-0.5 rounded-md bg-neutral-900 text-sky-300 border border-sky-500/50 font-mono font-bold text-[10px] shadow-sm z-30"
       >
         C
       </span>

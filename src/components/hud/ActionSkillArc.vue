@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { getActivePinia } from 'pinia'
-import { Zap, Cloud, Flame, ChevronsUp } from 'lucide-vue-next'
+import { ChevronsUp } from 'lucide-vue-next'
 import { useGameStore } from '../../stores/game-store'
 import type { SkillId, SkillsStateMap, SkillState } from '../../game/skills/skill-types'
 
@@ -123,23 +123,33 @@ const handleJumpClick = () => {
         type="button"
         :disabled="!dashSkill.ready"
         :class="[
-          'relative flex flex-col items-center justify-center rounded-full transition-all duration-75 select-none outline-none border shadow-xl',
+          'relative flex flex-col items-center justify-center rounded-full transition-all duration-75 select-none outline-none border shadow-xl overflow-hidden',
           props.isMobile ? 'h-[60px] w-[60px]' : 'h-16 w-16',
           dashSkill.isActive
             ? 'border-cyan-300 bg-cyan-500/50 text-cyan-100 ring-4 ring-cyan-300/80 scale-105 animate-pulse'
             : dashSkill.ready
-              ? 'border-sky-400/80 bg-gradient-to-b from-sky-950/90 via-neutral-950/95 to-neutral-950 text-sky-200 hover:text-white hover:border-sky-300 active:scale-90 shadow-sky-950/50 cursor-pointer'
+              ? 'border-sky-400/80 bg-neutral-950 text-sky-200 hover:border-sky-300 active:scale-90 shadow-sky-950/50 cursor-pointer'
               : 'border-white/10 bg-neutral-900/85 text-neutral-400 cursor-not-allowed opacity-80',
         ]"
         title="Kilat (Q) - Dash Cepat"
         @touchstart.prevent="handleSkillTouchStart($event, 'dash')"
         @click="handleSkillTrigger('dash')"
       >
+        <!-- Full-bleed Skill Icon Image -->
+        <img
+          :src="'/assets/ui/skills/skill-dash.png'"
+          alt="Kilat"
+          :class="[
+            'absolute inset-0 h-full w-full object-cover rounded-full p-1 select-none pointer-events-none transition-all duration-150',
+            dashSkill.ready ? 'opacity-100 drop-shadow-md' : 'opacity-25 grayscale',
+          ]"
+        />
+
         <!-- Cooldown Radial SVG -->
         <svg
           v-if="!dashSkill.ready"
           data-testid="hud-skill-dash-cooldown-ring"
-          class="absolute inset-0 w-full h-full -rotate-90 pointer-events-none p-0.5"
+          class="absolute inset-0 w-full h-full -rotate-90 pointer-events-none p-0.5 z-10"
           viewBox="0 0 50 50"
         >
           <circle cx="25" cy="25" r="21.5" class="stroke-black/60 fill-transparent stroke-[4px]" />
@@ -154,19 +164,13 @@ const handleJumpClick = () => {
           />
         </svg>
 
-        <template v-if="dashSkill.ready">
-          <Zap class="h-6 w-6 stroke-[2.2] text-sky-300 drop-shadow-sm" />
-          <span
-            class="font-heading text-[8px] font-black tracking-wider uppercase text-sky-200 mt-0.5 leading-none"
-          >
-            {{ dashSkill.name }}
-          </span>
-        </template>
-        <template v-else>
-          <span class="font-heading text-xs font-black text-sky-300 leading-none drop-shadow-md">
-            {{ dashSkill.cooldownRemainingSec }}s
-          </span>
-        </template>
+        <!-- Cooldown Numeric Text Overlay -->
+        <span
+          v-if="!dashSkill.ready"
+          class="relative z-20 font-heading text-sm font-black text-sky-300 leading-none drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)]"
+        >
+          {{ dashSkill.cooldownRemainingSec }}s
+        </span>
       </button>
     </div>
 
@@ -180,22 +184,32 @@ const handleJumpClick = () => {
         type="button"
         :disabled="!smokeSkill.ready"
         :class="[
-          'relative flex flex-col items-center justify-center rounded-full transition-all duration-75 select-none outline-none border shadow-xl',
+          'relative flex flex-col items-center justify-center rounded-full transition-all duration-75 select-none outline-none border shadow-xl overflow-hidden',
           props.isMobile ? 'h-[60px] w-[60px]' : 'h-16 w-16',
           smokeSkill.isActive
             ? 'border-cyan-300 bg-cyan-500/50 text-cyan-100 ring-4 ring-cyan-300/80 scale-105 animate-pulse'
             : smokeSkill.ready
-              ? 'border-sky-400/80 bg-gradient-to-b from-sky-950/90 via-neutral-950/95 to-neutral-950 text-sky-200 hover:text-white hover:border-sky-300 active:scale-90 shadow-sky-950/50 cursor-pointer'
+              ? 'border-sky-400/80 bg-neutral-950 text-sky-200 hover:border-sky-300 active:scale-90 shadow-sky-950/50 cursor-pointer'
               : 'border-white/10 bg-neutral-900/85 text-neutral-400 cursor-not-allowed opacity-80',
         ]"
         title="Asap (F) - Tabir Asap Pengabur"
         @touchstart.prevent="handleSkillTouchStart($event, 'smoke')"
         @click="handleSkillTrigger('smoke')"
       >
+        <!-- Full-bleed Skill Icon Image -->
+        <img
+          :src="'/assets/ui/skills/skill-smoke.png'"
+          alt="Asap"
+          :class="[
+            'absolute inset-0 h-full w-full object-cover rounded-full p-1 select-none pointer-events-none transition-all duration-150',
+            smokeSkill.ready ? 'opacity-100 drop-shadow-md' : 'opacity-25 grayscale',
+          ]"
+        />
+
         <svg
           v-if="!smokeSkill.ready"
           data-testid="hud-skill-smoke-cooldown-ring"
-          class="absolute inset-0 w-full h-full -rotate-90 pointer-events-none p-0.5"
+          class="absolute inset-0 w-full h-full -rotate-90 pointer-events-none p-0.5 z-10"
           viewBox="0 0 50 50"
         >
           <circle cx="25" cy="25" r="21.5" class="stroke-black/60 fill-transparent stroke-[4px]" />
@@ -210,19 +224,12 @@ const handleJumpClick = () => {
           />
         </svg>
 
-        <template v-if="smokeSkill.ready">
-          <Cloud class="h-6 w-6 stroke-[2.2] text-sky-300 drop-shadow-sm" />
-          <span
-            class="font-heading text-[8px] font-black tracking-wider uppercase text-sky-200 mt-0.5 leading-none"
-          >
-            {{ smokeSkill.name }}
-          </span>
-        </template>
-        <template v-else>
-          <span class="font-heading text-xs font-black text-sky-300 leading-none drop-shadow-md">
-            {{ smokeSkill.cooldownRemainingSec }}s
-          </span>
-        </template>
+        <span
+          v-if="!smokeSkill.ready"
+          class="relative z-20 font-heading text-sm font-black text-sky-300 leading-none drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)]"
+        >
+          {{ smokeSkill.cooldownRemainingSec }}s
+        </span>
       </button>
     </div>
 
@@ -236,22 +243,32 @@ const handleJumpClick = () => {
         type="button"
         :disabled="!adrenalineSkill.ready"
         :class="[
-          'relative flex flex-col items-center justify-center rounded-full transition-all duration-75 select-none outline-none border shadow-xl',
+          'relative flex flex-col items-center justify-center rounded-full transition-all duration-75 select-none outline-none border shadow-xl overflow-hidden',
           props.isMobile ? 'h-[60px] w-[60px]' : 'h-16 w-16',
           adrenalineSkill.isActive
             ? 'border-cyan-300 bg-cyan-500/50 text-cyan-100 ring-4 ring-cyan-300/80 scale-105 animate-pulse'
             : adrenalineSkill.ready
-              ? 'border-sky-400/80 bg-gradient-to-b from-sky-950/90 via-neutral-950/95 to-neutral-950 text-sky-200 hover:text-white hover:border-sky-300 active:scale-90 shadow-sky-950/50 cursor-pointer'
+              ? 'border-sky-400/80 bg-neutral-950 text-sky-200 hover:border-sky-300 active:scale-90 shadow-sky-950/50 cursor-pointer'
               : 'border-white/10 bg-neutral-900/85 text-neutral-400 cursor-not-allowed opacity-80',
         ]"
         title="Adrenalin (C) - Stamina Penuh & Mini-Immunity"
         @touchstart.prevent="handleSkillTouchStart($event, 'adrenaline')"
         @click="handleSkillTrigger('adrenaline')"
       >
+        <!-- Full-bleed Skill Icon Image -->
+        <img
+          :src="'/assets/ui/skills/skill-adrenaline.png'"
+          alt="Adrenalin"
+          :class="[
+            'absolute inset-0 h-full w-full object-cover rounded-full p-1 select-none pointer-events-none transition-all duration-150',
+            adrenalineSkill.ready ? 'opacity-100 drop-shadow-md' : 'opacity-25 grayscale',
+          ]"
+        />
+
         <svg
           v-if="!adrenalineSkill.ready"
           data-testid="hud-skill-adrenaline-cooldown-ring"
-          class="absolute inset-0 w-full h-full -rotate-90 pointer-events-none p-0.5"
+          class="absolute inset-0 w-full h-full -rotate-90 pointer-events-none p-0.5 z-10"
           viewBox="0 0 50 50"
         >
           <circle cx="25" cy="25" r="21.5" class="stroke-black/60 fill-transparent stroke-[4px]" />
@@ -266,19 +283,12 @@ const handleJumpClick = () => {
           />
         </svg>
 
-        <template v-if="adrenalineSkill.ready">
-          <Flame class="h-6 w-6 stroke-[2.2] text-sky-300 drop-shadow-sm" />
-          <span
-            class="font-heading text-[8px] font-black tracking-wider uppercase text-sky-200 mt-0.5 leading-none"
-          >
-            {{ adrenalineSkill.name }}
-          </span>
-        </template>
-        <template v-else>
-          <span class="font-heading text-xs font-black text-sky-300 leading-none drop-shadow-md">
-            {{ adrenalineSkill.cooldownRemainingSec }}s
-          </span>
-        </template>
+        <span
+          v-if="!adrenalineSkill.ready"
+          class="relative z-20 font-heading text-sm font-black text-sky-300 leading-none drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)]"
+        >
+          {{ adrenalineSkill.cooldownRemainingSec }}s
+        </span>
       </button>
     </div>
 

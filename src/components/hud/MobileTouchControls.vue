@@ -261,9 +261,9 @@ onUnmounted(() => {
         ref="baseRef"
         data-testid="hud-virtual-joystick"
         :class="[
-          'relative flex h-32 w-32 items-center justify-center rounded-full border-2 bg-neutral-950/70 shadow-2xl backdrop-blur-md transition-colors',
+          'relative flex h-32 w-32 items-center justify-center rounded-full border-2 bg-neutral-950/80 shadow-2xl backdrop-blur-md transition-colors overflow-hidden',
           props.isStunned
-            ? 'border-amber-500/80 shadow-[0_0_20px_rgba(245,158,11,0.25)]'
+            ? 'border-amber-500/80 shadow-[0_0_20px_rgba(245,158,11,0.35)]'
             : 'border-neutral-700/80',
         ]"
         @touchstart.prevent="handleJoystickStart"
@@ -271,33 +271,32 @@ onUnmounted(() => {
         @touchend.prevent="handleJoystickEnd"
         @touchcancel.prevent="handleJoystickEnd"
       >
-        <div class="pointer-events-none absolute top-2 text-[10px] font-bold text-neutral-500">
-          ▲
-        </div>
-        <div class="pointer-events-none absolute bottom-2 text-[10px] font-bold text-neutral-500">
-          ▼
-        </div>
-        <div class="pointer-events-none absolute left-2 text-[10px] font-bold text-neutral-500">
-          ◀
-        </div>
-        <div class="pointer-events-none absolute right-2 text-[10px] font-bold text-neutral-500">
-          ▶
-        </div>
+        <!-- Stylized Joystick Base Plate Graphic -->
+        <img
+          :src="'/assets/ui/controls/analog-base.png'"
+          alt="Analog Base"
+          :class="[
+            'pointer-events-none absolute inset-0 h-full w-full object-contain select-none transition-all duration-200',
+            props.isStunned ? 'opacity-85 sepia hue-rotate-15' : 'opacity-90',
+          ]"
+        />
 
         <!-- Center Knob -->
         <div
           data-testid="hud-joystick-knob"
           :class="[
-            'absolute flex h-14 w-14 items-center justify-center rounded-full border shadow-lg transition-transform duration-75',
-            props.isStunned
-              ? 'border-amber-400/80 bg-gradient-to-b from-amber-200/80 to-amber-400/80 opacity-75'
-              : 'border-neutral-400/80 bg-gradient-to-b from-neutral-200 to-neutral-400',
+            'absolute flex h-14 w-14 items-center justify-center rounded-full shadow-2xl transition-transform duration-75 select-none',
+            props.isStunned ? 'ring-2 ring-amber-400/80 opacity-80' : 'ring-1 ring-sky-400/40',
           ]"
           :style="{
             transform: `translate3d(${knobX}px, ${knobY}px, 0)`,
           }"
         >
-          <div class="h-5 w-5 rounded-full border border-neutral-400 bg-neutral-300 shadow-inner" />
+          <img
+            :src="'/assets/ui/controls/analog-knob.png'"
+            alt="Analog Knob"
+            class="pointer-events-none h-full w-full object-contain drop-shadow-[0_4px_10px_rgba(0,0,0,0.6)]"
+          />
         </div>
       </div>
     </div>
