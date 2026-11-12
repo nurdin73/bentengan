@@ -49,7 +49,7 @@ const onJoinRoom = () => {
 <template>
   <div
     data-testid="lobby-mode-selector"
-    class="bg-white border-2 border-neutral-200/90 rounded-[24px] sm:rounded-[28px] p-4 sm:p-8 shadow-xs flex flex-col gap-3.5 sm:gap-4 relative"
+    class="bg-[#fdfbf7]/95 backdrop-blur-md border-2 border-white border-b-[6px] border-b-neutral-300 rounded-[24px] sm:rounded-[28px] p-4 sm:p-6 shadow-2xl flex flex-col gap-3.5 sm:gap-4 relative"
   >
     <!-- Input: Nama Panggilanmu -->
     <div class="flex flex-col gap-1.5">
@@ -216,5 +216,7 @@ const onJoinRoom = () => {
       <AlertCircle class="w-4 h-4 text-rose-600 shrink-0" />
       <span>{{ connectionError }}</span>
     </div>
+
+    <slot name="footer-action" />
   </div>
 </template>

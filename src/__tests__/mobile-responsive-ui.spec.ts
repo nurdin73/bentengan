@@ -55,11 +55,12 @@ describe('Mobile Responsive Layout & Icon Integration', () => {
 
       const rulesBtn = wrapper.find('[data-testid="navbar-rules-btn"]')
       const controlsBtn = wrapper.find('[data-testid="navbar-controls-btn"]')
-      const practiceBtn = wrapper.find('[data-testid="navbar-practice-btn"]')
+      const practiceBtn = wrapper.find('[data-testid="home-practice-btn"]')
 
       expect(rulesBtn.exists()).toBe(true)
       expect(controlsBtn.exists()).toBe(true)
       expect(practiceBtn.exists()).toBe(true)
+      expect(wrapper.find('[data-testid="navbar-practice-btn"]').exists()).toBe(false)
 
       // Open rules modal
       await rulesBtn.trigger('click')
@@ -95,7 +96,7 @@ describe('Mobile Responsive Layout & Icon Integration', () => {
     it('opens practice team picker dialog via ConfirmDialog and handles team selection', async () => {
       const wrapper = mount(HomeView)
 
-      const practiceBtn = wrapper.find('[data-testid="navbar-practice-btn"]')
+      const practiceBtn = wrapper.find('[data-testid="home-practice-btn"]')
       expect(practiceBtn.exists()).toBe(true)
 
       // Initially closed

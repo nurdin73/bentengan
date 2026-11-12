@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, watch } from 'vue'
 import * as THREE from 'three'
-import { RotateCw, Sparkles } from 'lucide-vue-next'
+import { RotateCw } from 'lucide-vue-next'
 import { CharacterAvatar } from '../../game/entities/character-avatar'
 import type { TeamId } from '../../types/game.types'
 
@@ -10,9 +10,11 @@ const props = withDefaults(
     outfitId: number
     teamId: TeamId
     hideHint?: boolean
+    variant?: 'card' | 'stage'
   }>(),
   {
     hideHint: false,
+    variant: 'card',
   },
 )
 
@@ -50,11 +52,16 @@ const initScene = () => {
   scene = new THREE.Scene()
 
   camera = new THREE.PerspectiveCamera(36, width / height, 0.1, 50)
-  camera.position.set(0, 0.85, 2.7)
-  camera.lookAt(0, 0.72, 0)
+  if (props.variant === 'stage') {
+    camera.position.set(0, 1.18, 3.3)
+    camera.lookAt(0, 0.55, 0)
+  } else {
+    camera.position.set(0, 0.85, 2.7)
+    camera.lookAt(0, 0.72, 0)
+  }
 
   // 2. Lighting Setup
-  const ambientLight = new THREE.AmbientLight(0xffffff, 0.85)
+  const ambientLight = new THREE.AmbientLight(0xffffff, 0.9)
   scene.add(ambientLight)
 
   const keyLight = new THREE.DirectionalLight(0xfffbeb, 1.4)
@@ -70,25 +77,48 @@ const initScene = () => {
   scene.add(rimLight)
 
   // 3. Circular Stage Pedestal
-  const pedestalGeo = new THREE.CylinderGeometry(0.72, 0.8, 0.08, 32)
-  const pedestalMat = new THREE.MeshStandardMaterial({
-    color: 0x1e293b,
-    roughness: 0.35,
-    metalness: 0.5,
-  })
-  const pedestal = new THREE.Mesh(pedestalGeo, pedestalMat)
-  pedestal.position.set(0, -0.04, 0)
-  scene.add(pedestal)
+  if (props.variant === 'stage') {
+    // Floating turf-and-wood island pedestal
+    const turfGeo = new THREE.CylinderGeometry(0.76, 0.78, 0.08, 32)
+    const turfMat = new THREE.MeshStandardMaterial({
+      color: 0x4ade80,
+      roughness: 0.72,
+      metalness: 0.05,
+    })
+    const turfCap = new THREE.Mesh(turfGeo, turfMat)
+    turfCap.position.set(0, -0.04, 0)
+    scene.add(turfCap)
+
+    const woodGeo = new THREE.CylinderGeometry(0.74, 0.42, 0.24, 32)
+    const woodMat = new THREE.MeshStandardMaterial({
+      color: 0xb45309,
+      roughness: 0.68,
+      metalness: 0.05,
+    })
+    const woodBase = new THREE.Mesh(woodGeo, woodMat)
+    woodBase.position.set(0, -0.2, 0)
+    scene.add(woodBase)
+  } else {
+    const pedestalGeo = new THREE.CylinderGeometry(0.72, 0.8, 0.08, 32)
+    const pedestalMat = new THREE.MeshStandardMaterial({
+      color: 0x1e293b,
+      roughness: 0.35,
+      metalness: 0.5,
+    })
+    const pedestal = new THREE.Mesh(pedestalGeo, pedestalMat)
+    pedestal.position.set(0, -0.04, 0)
+    scene.add(pedestal)
+  }
 
   // Glowing Team Ring on Top of Pedestal
-  const ringGeo = new THREE.RingGeometry(0.65, 0.71, 32)
+  const ringGeo = new THREE.RingGeometry(0.67, 0.73, 32)
   ringGeo.rotateX(-Math.PI / 2)
   pedestalRingMat = new THREE.MeshBasicMaterial({
     color: props.teamId === 'blue' ? 0x3b82f6 : 0xef4444,
     side: THREE.DoubleSide,
   })
   const ring = new THREE.Mesh(ringGeo, pedestalRingMat)
-  ring.position.set(0, 0.002, 0)
+  ring.position.set(0, 0.003, 0)
   scene.add(ring)
 
   // 4. Character Avatar
@@ -246,7 +276,12 @@ onUnmounted(() => {
   <div
     ref="containerRef"
     data-testid="character-preview-viewport"
-    class="w-full h-full min-h-[175px] relative overflow-hidden rounded-2xl bg-radial from-neutral-800 to-neutral-950 border border-neutral-700/60 touch-none select-none cursor-grab active:cursor-grabbing shadow-inner flex items-center justify-center"
+    :class="[
+      'w-full h-full min-h-[175px] relative overflow-hidden touch-none select-none cursor-grab active:cursor-grabbing flex items-center justify-center',
+      props.variant === 'stage'
+        ? 'bg-transparent'
+        : 'rounded-2xl bg-radial from-neutral-800 to-neutral-950 border border-neutral-700/60 shadow-inner',
+    ]"
     @pointerdown="onPointerDown"
     @pointermove="onPointerMove"
     @pointerup="onPointerUp"
@@ -254,6 +289,7 @@ onUnmounted(() => {
   >
     <!-- Top Left: 3D Live Indicator Badge -->
     <div
+      v-if="props.variant !== 'stage'"
       data-testid="preview-live-badge"
       class="absolute top-2.5 left-2.5 z-10 flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-black/60 backdrop-blur-xs border border-white/10 text-[9px] font-heading font-black uppercase tracking-wider text-neutral-300 pointer-events-none"
     >
