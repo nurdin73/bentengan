@@ -12,6 +12,9 @@ const emit = defineEmits<{
   (e: 'open-settings'): void
   (e: 'toggle-mobile-menu'): void
 }>()
+
+const navBtnClass =
+  'px-3.5 py-2 rounded-2xl bg-sky-950/35 hover:bg-sky-950/50 backdrop-blur-md text-white border border-white/45 border-b-[4px] border-b-white/80 shadow-md transition-all cursor-pointer active:translate-y-[2px] active:border-b-[2px] flex items-center gap-1.5'
 </script>
 
 <template>
@@ -36,40 +39,40 @@ const emit = defineEmits<{
       <button
         type="button"
         data-testid="navbar-rules-btn"
-        class="px-3.5 py-2 rounded-2xl bg-white/90 hover:bg-white text-neutral-800 border border-white border-b-[3px] border-b-sky-200/90 shadow-md transition-all cursor-pointer active:translate-y-[1px] active:border-b-[2px] flex items-center gap-1.5"
+        :class="navBtnClass"
         @click="emit('open-rules')"
       >
-        <ScrollText class="w-3.5 h-3.5 text-sky-600" />
+        <ScrollText class="w-3.5 h-3.5 text-amber-200" />
         <span>Aturan</span>
       </button>
 
       <button
         type="button"
         data-testid="navbar-controls-btn"
-        class="px-3.5 py-2 rounded-2xl bg-white/90 hover:bg-white text-neutral-800 border border-white border-b-[3px] border-b-sky-200/90 shadow-md transition-all cursor-pointer active:translate-y-[1px] active:border-b-[2px] flex items-center gap-1.5"
+        :class="navBtnClass"
         @click="emit('open-controls')"
       >
-        <Gamepad2 class="w-3.5 h-3.5 text-emerald-600" />
+        <Gamepad2 class="w-3.5 h-3.5 text-emerald-200" />
         <span>Kontrol</span>
       </button>
 
       <button
         type="button"
         data-testid="navbar-character-btn"
-        class="px-3.5 py-2 rounded-2xl bg-white/90 hover:bg-white text-neutral-800 border border-white border-b-[3px] border-b-sky-200/90 shadow-md transition-all cursor-pointer active:translate-y-[1px] active:border-b-[2px] flex items-center gap-1.5"
+        :class="navBtnClass"
         @click="emit('open-character')"
       >
-        <Shirt class="w-3.5 h-3.5 text-purple-600" />
+        <Shirt class="w-3.5 h-3.5 text-purple-200" />
         <span>Karakter</span>
       </button>
 
       <button
         type="button"
         data-testid="navbar-settings-btn"
-        class="px-3.5 py-2 rounded-2xl bg-white/90 hover:bg-white text-neutral-800 border border-white border-b-[3px] border-b-sky-200/90 shadow-md transition-all cursor-pointer active:translate-y-[1px] active:border-b-[2px] flex items-center gap-1.5"
+        :class="navBtnClass"
         @click="emit('open-settings')"
       >
-        <Settings class="w-3.5 h-3.5 text-amber-600" />
+        <Settings class="w-3.5 h-3.5 text-amber-200" />
         <span>Pengaturan</span>
       </button>
     </nav>
@@ -78,12 +81,12 @@ const emit = defineEmits<{
     <button
       type="button"
       data-testid="navbar-mobile-menu-btn"
-      class="sm:hidden w-10 h-10 rounded-2xl bg-white/90 hover:bg-white active:scale-95 border border-white border-b-[3px] border-b-sky-200 text-neutral-800 flex items-center justify-center shadow-md transition-all cursor-pointer"
+      class="sm:hidden w-10 h-10 rounded-2xl bg-sky-950/35 hover:bg-sky-950/50 backdrop-blur-md active:translate-y-[2px] active:border-b-[2px] border border-white/45 border-b-[4px] border-b-white/80 text-white flex items-center justify-center shadow-md transition-all cursor-pointer"
       aria-label="Menu Navigasi"
       @click="emit('toggle-mobile-menu')"
     >
-      <X v-if="isMobileMenuOpen" class="w-5 h-5 text-neutral-800" />
-      <Menu v-else class="w-5 h-5 text-neutral-800" />
+      <X v-if="isMobileMenuOpen" class="w-5 h-5 text-white" />
+      <Menu v-else class="w-5 h-5 text-white" />
     </button>
   </header>
 </template>

@@ -37,7 +37,7 @@ const activeOutfitName = computed(() => {
     </div>
 
     <!-- 3D Showcase Area -->
-    <div class="relative w-full max-w-[350px] sm:max-w-[400px] aspect-[4/4.3] flex items-center justify-center">
+    <div class="relative w-full max-w-[360px] sm:max-w-[420px] lg:max-w-[460px] aspect-[4/4.3] flex items-center justify-center">
       <!-- Radial Ground Glow -->
       <div
         class="pointer-events-none absolute bottom-4 left-1/2 -translate-x-1/2 w-56 h-16 rounded-full blur-xl opacity-60 transition-colors duration-300"

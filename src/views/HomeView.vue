@@ -100,7 +100,7 @@ const openModalFromDrawer = (target: 'rules' | 'controls' | 'character' | 'setti
 
     <!-- Main 2-Column Game Lobby Stage -->
     <main
-      class="relative z-10 flex-1 flex items-center justify-center px-3.5 sm:px-8 py-2 sm:py-4 max-w-6xl mx-auto w-full"
+      class="relative z-10 flex-1 flex items-center justify-center px-4 sm:px-8 lg:px-12 py-2 sm:py-4 max-w-7xl mx-auto w-full"
     >
       <div class="w-full grid grid-cols-1 lg:grid-cols-12 gap-5 lg:gap-8 items-center">
         <!-- Left: Live 3D Character Stage -->
