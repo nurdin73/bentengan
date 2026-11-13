@@ -3,6 +3,8 @@ import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { Play, Shield, Swords } from 'lucide-vue-next'
 import { useRoomStore } from '../stores/room-store'
+import { useSettingsStore } from '../stores/settings-store'
+import { useHomeBgm } from '../components/home/use-home-bgm'
 import HomeTopHud from '../components/home/HomeTopHud.vue'
 import HomeMobileDrawer from '../components/home/HomeMobileDrawer.vue'
 import HomeCharacterStage from '../components/home/HomeCharacterStage.vue'
@@ -17,6 +19,9 @@ import type { TeamId } from '../types/game.types'
 
 const router = useRouter()
 const roomStore = useRoomStore()
+const settingsStore = useSettingsStore()
+
+useHomeBgm()
 
 const showRulesModal = ref(false)
 const showControlsModal = ref(false)
@@ -80,11 +85,13 @@ const openModalFromDrawer = (target: 'rules' | 'controls' | 'character' | 'setti
     <!-- Top Game HUD -->
     <HomeTopHud
       :is-mobile-menu-open="isMobileMenuOpen"
+      :is-muted="settingsStore.isMuted"
       @open-rules="showRulesModal = true"
       @open-controls="showControlsModal = true"
       @open-character="showCharacterModal = true"
       @open-settings="showSettingsModal = true"
       @toggle-mobile-menu="isMobileMenuOpen = !isMobileMenuOpen"
+      @toggle-mute="settingsStore.toggleMute()"
     />
 
     <!-- Mobile Navigation Drawer -->

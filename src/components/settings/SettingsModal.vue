@@ -9,7 +9,6 @@ import {
   Sparkles,
   RotateCcw,
   Check,
-  Eye,
   Music,
 } from 'lucide-vue-next'
 import { useSettingsStore } from '../../stores/settings-store'
@@ -148,6 +147,26 @@ onUnmounted(() => {
               :value="settings.sfxVolume"
               class="w-full accent-amber-500 cursor-pointer"
               @input="settings.setSfxVolume(Number(($event.target as HTMLInputElement).value))"
+            />
+          </div>
+
+          <!-- BGM Volume Slider -->
+          <div class="flex flex-col gap-1">
+            <div class="flex justify-between text-xs font-bold text-neutral-600">
+              <span>Volume Musik (BGM)</span>
+              <span data-testid="settings-bgm-vol-label" class="font-mono text-neutral-800">
+                {{ Math.round(settings.bgmVolume * 100) }}%
+              </span>
+            </div>
+            <input
+              data-testid="settings-bgm-vol-slider"
+              type="range"
+              min="0"
+              max="1"
+              step="0.05"
+              :value="settings.bgmVolume"
+              class="w-full accent-amber-500 cursor-pointer"
+              @input="settings.setBgmVolume(Number(($event.target as HTMLInputElement).value))"
             />
           </div>
 

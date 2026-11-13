@@ -8,6 +8,7 @@ export interface GameSettingsState {
   // Audio levels
   masterVolume: number
   sfxVolume: number
+  bgmVolume: number
   isMuted: boolean
 
   // Graphics options
@@ -23,6 +24,7 @@ export const DEFAULT_SETTINGS: GameSettingsState = {
   invertY: false,
   masterVolume: 0.8,
   sfxVolume: 0.8,
+  bgmVolume: 0.45,
   isMuted: false,
   shadowsEnabled: true,
   particleDensity: 'high',
@@ -63,6 +65,7 @@ export const useSettingsStore = defineStore('settings', {
       masterVolume:
         typeof saved.masterVolume === 'number' ? saved.masterVolume : DEFAULT_SETTINGS.masterVolume,
       sfxVolume: typeof saved.sfxVolume === 'number' ? saved.sfxVolume : DEFAULT_SETTINGS.sfxVolume,
+      bgmVolume: typeof saved.bgmVolume === 'number' ? saved.bgmVolume : DEFAULT_SETTINGS.bgmVolume,
       isMuted: typeof saved.isMuted === 'boolean' ? saved.isMuted : DEFAULT_SETTINGS.isMuted,
       shadowsEnabled:
         typeof saved.shadowsEnabled === 'boolean'
@@ -84,6 +87,10 @@ export const useSettingsStore = defineStore('settings', {
       if (state.isMuted) return 0
       return Math.max(0, Math.min(1, state.masterVolume * state.sfxVolume))
     },
+    effectiveBgmVolume: (state): number => {
+      if (state.isMuted) return 0
+      return Math.max(0, Math.min(1, state.masterVolume * state.bgmVolume))
+    },
   },
 
   actions: {
@@ -104,6 +111,11 @@ export const useSettingsStore = defineStore('settings', {
 
     setSfxVolume(val: number): void {
       this.sfxVolume = Math.max(0, Math.min(1, Number(val.toFixed(2))))
+      persistToStorage(this.$state)
+    },
+
+    setBgmVolume(val: number): void {
+      this.bgmVolume = Math.max(0, Math.min(1, Number(val.toFixed(2))))
       persistToStorage(this.$state)
     },
 
@@ -132,6 +144,7 @@ export const useSettingsStore = defineStore('settings', {
       this.invertY = DEFAULT_SETTINGS.invertY
       this.masterVolume = DEFAULT_SETTINGS.masterVolume
       this.sfxVolume = DEFAULT_SETTINGS.sfxVolume
+      this.bgmVolume = DEFAULT_SETTINGS.bgmVolume
       this.isMuted = DEFAULT_SETTINGS.isMuted
       this.shadowsEnabled = DEFAULT_SETTINGS.shadowsEnabled
       this.particleDensity = DEFAULT_SETTINGS.particleDensity

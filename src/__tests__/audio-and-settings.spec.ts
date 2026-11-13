@@ -29,6 +29,7 @@ describe('Milestone 6 — Audio System & Game Settings', () => {
       expect(store.invertY).toBe(DEFAULT_SETTINGS.invertY)
       expect(store.masterVolume).toBe(DEFAULT_SETTINGS.masterVolume)
       expect(store.sfxVolume).toBe(DEFAULT_SETTINGS.sfxVolume)
+      expect(store.bgmVolume).toBe(DEFAULT_SETTINGS.bgmVolume)
       expect(store.isMuted).toBe(false)
       expect(store.shadowsEnabled).toBe(true)
       expect(store.particleDensity).toBe('high')
@@ -71,6 +72,21 @@ describe('Milestone 6 — Audio System & Game Settings', () => {
       expect(store.effectiveSfxVolume).toBeCloseTo(0.4, 2)
     })
 
+    it('calculates effective BGM volume correctly with master volume and mute', () => {
+      const store = useSettingsStore()
+      store.setMasterVolume(0.5)
+      store.setBgmVolume(0.6)
+
+      // 0.5 * 0.6 = 0.3
+      expect(store.effectiveBgmVolume).toBeCloseTo(0.3, 2)
+
+      store.toggleMute()
+      expect(store.effectiveBgmVolume).toBe(0)
+
+      store.toggleMute()
+      expect(store.effectiveBgmVolume).toBeCloseTo(0.3, 2)
+    })
+
     it('manages graphics settings: shadows and particle density', () => {
       const store = useSettingsStore()
       store.setShadowsEnabled(false)
@@ -86,6 +102,7 @@ describe('Milestone 6 — Audio System & Game Settings', () => {
       store.setInvertY(true)
       store.setMasterVolume(0.2)
       store.setSfxVolume(0.3)
+      store.setBgmVolume(0.9)
       store.setShadowsEnabled(false)
       store.setParticleDensity('low')
 
@@ -95,6 +112,7 @@ describe('Milestone 6 — Audio System & Game Settings', () => {
       expect(store.invertY).toBe(DEFAULT_SETTINGS.invertY)
       expect(store.masterVolume).toBe(DEFAULT_SETTINGS.masterVolume)
       expect(store.sfxVolume).toBe(DEFAULT_SETTINGS.sfxVolume)
+      expect(store.bgmVolume).toBe(DEFAULT_SETTINGS.bgmVolume)
       expect(store.shadowsEnabled).toBe(DEFAULT_SETTINGS.shadowsEnabled)
       expect(store.particleDensity).toBe(DEFAULT_SETTINGS.particleDensity)
     })
@@ -130,6 +148,16 @@ describe('Milestone 6 — Audio System & Game Settings', () => {
       await slider.setValue(0.5)
       expect(store.masterVolume).toBe(0.5)
       expect(wrapper.find('[data-testid="settings-master-vol-label"]').text()).toContain('50%')
+    })
+
+    it('updates BGM volume when BGM volume slider is adjusted', async () => {
+      const wrapper = mount(SettingsModal)
+      const store = useSettingsStore()
+      const slider = wrapper.find('[data-testid="settings-bgm-vol-slider"]')
+
+      await slider.setValue(0.75)
+      expect(store.bgmVolume).toBe(0.75)
+      expect(wrapper.find('[data-testid="settings-bgm-vol-label"]').text()).toContain('75%')
     })
 
     it('toggles mute button and reflects label change', async () => {
