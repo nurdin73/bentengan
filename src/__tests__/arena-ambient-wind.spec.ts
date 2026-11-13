@@ -250,14 +250,87 @@ describe('ArenaAmbientWind — 3D Arena Ambient Wind System', () => {
     expect(wind.dustPoints.geometry.drawRange.count).toBe(120)
 
     const initialX = posAttr.getX(0)
+    const initialZ = posAttr.getZ(0)
     // Force second mote past maxX to verify wrap-around
     posAttr.setXYZ(1, 30, 1.5, 0)
 
     wind.update(0.25)
 
-    expect(posAttr.getX(0)).not.toBe(initialX)
+    expect(posAttr.getX(0) !== initialX || posAttr.getZ(0) !== initialZ).toBe(true)
     expect(posAttr.getX(1)).toBeGreaterThanOrEqual(-24)
     expect(posAttr.getX(1)).toBeLessThan(-15)
+
+    wind.dispose()
+  })
+
+  it('initializes random wind angle in [0, 2π) and shifts wind direction smoothly over time', () => {
+    const scene = new THREE.Scene()
+    const wind = new ArenaAmbientWind(scene)
+
+    const initialAngle = wind.getWindAngle()
+    expect(initialAngle).toBeGreaterThanOrEqual(0)
+    expect(initialAngle).toBeLessThan(Math.PI * 2)
+
+    let maxStepDelta = 0
+    let prevAngle = initialAngle
+    // Simulate 25 seconds so at least one windShiftInterval (12-18s) triggers
+    for (let i = 0; i < 250; i++) {
+      wind.update(0.1)
+      const currentAngle = wind.getWindAngle()
+      const stepDelta = Math.abs(
+        Math.atan2(Math.sin(currentAngle - prevAngle), Math.cos(currentAngle - prevAngle)),
+      )
+      maxStepDelta = Math.max(maxStepDelta, stepDelta)
+      prevAngle = currentAngle
+    }
+
+    expect(wind.getWindAngle()).not.toBeCloseTo(initialAngle, 3)
+    // Ensure smooth angular steering (rate ~0.16 rad/s -> <= 0.02 rad per 0.1s step)
+    expect(maxStepDelta).toBeLessThanOrEqual(0.02)
+
+    wind.dispose()
+  })
+
+  it('moves leaves, dust, and ribbons along arbitrary negative wind angles with 4-sided wrap', () => {
+    const scene = new THREE.Scene()
+    const angle = Math.PI * 1.25 // -X, -Z quadrant
+    const wind = new ArenaAmbientWind(scene, {
+      initialAngleRad: angle,
+      enableDynamicShift: false,
+    })
+
+    expect(wind.getWindAngle()).toBeCloseTo(angle)
+
+    const leaf = wind.leaves[0]!
+    leaf.position.set(0, 4, 0)
+    const dustPos = wind.dustPoints.geometry.getAttribute('position') as THREE.BufferAttribute
+    dustPos.setXYZ(0, 0, 1.5, 0)
+
+    // Force another leaf & dust beyond minX/minZ to test negative boundary wrapping
+    const outLeaf = wind.leaves[1]!
+    outLeaf.position.set(-28, 4, -42)
+    dustPos.setXYZ(1, -28, 1.5, -42)
+
+    wind.update(0.1)
+
+    expect(leaf.position.x).toBeLessThan(0)
+    expect(leaf.position.z).toBeLessThan(0)
+    expect(dustPos.getX(0)).toBeLessThan(0)
+    expect(dustPos.getZ(0)).toBeLessThan(0)
+
+    expect(outLeaf.position.x).toBeGreaterThanOrEqual(20)
+    expect(outLeaf.position.x).toBeLessThanOrEqual(24)
+    expect(outLeaf.position.z).toBeGreaterThanOrEqual(34)
+    expect(outLeaf.position.z).toBeLessThanOrEqual(38)
+
+    expect(dustPos.getX(1)).toBeGreaterThanOrEqual(20)
+    expect(dustPos.getX(1)).toBeLessThanOrEqual(24)
+    expect(dustPos.getZ(1)).toBeGreaterThanOrEqual(34)
+    expect(dustPos.getZ(1)).toBeLessThanOrEqual(38)
+
+    const ribbon = wind.ribbons[0]!
+    const expectedYaw = Math.atan2(Math.cos(angle), Math.sin(angle))
+    expect(ribbon.mesh.rotation.y).toBeCloseTo(expectedYaw)
 
     wind.dispose()
   })

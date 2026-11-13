@@ -40,6 +40,11 @@ export interface ArenaWindBounds {
   maxZ: number
 }
 
+export interface ArenaAmbientWindOptions {
+  initialAngleRad?: number
+  enableDynamicShift?: boolean
+}
+
 const DEFAULT_ARENA_BOUNDS: ArenaWindBounds = {
   minX: -24,
   maxX: 24,
@@ -61,6 +66,17 @@ const MAX_DUST_MOTES = 120
 const LOW_DENSITY_DUST_MOTES = 45
 const DUST_MIN_Y = 0.15
 const DUST_MAX_Y = 3.8
+const DEFAULT_WIND_SPEED = 2.04
+const WIND_SINK_Y = -0.08
+const WIND_SHIFT_RATE_RAD = 0.16
+const RIBBON_HALF_SPAN = 36
+const RIBBON_LATERAL_SPREAD = 22
+const TWO_PI = Math.PI * 2
+
+function normalizeAngle(angleRad: number): number {
+  const wrapped = angleRad % TWO_PI
+  return wrapped < 0 ? wrapped + TWO_PI : wrapped
+}
 
 export class ArenaAmbientWind {
   public readonly group: THREE.Group
@@ -81,20 +97,36 @@ export class ArenaAmbientWind {
   public readonly leaves: LeafParticle[] = []
   public readonly ribbons: WindRibbon[] = []
   public readonly dustPoints: THREE.Points
+  private readonly leafSpeedMultipliers = new Float32Array(MAX_LEAVES)
   private readonly dustSpeedMultipliers = new Float32Array(MAX_DUST_MOTES)
   private readonly dustPhases = new Float32Array(MAX_DUST_MOTES)
   private activeDustCount = MAX_DUST_MOTES
 
-  // Prevailing wind direction vector (normalized X and Z drift)
-  private readonly windDirection = new THREE.Vector3(1.8, -0.08, 0.95)
+  // Dynamic wind direction & gust state
+  private readonly windDirection = new THREE.Vector3(DEFAULT_WIND_SPEED, WIND_SINK_Y, 0)
+  private windAngle: number
+  private targetWindAngle: number
+  private readonly enableDynamicShift: boolean
+  private windShiftTimer = 0
+  private windShiftInterval: number
   private gustIntensity = 0.2
   private gustTimer = 0
 
-  constructor(scene: THREE.Scene) {
+  constructor(scene: THREE.Scene, options: ArenaAmbientWindOptions = {}) {
     this.scene = scene
     this.group = new THREE.Group()
     this.group.name = 'ArenaAmbientWind_Root'
     this.scene.add(this.group)
+
+    const initialAngle =
+      options.initialAngleRad !== undefined && Number.isFinite(options.initialAngleRad)
+        ? normalizeAngle(options.initialAngleRad)
+        : Math.random() * TWO_PI
+    this.windAngle = initialAngle
+    this.targetWindAngle = initialAngle
+    this.enableDynamicShift = options.enableDynamicShift ?? true
+    this.windShiftInterval = 12 + Math.random() * 6
+    this.syncWindDirection()
 
     // Pre-allocate shared geometries & vein texture
     for (const variant of LEAF_VARIANTS) {
@@ -165,14 +197,17 @@ export class ArenaAmbientWind {
       mesh.scale.setScalar(scale)
       this.group.add(mesh)
 
+      const speedMult = 0.8 + Math.random() * 0.4
+      this.leafSpeedMultipliers[i] = speedMult
+
       this.leaves.push({
         mesh,
         active: true,
         position: mesh.position,
         velocity: new THREE.Vector3(
-          this.windDirection.x * (0.8 + Math.random() * 0.4),
-          this.windDirection.y * (0.8 + Math.random() * 0.4),
-          this.windDirection.z * (0.8 + Math.random() * 0.4),
+          this.windDirection.x * speedMult,
+          this.windDirection.y * speedMult,
+          this.windDirection.z * speedMult,
         ),
         rotationVelocity: new THREE.Vector3(
           (Math.random() - 0.5) * 2.2,
@@ -206,7 +241,7 @@ export class ArenaAmbientWind {
         cycleTime,
         duration,
         baseY: heights[i % heights.length]!,
-        startOffsetZ: (Math.random() - 0.5) * 20,
+        startOffsetZ: (Math.random() - 0.5) * RIBBON_LATERAL_SPREAD * 2,
         speed: speeds[i % speeds.length]!,
         baseOpacity: 0.22,
       })
@@ -279,6 +314,50 @@ export class ArenaAmbientWind {
   }
 
   /**
+   * Returns current horizontal wind direction angle in radians [0, 2π).
+   */
+  public getWindAngle(): number {
+    return this.windAngle
+  }
+
+  private syncWindDirection(): void {
+    this.windDirection.set(
+      Math.cos(this.windAngle) * DEFAULT_WIND_SPEED,
+      WIND_SINK_Y,
+      Math.sin(this.windAngle) * DEFAULT_WIND_SPEED,
+    )
+  }
+
+  private wrapCoordinate(value: number, min: number, max: number): number {
+    if (value > max) return min + Math.random() * 3.0
+    if (value < min) return max - Math.random() * 3.0
+    return value
+  }
+
+  private updateWindAngle(dt: number): void {
+    if (!this.enableDynamicShift) return
+
+    this.windShiftTimer += dt
+    if (this.windShiftTimer >= this.windShiftInterval) {
+      this.windShiftTimer = 0
+      this.windShiftInterval = 12 + Math.random() * 6
+      const shiftSign = Math.random() < 0.5 ? -1 : 1
+      const shiftDelta = 0.4 + Math.random() * 0.6
+      this.targetWindAngle = normalizeAngle(this.windAngle + shiftSign * shiftDelta)
+    }
+
+    const diff = Math.atan2(
+      Math.sin(this.targetWindAngle - this.windAngle),
+      Math.cos(this.targetWindAngle - this.windAngle),
+    )
+    if (Math.abs(diff) > 1e-4) {
+      const step = Math.sign(diff) * Math.min(Math.abs(diff), WIND_SHIFT_RATE_RAD * dt)
+      this.windAngle = normalizeAngle(this.windAngle + step)
+      this.syncWindDirection()
+    }
+  }
+
+  /**
    * Zero allocation inside tick loop.
    */
   public update(dt: number): void {
@@ -286,6 +365,8 @@ export class ArenaAmbientWind {
 
     // Clamp dt to avoid huge leap on tab backgrounding
     const safeDt = Math.min(0.1, dt)
+
+    this.updateWindAngle(safeDt)
 
     // Modulate overall wind gust cycle (natural swell every ~6 seconds)
     this.gustTimer += safeDt
@@ -304,6 +385,13 @@ export class ArenaAmbientWind {
       const leaf = this.leaves[i]!
       if (!leaf.active) continue
 
+      const speedMult = this.leafSpeedMultipliers[i]!
+      leaf.velocity.set(
+        this.windDirection.x * speedMult,
+        this.windDirection.y * speedMult,
+        this.windDirection.z * speedMult,
+      )
+
       leaf.swayPhase += leaf.swayFrequency * dt
       const swayOffset = Math.sin(leaf.swayPhase) * leaf.swayAmplitude
 
@@ -317,24 +405,21 @@ export class ArenaAmbientWind {
       leaf.mesh.rotation.y += leaf.rotationVelocity.y * dt
       leaf.mesh.rotation.z += leaf.rotationVelocity.z * dt
 
-      // Seamless wrap-around when leaving arena bounds
-      if (
-        leaf.position.x > this.bounds.maxX ||
-        leaf.position.z > this.bounds.maxZ ||
-        leaf.position.y < this.bounds.minY
-      ) {
-        // Reset to upwind boundary
-        leaf.position.x = this.bounds.minX + Math.random() * 4.0
+      // Symmetric 4-sided wrap-around when leaving arena bounds
+      leaf.position.x = this.wrapCoordinate(leaf.position.x, this.bounds.minX, this.bounds.maxX)
+      leaf.position.z = this.wrapCoordinate(leaf.position.z, this.bounds.minZ, this.bounds.maxZ)
+      if (leaf.position.y < this.bounds.minY) {
         leaf.position.y = this.bounds.maxY - Math.random() * 2.5
-        leaf.position.z = this.bounds.minZ + Math.random() * (this.bounds.maxZ - this.bounds.minZ)
-      } else if (leaf.position.x < this.bounds.minX) {
-        leaf.position.x = this.bounds.maxX
       }
     }
   }
 
   private updateRibbons(dt: number): void {
-    const totalDistX = this.bounds.maxX - this.bounds.minX + 16
+    const dirX = Math.cos(this.windAngle)
+    const dirZ = Math.sin(this.windAngle)
+    const perpX = -dirZ
+    const perpZ = dirX
+    const ribbonYaw = Math.atan2(dirX, dirZ)
 
     for (let i = 0; i < this.ribbons.length; i++) {
       const ribbon = this.ribbons[i]!
@@ -343,18 +428,17 @@ export class ArenaAmbientWind {
       ribbon.cycleTime += dt
       if (ribbon.cycleTime >= ribbon.duration) {
         ribbon.cycleTime = 0
-        ribbon.startOffsetZ = (Math.random() - 0.5) * 36
+        ribbon.startOffsetZ = (Math.random() - 0.5) * RIBBON_LATERAL_SPREAD * 2
       }
 
       const progress = ribbon.cycleTime / ribbon.duration
-      // Position moves from minX - 8 to maxX + 8
-      const currentX = this.bounds.minX - 8 + progress * totalDistX
-      // Z follows diagonal slope
-      const currentZ = ribbon.startOffsetZ + progress * 24
-      // Y undulates smoothly
+      const along = (progress - 0.5) * RIBBON_HALF_SPAN * 2
+      const currentX = along * dirX + ribbon.startOffsetZ * perpX
+      const currentZ = along * dirZ + ribbon.startOffsetZ * perpZ
       const currentY = ribbon.baseY + Math.sin(progress * Math.PI * 2) * 0.4
 
       ribbon.mesh.position.set(currentX, currentY, currentZ)
+      ribbon.mesh.rotation.y = ribbonYaw
 
       // Fade-in at start, fade-out at end of streak
       let alpha = 1.0
@@ -380,15 +464,13 @@ export class ArenaAmbientWind {
       const phase = this.dustPhases[i]! + dt * 1.6
       this.dustPhases[i] = phase
 
-      let x = positions[idx]! + this.windDirection.x * gustFactor * speedMult * dt
+      const rawX = positions[idx]! + this.windDirection.x * gustFactor * speedMult * dt
       let y = positions[idx + 1]! + Math.sin(phase) * 0.09 * dt
-      let z = positions[idx + 2]! + this.windDirection.z * gustFactor * speedMult * dt
+      const rawZ = positions[idx + 2]! + this.windDirection.z * gustFactor * speedMult * dt
 
-      if (x > this.bounds.maxX || z > this.bounds.maxZ) {
-        x = this.bounds.minX + Math.random() * 4.0
-        y = DUST_MIN_Y + Math.random() * (DUST_MAX_Y - DUST_MIN_Y)
-        z = this.bounds.minZ + Math.random() * (this.bounds.maxZ - this.bounds.minZ)
-      } else if (y < DUST_MIN_Y) {
+      const x = this.wrapCoordinate(rawX, this.bounds.minX, this.bounds.maxX)
+      const z = this.wrapCoordinate(rawZ, this.bounds.minZ, this.bounds.maxZ)
+      if (y < DUST_MIN_Y) {
         y = DUST_MAX_Y
       } else if (y > DUST_MAX_Y) {
         y = DUST_MIN_Y
