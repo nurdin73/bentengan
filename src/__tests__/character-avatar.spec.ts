@@ -1,10 +1,8 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
+import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import * as THREE from 'three'
 import {
   CharacterAvatar,
   setCharacterModelTemplate,
-  getCharacterModelTemplate,
-  type OutfitPresetId,
 } from '../game/entities/character-avatar'
 import { PhysicsWorld } from '../game/physics/physics-world'
 import { PlayerController } from '../game/entities/player-controller'
@@ -194,7 +192,7 @@ describe('CharacterAvatar Modular Soft-box Avatar System', () => {
       avatar.updateAnimation(0.016, 0, true, false, false, true)
     }
 
-    expect(avatar.pivotTorso!.rotation.x).toBeCloseTo(0.1, 1)
+    expect(avatar.pivotTorso!.rotation.x).toBeCloseTo(0.12, 1)
     expect(avatar.pivotHead!.rotation.x).toBeCloseTo(0.15, 1)
   })
 

@@ -19,6 +19,7 @@ import SkillActionBar from './SkillActionBar.vue'
 import GameControlsModal from '../guide/GameControlsModal.vue'
 import SettingsModal from '../settings/SettingsModal.vue'
 import DevDebugPanel from '../dev/DevDebugPanel.vue'
+import MatchCountdownOverlay from './MatchCountdownOverlay.vue'
 import { checkIsMobileTouchDevice } from './mobile-device.utils'
 import type { VirtualMovementInput } from '../../game/input/input-manager'
 import type { SkillId } from '../../game/skills/skill-types'
@@ -28,6 +29,7 @@ const roomStore = useRoomStore()
 
 const isMobile = ref(false)
 const forceShowMobileHUD = ref(false)
+const showCountdown = ref(true)
 
 const isEffectiveMobile = computed(() => isMobile.value || forceShowMobileHUD.value)
 
@@ -83,7 +85,7 @@ const closeSettingsModal = () => {
   showSettingsModal.value = false
 }
 
-defineEmits<{
+const emit = defineEmits<{
   (e: 'request-pointer-lock'): void
   (e: 'virtual-move', movement: VirtualMovementInput): void
   (e: 'virtual-sprint', sprint: boolean): void
@@ -91,7 +93,19 @@ defineEmits<{
   (e: 'virtual-look', delta: { deltaX: number; deltaY: number }): void
   (e: 'virtual-interact'): void
   (e: 'trigger-skill', skillId: SkillId): void
+  (e: 'countdown-finished'): void
 }>()
+
+const handleCountdownStarted = () => {
+  gameStore.finishCountdown()
+  emit('countdown-finished')
+}
+
+const handleCountdownFinished = () => {
+  showCountdown.value = false
+  gameStore.finishCountdown()
+  emit('countdown-finished')
+}
 </script>
 
 <template>
@@ -121,6 +135,25 @@ defineEmits<{
         background:
           'radial-gradient(ellipse 75% 75% at center, rgba(0, 0, 0, 0) 58%, rgba(15, 23, 42, 0.35) 85%, rgba(2, 6, 23, 0.65) 100%)',
       }"
+    />
+
+    <!-- Critical Exhaustion / Stun Red Pulse Vignette -->
+    <div
+      v-if="gameStore.isStunned || gameStore.staminaPercentage <= 15"
+      data-testid="hud-exhaustion-vignette"
+      class="pointer-events-none fixed inset-0 z-20 transition-opacity duration-200 animate-pulse"
+      :style="{
+        boxShadow: gameStore.isStunned
+          ? 'inset 0 0 100px 30px rgba(220, 38, 38, 0.65)'
+          : 'inset 0 0 80px 20px rgba(239, 68, 68, 0.4)',
+      }"
+    />
+
+    <!-- Match Start 3-2-1 Countdown Overlay -->
+    <MatchCountdownOverlay
+      v-if="showCountdown"
+      @started="handleCountdownStarted"
+      @finished="handleCountdownFinished"
     />
 
     <!-- Smoke Screen Blind Vignette Overlay (Enemy Smoke) -->

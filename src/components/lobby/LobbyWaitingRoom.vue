@@ -25,6 +25,7 @@ import TactileButton from '../ui/TactileButton.vue'
 import ConfirmDialog from '../ui/ConfirmDialog.vue'
 import CharacterPickerModal from '../wardrobe/CharacterPickerModal.vue'
 import { OUTFIT_PRESETS } from '../../game/entities/character-avatar'
+import { uiSound } from '../../game/audio/ui-sound'
 import type { TeamId } from '../../types/game.types'
 
 const router = useRouter()
@@ -47,6 +48,7 @@ const emit = defineEmits<{
 const copyRoomCode = async () => {
   try {
     await navigator.clipboard.writeText(roomStore.roomCode)
+    uiSound.playUiCopyCode()
     copied.value = true
     setTimeout(() => {
       copied.value = false
@@ -57,11 +59,16 @@ const copyRoomCode = async () => {
 }
 
 const onSelectTeam = (team: TeamId) => {
+  if (roomStore.myTeam !== team) {
+    uiSound.playUiTeamSwitch(team)
+  }
   roomStore.setTeam(team)
   activeMobileTab.value = team
 }
 
 const onToggleReady = () => {
+  const nextReady = !roomStore.myPlayer?.isReady
+  uiSound.playUiToggleReady(nextReady)
   roomStore.toggleReady()
 }
 
@@ -71,6 +78,7 @@ const handleStartClick = () => {
 
 const confirmStart = () => {
   showStartDialog.value = false
+  uiSound.playWhistleStart()
   roomStore.startMatch()
 }
 
@@ -318,9 +326,9 @@ const confirmLeave = () => {
             </div>
             <span
               :class="[
-                'text-[10px] font-heading font-black uppercase px-2.5 py-1 rounded-lg tracking-wider flex items-center gap-1 shrink-0',
+                'text-[10px] font-heading font-black uppercase px-2.5 py-1 rounded-lg tracking-wider flex items-center gap-1 shrink-0 transition-all duration-300',
                 p.isReady
-                  ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                  ? 'bg-emerald-100 text-emerald-800 border border-emerald-300 shadow-[0_0_12px_rgba(16,185,129,0.35)] ring-2 ring-emerald-400/40'
                   : 'bg-neutral-100 text-neutral-500 border border-neutral-200',
               ]"
             >
@@ -410,9 +418,9 @@ const confirmLeave = () => {
             </div>
             <span
               :class="[
-                'text-[10px] font-heading font-black uppercase px-2.5 py-1 rounded-lg tracking-wider flex items-center gap-1 shrink-0',
+                'text-[10px] font-heading font-black uppercase px-2.5 py-1 rounded-lg tracking-wider flex items-center gap-1 shrink-0 transition-all duration-300',
                 p.isReady
-                  ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                  ? 'bg-emerald-100 text-emerald-800 border border-emerald-300 shadow-[0_0_12px_rgba(16,185,129,0.35)] ring-2 ring-emerald-400/40'
                   : 'bg-neutral-100 text-neutral-500 border border-neutral-200',
               ]"
             >

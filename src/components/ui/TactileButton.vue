@@ -1,21 +1,32 @@
 <script setup lang="ts">
+import { uiSound } from '../../game/audio/ui-sound'
+
 interface Props {
   variant?: 'amber' | 'blue' | 'red' | 'emerald' | 'neutral'
   disabled?: boolean
   type?: 'button' | 'submit' | 'reset'
   dataTestid?: string
+  silent?: boolean
 }
 
-withDefaults(defineProps<Props>(), {
+const props = withDefaults(defineProps<Props>(), {
   variant: 'amber',
   disabled: false,
   type: 'button',
   dataTestid: 'tactile-btn',
+  silent: false,
 })
 
-defineEmits<{
+const emit = defineEmits<{
   (e: 'click', event: MouseEvent): void
 }>()
+
+const handleClick = (e: MouseEvent) => {
+  if (!props.disabled && !props.silent) {
+    uiSound.playUiClick()
+  }
+  emit('click', e)
+}
 </script>
 
 <template>
@@ -31,7 +42,7 @@ defineEmits<{
       variant === 'emerald' && 'timbul-btn-emerald',
       variant === 'neutral' && 'timbul-btn-neutral',
     ]"
-    @click="$emit('click', $event)"
+    @click="handleClick"
   >
     <slot />
   </button>

@@ -594,6 +594,28 @@ export class VFXManager {
   }
 
   /**
+   * Spawns a subtle pulsing shimmer on the jail zone floor to clearly indicate prisoner boundaries.
+   */
+  public spawnPrisonerShimmer(pos: Vector3Position, color: number = 0x38bdf8): void {
+    if (!isValidPos(pos)) return
+    const ring = this.ringPool.find((r) => !r.active)
+    if (!ring) return
+
+    ring.active = true
+    ring.lifetime = 0
+    ring.maxLifetime = 0.85
+    ring.startScale = 2.0
+    ring.targetScale = 3.6
+    ring.baseOpacity = 0.45
+    ring.mesh.position.set(pos.x, 0.05, pos.z)
+    ring.mesh.scale.setScalar(ring.startScale)
+    const mat = ring.mesh.material as THREE.MeshBasicMaterial
+    mat.color.setHex(color)
+    mat.opacity = 0.45
+    ring.mesh.visible = true
+  }
+
+  /**
    * Triggers a vertical light beacon when base pillar is touched.
    */
   public triggerBaseBeacon(pos: Vector3Position, color: number = 0xfacc15): void {

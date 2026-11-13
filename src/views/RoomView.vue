@@ -1,10 +1,12 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRoute, useRouter, onBeforeRouteLeave } from 'vue-router'
 import { AlertCircle, ArrowLeft } from 'lucide-vue-next'
 import { useRoomStore } from '../stores/room-store'
 import { useGameStore } from '../stores/game-store'
 import { useDevStore } from '../stores/dev-store'
+import { useSettingsStore } from '../stores/settings-store'
+import { homeBgmPlayer } from '../game/audio/home-bgm'
 import LobbyWaitingRoom from '../components/lobby/LobbyWaitingRoom.vue'
 import RulesBriefingView from '../components/lobby/RulesBriefingView.vue'
 import GameCanvas from '../components/game/GameCanvas.vue'
@@ -18,10 +20,44 @@ const router = useRouter()
 const roomStore = useRoomStore()
 const gameStore = useGameStore()
 const devStore = useDevStore()
+const settingsStore = useSettingsStore()
+
+const syncLobbyBgm = () => {
+  if (roomStore.status === 'waiting' && settingsStore.effectiveBgmVolume > 0) {
+    void homeBgmPlayer.start(settingsStore.effectiveBgmVolume)
+  } else {
+    homeBgmPlayer.stop()
+  }
+}
+
+watch(
+  () => roomStore.status,
+  () => {
+    syncLobbyBgm()
+  },
+)
+
+watch(
+  () => settingsStore.effectiveBgmVolume,
+  (vol) => {
+    if (roomStore.status === 'waiting') {
+      if (vol <= 0) {
+        homeBgmPlayer.pause()
+      } else {
+        homeBgmPlayer.setVolume(vol)
+      }
+    }
+  },
+)
 
 onBeforeRouteLeave(() => {
   devStore.lockDevMode()
+  homeBgmPlayer.stop()
   roomStore.leaveRoom()
+})
+
+onUnmounted(() => {
+  homeBgmPlayer.stop()
 })
 
 const roomCode = computed(() => {
@@ -56,6 +92,7 @@ onMounted(async () => {
 
   // If user navigated directly via URL or reloaded as guest, allow them to join/rejoin
   roomStore.roomCode = roomCode.value
+  syncLobbyBgm()
 })
 
 const handleJoinAcknowledge = async () => {
@@ -96,6 +133,10 @@ const handleTriggerSkill = (skillId: SkillId) => {
   gameCanvasRef.value?.triggerSkill(skillId)
 }
 
+const handleCountdownFinished = () => {
+  gameCanvasRef.value?.finishCountdown()
+}
+
 const handleRestart = () => {
   gameStore.resetStats()
   roomStore.returnToLobbyForRematch()
@@ -128,6 +169,7 @@ const handleLeaveToHome = () => {
       @virtual-look="handleVirtualLook"
       @virtual-interact="handleVirtualInteract"
       @trigger-skill="handleTriggerSkill"
+      @countdown-finished="handleCountdownFinished"
     />
 
     <!-- Results Modal on Finish -->

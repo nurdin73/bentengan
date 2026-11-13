@@ -316,6 +316,7 @@ export class PlayerController implements GameplayEntity {
         this.stunUntil = now + GAME_CONFIG.gameplay.stunDurationMs
         this.isSprinting = false
         this.isExhausted = true
+        soundManager.playExhaustionGasp()
         soundManager.startStun()
         const currentLinVel = this.body.linvel()
         this.body.setLinvel({ x: 0, y: currentLinVel.y, z: 0 }, true)

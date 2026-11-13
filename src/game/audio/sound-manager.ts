@@ -1,5 +1,6 @@
 import { useSettingsStore } from '../../stores/settings-store'
 import { computeSpatialMix, type SpatialPoint } from './audio-spatial.utils'
+import { ingameBgm } from './ingame-bgm'
 import {
   triggerAdrenalineSfx,
   triggerCaughtStingSfx,
@@ -8,6 +9,7 @@ import {
   triggerSmokeSfx,
 } from './skill-sfx'
 import { TensionLayer } from './tension-layer'
+import { uiSound } from './ui-sound'
 
 export class SoundManager {
   private ctx: AudioContext | null = null
@@ -521,9 +523,75 @@ export class SoundManager {
     triggerCaughtStingSfx(this.ctx, this.masterGain)
   }
 
+  public playWhistleStart(): void {
+    uiSound.playWhistleStart()
+  }
+
+  /**
+   * Heavy panting breath / gasp when player runs out of stamina.
+   */
+  public playExhaustionGasp(): void {
+    if (!this.ensureReady() || !this.ctx || !this.masterGain || !this.noiseBuffer) return
+
+    const t = this.ctx.currentTime
+    const noise = this.ctx.createBufferSource()
+    noise.buffer = this.noiseBuffer
+
+    const filter = this.ctx.createBiquadFilter()
+    filter.type = 'bandpass'
+    filter.frequency.setValueAtTime(450, t)
+    filter.Q.setValueAtTime(1.5, t)
+
+    const gain = this.ctx.createGain()
+    gain.gain.setValueAtTime(0.001, t)
+    gain.gain.linearRampToValueAtTime(0.2, t + 0.08)
+    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.35)
+
+    noise.connect(filter)
+    filter.connect(gain)
+    gain.connect(this.masterGain)
+
+    noise.start(t)
+    noise.stop(t + 0.36)
+  }
+
+  /**
+   * Subtle alert buzzer when approaching out-of-bounds boundary.
+   */
+  public playBoundaryWarning(): void {
+    if (!this.ensureReady() || !this.ctx || !this.masterGain) return
+
+    const t = this.ctx.currentTime
+    const osc = this.ctx.createOscillator()
+    const gain = this.ctx.createGain()
+
+    osc.type = 'square'
+    osc.frequency.setValueAtTime(220, t)
+
+    gain.gain.setValueAtTime(0.001, t)
+    gain.gain.linearRampToValueAtTime(0.08, t + 0.01)
+    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.1)
+
+    osc.connect(gain)
+    gain.connect(this.masterGain)
+
+    osc.start(t)
+    osc.stop(t + 0.11)
+  }
+
+  public startIngameBgm(): void {
+    if (!this.ensureReady() || !this.ctx) return
+    ingameBgm.start(this.ctx)
+  }
+
+  public stopIngameBgm(): void {
+    ingameBgm.stop()
+  }
+
   public updateTension(dt: number, threatLevel: number, isExhausted: boolean): void {
     if (!this.ctx || !this.masterGain || this.getEffectiveVolume() <= 0) return
     if (this.ctx.state === 'suspended') return
+    ingameBgm.setThreatLevel(threatLevel)
     this.tensionLayer.update(
       dt,
       threatLevel,
@@ -536,6 +604,7 @@ export class SoundManager {
 
   public resetTension(): void {
     this.tensionLayer.reset()
+    ingameBgm.setThreatLevel(0)
   }
 
   /**
@@ -620,6 +689,7 @@ export class SoundManager {
   public dispose(): void {
     this.stopStun()
     this.resetTension()
+    this.stopIngameBgm()
     try {
       this.ctx?.close()
     } catch {

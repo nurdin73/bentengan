@@ -114,6 +114,26 @@ describe('Milestone 6 — Visual Polish, VFX & Arena Polish', () => {
       vfx.dispose()
     })
 
+    it('spawns prisoner jail boundary shimmer ring', () => {
+      const scene = new THREE.Scene()
+      const vfx = new VFXManager(scene)
+
+      vfx.spawnPrisonerShimmer({ x: -10, y: 0, z: 15 }, 0x38bdf8)
+
+      const shimmerRing = vfx.group.children.find(
+        (c) => c.visible && c instanceof THREE.Mesh && c.geometry instanceof THREE.RingGeometry,
+      ) as THREE.Mesh | undefined
+
+      expect(shimmerRing).toBeDefined()
+      expect(shimmerRing?.visible).toBe(true)
+
+      // Advance past shimmer lifetime (0.85s)
+      vfx.update(1.0)
+      expect(shimmerRing?.visible).toBe(false)
+
+      vfx.dispose()
+    })
+
     it('triggers vertical light beacon on base touch', () => {
       const scene = new THREE.Scene()
       const vfx = new VFXManager(scene)

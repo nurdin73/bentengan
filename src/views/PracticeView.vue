@@ -56,6 +56,10 @@ const handleTriggerSkill = (skillId: SkillId) => {
   gameCanvasRef.value?.triggerSkill(skillId)
 }
 
+const handleCountdownFinished = () => {
+  gameCanvasRef.value?.finishCountdown()
+}
+
 const handleRestart = () => {
   practiceSessionKey.value++
   gameStore.resetStats()
@@ -92,6 +96,7 @@ const handleExitToHome = () => {
       @virtual-look="handleVirtualLook"
       @virtual-interact="handleVirtualInteract"
       @trigger-skill="handleTriggerSkill"
+      @countdown-finished="handleCountdownFinished"
     />
 
     <!-- Results Modal on Finish -->

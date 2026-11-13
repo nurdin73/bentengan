@@ -154,6 +154,7 @@ defineExpose({
   triggerVirtualInteract,
   triggerSkill,
   setPaused: (paused: boolean) => engine?.setPaused(paused),
+  finishCountdown: () => engine?.finishCountdown(),
 })
 </script>
 

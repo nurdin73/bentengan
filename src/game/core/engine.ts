@@ -47,6 +47,7 @@ export interface GameEngineInitOptions {
   roomPlayers?: RoomPlayer[]
   isPractice?: boolean
   isHost?: boolean
+  skipCountdown?: boolean
 }
 
 export interface GameEngineStateCallback {
@@ -114,6 +115,7 @@ export class GameEngine {
   public localPlayerId = 'local-player'
   public localPlayerUsername = 'Anda'
   private networkTimer = 0
+  private jailShimmerTimer = 0
   private worldTick = 0
   private readonly combatFeedback = new CombatFeedback()
   private readonly feedbackEntities: GameplayEntity[] = []
@@ -122,6 +124,8 @@ export class GameEngine {
   private isRunning = false
   private isPaused = false
   private pausedAt = 0
+  public isCountdownActive = true
+  private countdownUntil = 0
   private isMatchFinished = false
   private animationFrameId = 0
   private lastTime = 0
@@ -319,7 +323,24 @@ export class GameEngine {
     this.isRunning = true
     this.matchStartTime = performance.now()
     this.lastTime = performance.now()
+    this.isCountdownActive = !options.skipCountdown
+    this.countdownUntil = this.isCountdownActive ? performance.now() + 2550 : 0
+    if (this.isCountdownActive) {
+      for (const bot of this.bots) {
+        bot.isFrozen = true
+      }
+    }
+    soundManager.startIngameBgm()
     this.loop(this.lastTime)
+  }
+
+  public finishCountdown(): void {
+    if (!this.isCountdownActive) return
+    this.isCountdownActive = false
+    this.countdownUntil = 0
+    for (const bot of this.bots) {
+      bot.isFrozen = false
+    }
   }
 
   private spawnSimulatedBots(playerTeam: TeamId): void {
@@ -404,11 +425,17 @@ export class GameEngine {
     const mouseDelta = this.isPaused ? { deltaX: 0, deltaY: 0 } : this.input.consumeMouseDelta()
     const now = performance.now()
 
-    if (this.localPlayer && !this.isPaused && this.skillManager) {
+    if (this.isCountdownActive && this.countdownUntil > 0 && now >= this.countdownUntil) {
+      this.finishCountdown()
+    }
+
+    if (this.localPlayer && !this.isPaused && !this.isCountdownActive && this.skillManager) {
       const triggeredSkills = this.input.consumePendingSkills()
       for (const skillId of triggeredSkills) {
         this.activateLocalSkill(skillId, now)
       }
+    }
+    if (this.localPlayer && this.skillManager) {
       this.skillManager.update(frameTime, now, this.localPlayer.teamId)
       this.callbacks.onSkillStateChange?.(this.skillManager.getAllSkillsState(now))
     }
@@ -436,7 +463,7 @@ export class GameEngine {
 
       if (this.localPlayer) {
         this.localPlayer.recordPreviousPosition()
-        if (!this.isPaused) {
+        if (!this.isPaused && !this.isCountdownActive) {
           input = this.input.getMovementInput(this.cameraController.getYaw())
         }
         this.localPlayer.updateFixed(input, this.fixedDt, now)
@@ -451,7 +478,7 @@ export class GameEngine {
       }
 
       // Evaluate Milestone 2 Core Gameplay Interactions
-      if (!this.isMatchFinished) {
+      if (!this.isMatchFinished && !this.isCountdownActive) {
         this.evaluateGameplayRules(input, now, allEntities)
       }
 
@@ -558,6 +585,16 @@ export class GameEngine {
 
     // Update VFX Particles, Skill Effects & Sprint Dust
     this.vfx.update(frameTime)
+
+    // Periodic Prisoner Jail Boundary Shimmer
+    if (this.arena) {
+      this.jailShimmerTimer += frameTime
+      if (this.jailShimmerTimer >= 1.6) {
+        this.jailShimmerTimer = 0
+        this.vfx.spawnPrisonerShimmer(this.arena.zones.blueJailPosition, 0x38bdf8)
+        this.vfx.spawnPrisonerShimmer(this.arena.zones.redJailPosition, 0xf87171)
+      }
+    }
     if (this.localPlayer) {
       const localPos = this.localPlayer.getPosition()
       if (this.localPlayer.justJumped) {
@@ -900,6 +937,19 @@ export class GameEngine {
   }
 
   private applyDevModifiers(now: number): void {
+    const dev = this.isPractice ? this.getDevStore() : null
+
+    // 1. Bot freezing (countdown lock or dev freeze overrides)
+    for (const bot of this.bots) {
+      if (this.isCountdownActive) {
+        bot.isFrozen = true
+      } else if (dev && dev.isUnlocked) {
+        bot.isFrozen = dev.freezeAllBots || (dev.freezeEnemyBots && bot.teamId !== this.playerTeam)
+      } else {
+        bot.isFrozen = false
+      }
+    }
+
     if (!this.isPractice) {
       if (this.localPlayer) {
         this.localPlayer.isGodMode = false
@@ -908,15 +958,7 @@ export class GameEngine {
       return
     }
 
-    const dev = this.getDevStore()
     if (!dev || !dev.isUnlocked) return
-
-    // 1. Bot freezing
-    const freezeEnemy = dev.freezeEnemyBots
-    const freezeAll = dev.freezeAllBots
-    for (const bot of this.bots) {
-      bot.isFrozen = freezeAll || (freezeEnemy && bot.teamId !== this.playerTeam)
-    }
 
     // 2. God mode & Speed
     if (this.localPlayer) {
@@ -1182,6 +1224,8 @@ export class GameEngine {
       soundManager.playBaseTouch()
     }
 
+    soundManager.stopIngameBgm()
+
     if (winner === this.playerTeam) {
       soundManager.playVictory()
     } else if (winner) {
@@ -1225,13 +1269,18 @@ export class GameEngine {
     this.isPaused = paused
 
     if (paused) {
+      soundManager.stopIngameBgm()
       this.pausedAt = performance.now()
       this.input.reset()
       if (document.pointerLockElement) {
         document.exitPointerLock?.()
       }
     } else {
+      soundManager.startIngameBgm()
       const pausedDuration = performance.now() - this.pausedAt
+      if (this.isCountdownActive && this.countdownUntil > 0) {
+        this.countdownUntil += pausedDuration
+      }
       this.matchStartTime += pausedDuration
       this.lastTime = performance.now()
       this.accumulator = 0

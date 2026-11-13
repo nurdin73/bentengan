@@ -3,6 +3,8 @@ import { setActivePinia, createPinia } from 'pinia'
 import { mount } from '@vue/test-utils'
 import { useSettingsStore, DEFAULT_SETTINGS } from '../stores/settings-store'
 import { SoundManager } from '../game/audio/sound-manager'
+import { uiSound } from '../game/audio/ui-sound'
+import { ingameBgm } from '../game/audio/ingame-bgm'
 import { computeSpatialMix } from '../game/audio/audio-spatial.utils'
 import { computeEnemyTerritoryThreat } from '../game/systems/threat-level.utils'
 import type { GameplayEntity } from '../types/game.types'
@@ -244,7 +246,40 @@ describe('Milestone 6 — Audio System & Game Settings', () => {
         sm.resetTension()
         sm.playVictory()
         sm.playDefeat()
+        sm.playWhistleStart()
+        sm.playExhaustionGasp()
+        sm.playBoundaryWarning()
+        sm.startIngameBgm()
+        sm.stopIngameBgm()
         sm.dispose()
+      }).not.toThrow()
+    })
+
+    it('handles UiSoundManager procedural UI audio triggers cleanly', () => {
+      expect(() => {
+        uiSound.init()
+        uiSound.playUiClick()
+        uiSound.playUiToggleReady(true)
+        uiSound.playUiToggleReady(false)
+        uiSound.playUiTeamSwitch('blue')
+        uiSound.playUiTeamSwitch('red')
+        uiSound.playUiCopyCode()
+        uiSound.playCountdownTick()
+        uiSound.playWhistleStart()
+        uiSound.dispose()
+      }).not.toThrow()
+    })
+
+    it('handles InGameBgmPlayer lifecycle and threat level adjustments', () => {
+      expect(() => {
+        ingameBgm.init()
+        ingameBgm.start()
+        ingameBgm.setThreatLevel(0.5)
+        ingameBgm.pause()
+        ingameBgm.resume()
+        ingameBgm.setThreatLevel(1.0)
+        ingameBgm.stop()
+        ingameBgm.dispose()
       }).not.toThrow()
     })
 

@@ -17,6 +17,7 @@ export const useGameStore = defineStore('game', {
     rescueCooldownRemainingSeconds: 0,
     isPointerLocked: false,
     isPaused: false,
+    isCountdownActive: true,
     gameTimeSeconds: 0,
     smokeBlindIntensity: 0,
     smokeVignetteIntensity: 0,
@@ -174,7 +175,12 @@ export const useGameStore = defineStore('game', {
       this.matchResult = result
     },
 
+    finishCountdown() {
+      this.isCountdownActive = false
+    },
+
     resetStats() {
+      this.isCountdownActive = true
       this.capturesCount = 0
       this.rescuesCount = 0
       this.timesCapturedCount = 0
