@@ -16,6 +16,7 @@ import { useDevStore, type TeleportTarget } from '../../stores/dev-store'
 import { useSettingsStore } from '../../stores/settings-store'
 import { soundManager } from '../audio/sound-manager'
 import { VFXManager } from '../vfx/vfx-manager'
+import { CombatFeedback } from '../systems/combat-feedback'
 import type {
   SkillId,
   SkillsStateMap,
@@ -60,6 +61,8 @@ export interface GameEngineStateCallback {
     immunitySource?: 'skill' | 'rescue' | null
     smokeBlindIntensity?: number
     smokeVignetteIntensity?: number
+    dangerVignetteIntensity?: number
+    exhaustionVignetteIntensity?: number
   }) => void
   onSkillStateChange?: (skills: SkillsStateMap) => void
   onRosterUpdate: (roster: {
@@ -112,6 +115,8 @@ export class GameEngine {
   public localPlayerUsername = 'Anda'
   private networkTimer = 0
   private worldTick = 0
+  private readonly combatFeedback = new CombatFeedback()
+  private readonly feedbackEntities: GameplayEntity[] = []
 
   // Fixed timestep accumulator
   private isRunning = false
@@ -137,7 +142,9 @@ export class GameEngine {
     this.scene.background = new THREE.Color(0x7dd3fc)
     this.scene.fog = new THREE.Fog(0x7dd3fc, 45, 95)
 
-    const aspect = container.clientWidth / (container.clientHeight || 1)
+    const initWidth = container.clientWidth || window.innerWidth || 1280
+    const initHeight = container.clientHeight || window.innerHeight || 720
+    const aspect = Math.max(0.1, initWidth / Math.max(1, initHeight))
     this.camera = new THREE.PerspectiveCamera(60, aspect, 0.1, 150)
     this.cameraController = new ThirdPersonCameraController(this.camera)
 
@@ -146,7 +153,7 @@ export class GameEngine {
       antialias: true,
       powerPreference: 'high-performance',
     })
-    this.renderer.setSize(container.clientWidth, container.clientHeight)
+    this.renderer.setSize(initWidth, initHeight)
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
 
     let shadowsEnabled = true
@@ -389,7 +396,8 @@ export class GameEngine {
       return
     }
 
-    const frameTime = Math.min((currentTime - this.lastTime) / 1000, 0.1)
+    const rawDelta = (currentTime - this.lastTime) / 1000
+    const frameTime = Number.isFinite(rawDelta) ? Math.max(0, Math.min(rawDelta, 0.1)) : 0
     this.lastTime = currentTime
     this.accumulator += frameTime
 
@@ -399,7 +407,7 @@ export class GameEngine {
     if (this.localPlayer && !this.isPaused && this.skillManager) {
       const triggeredSkills = this.input.consumePendingSkills()
       for (const skillId of triggeredSkills) {
-        this.skillManager.triggerSkill(skillId, this.localPlayer, now)
+        this.activateLocalSkill(skillId, now)
       }
       this.skillManager.update(frameTime, now, this.localPlayer.teamId)
       this.callbacks.onSkillStateChange?.(this.skillManager.getAllSkillsState(now))
@@ -497,6 +505,23 @@ export class GameEngine {
       const { blindIntensity: smokeBlindIntensity, vignetteIntensity: smokeVignetteIntensity } =
         this.updateSmokeVisibility()
 
+      soundManager.setListener(this.localPlayer.getPosition(), this.cameraController.getYaw())
+
+      this.feedbackEntities.length = 0
+      this.feedbackEntities.push(this.localPlayer)
+      for (const remote of this.remotePlayers.values()) {
+        this.feedbackEntities.push(remote)
+      }
+      for (const bot of this.bots) {
+        this.feedbackEntities.push(bot)
+      }
+      const combatState = this.combatFeedback.update(
+        frameTime,
+        this.localPlayer,
+        this.feedbackEntities,
+        this.localPlayer.isExhausted,
+      )
+
       // Emit player state to Pinia
       this.callbacks.onPlayerStateChange({
         stamina: this.localPlayer.stamina,
@@ -509,6 +534,8 @@ export class GameEngine {
         immunitySource: this.localPlayer.immunitySource,
         smokeBlindIntensity,
         smokeVignetteIntensity,
+        dangerVignetteIntensity: combatState.dangerVignetteIntensity,
+        exhaustionVignetteIntensity: combatState.exhaustionVignetteIntensity,
       })
     }
 
@@ -529,10 +556,37 @@ export class GameEngine {
       }
     }
 
-    // Update VFX Particles & Sprint Dust
+    // Update VFX Particles, Skill Effects & Sprint Dust
     this.vfx.update(frameTime)
-    if (this.localPlayer && this.localPlayer.isSprinting && this.localPlayer.isGrounded) {
-      this.vfx.spawnSprintDust(this.localPlayer.mesh.position)
+    if (this.localPlayer) {
+      const localPos = this.localPlayer.getPosition()
+      if (this.localPlayer.justJumped) {
+        this.localPlayer.justJumped = false
+        this.vfx.spawnJumpLandDust(localPos, 0.75)
+      }
+      if (this.localPlayer.justLanded) {
+        this.localPlayer.justLanded = false
+        this.vfx.spawnJumpLandDust(localPos, 1.2)
+        this.cameraController.addTrauma(0.14)
+      }
+      if (now < this.localPlayer.dashUntil) {
+        this.vfx.spawnDashTrail(
+          localPos,
+          this.localPlayer.mesh.rotation.y,
+          this.localPlayer.teamId === 'blue' ? 0x38bdf8 : 0xf87171,
+        )
+      }
+      if (now < this.localPlayer.adrenalineUntil) {
+        this.vfx.spawnAdrenalineAura(localPos)
+      }
+      if (this.localPlayer.isSprinting && this.localPlayer.isGrounded) {
+        this.vfx.spawnSprintDust(this.localPlayer.mesh.position)
+        this.vfx.spawnSpeedLine(
+          localPos,
+          this.localPlayer.mesh.rotation.y,
+          this.localPlayer.teamId === 'blue' ? 0xbae6fd : 0xfecaca,
+        )
+      }
     }
     // Remote opponent sprint dust
     for (const remote of this.remotePlayers.values()) {
@@ -540,10 +594,19 @@ export class GameEngine {
         this.vfx.spawnSprintDust(remote.mesh.position)
       }
     }
-    // Bot sprint dust
+    // Bot sprint dust & jump/land dust
     for (const bot of this.bots) {
+      const botPos = bot.getPosition()
+      if (bot.justJumped) {
+        bot.justJumped = false
+        this.vfx.spawnJumpLandDust(botPos, 0.75)
+      }
+      if (bot.justLanded) {
+        bot.justLanded = false
+        this.vfx.spawnJumpLandDust(botPos, 1.1)
+      }
       if (bot.isSprinting && bot.status === 'normal') {
-        this.vfx.spawnSprintDust(bot.getPosition())
+        this.vfx.spawnSprintDust(botPos)
       }
     }
 
@@ -774,6 +837,9 @@ export class GameEngine {
           radius,
           event.sourceTeamId ?? (this.localPlayer?.teamId === 'blue' ? 'red' : 'blue'),
         )
+        const remoteSmokePos = { x: sx, y: sy, z: sz }
+        this.vfx.spawnSmokeBurst(remoteSmokePos, radius)
+        soundManager.playSmoke(remoteSmokePos)
       }
       // If host, confound enemy bots within smoke radius
       if (this.isHost) {
@@ -936,8 +1002,10 @@ export class GameEngine {
               if (entity instanceof BotController) {
                 entity.isRetreating = true
               }
-              this.vfx.spawnRescueSparkles(entity.getPosition())
-              soundManager.playRescue()
+              const rescuePos = entity.getPosition()
+              this.vfx.spawnRescueSparkles(rescuePos)
+              soundManager.playRescue(rescuePos)
+              this.cameraController.addTrauma(0.24)
               this.callbacks.onRescue('Anda', entity.name)
               if (this.isHost && !this.isPractice) {
                 peerNetworkManager.broadcastGameEvent({
@@ -968,8 +1036,12 @@ export class GameEngine {
             if (target instanceof BotController) {
               target.isRetreating = true
             }
-            this.vfx.spawnRescueSparkles(target.getPosition())
-            soundManager.playRescue()
+            const rescuePos = target.getPosition()
+            this.vfx.spawnRescueSparkles(rescuePos)
+            soundManager.playRescue(rescuePos)
+            if (target === this.localPlayer) {
+              this.cameraController.addTrauma(0.24)
+            }
             const rescuerName = rescuer.name
             const targetName = target === this.localPlayer ? 'Anda' : target.name
             this.callbacks.onRescue(rescuerName, targetName)
@@ -994,14 +1066,29 @@ export class GameEngine {
         if (target.status === 'jailed') continue
 
         if (GameplayRules.canCapture(hunter, target, now)) {
+          if (
+            hunter instanceof PlayerController ||
+            hunter instanceof BotController ||
+            hunter instanceof RemotePlayerController
+          ) {
+            hunter.triggerTagSwipe()
+          }
+          const capturePos = target.getPosition()
+          const impactColor = hunter.teamId === 'blue' ? 0x60a5fa : 0xf87171
           target.status = 'jailed'
           const jailPos =
             target.teamId === 'blue'
               ? this.arena.zones.blueJailPosition
               : this.arena.zones.redJailPosition
           target.teleportTo(jailPos.x, jailPos.y, jailPos.z)
-          this.vfx.spawnCaptureRing(target.getPosition())
-          soundManager.playCapture()
+          this.vfx.spawnTagHitSpark(capturePos, impactColor)
+          soundManager.playCapture(capturePos)
+          if (target === this.localPlayer) {
+            soundManager.playCaughtSting()
+            this.cameraController.addTrauma(0.55)
+          } else if (hunter === this.localPlayer) {
+            this.cameraController.addTrauma(0.32)
+          }
 
           const hunterName = hunter === this.localPlayer ? 'Anda' : hunter.name
           const targetName = target === this.localPlayer ? 'Anda' : target.name
@@ -1099,6 +1186,17 @@ export class GameEngine {
       soundManager.playVictory()
     } else if (winner) {
       soundManager.playDefeat()
+    }
+
+    this.combatFeedback.reset()
+    if (this.localPlayer) {
+      this.localPlayer.isVictorious = this.localPlayer.teamId === winner
+    }
+    for (const bot of this.bots) {
+      bot.isVictorious = bot.teamId === winner
+    }
+    for (const remote of this.remotePlayers.values()) {
+      remote.isVictorious = remote.teamId === winner
     }
 
     const durationSeconds = Math.round((performance.now() - this.matchStartTime) / 1000)
@@ -1295,11 +1393,38 @@ export class GameEngine {
     }
   }
 
-  public triggerSkill(skillId: SkillId): SkillActivationResult {
+  private activateLocalSkill(skillId: SkillId, now: number): SkillActivationResult {
     if (!this.localPlayer || !this.skillManager) {
       return { success: false, reason: 'jailed' }
     }
-    return this.skillManager.triggerSkill(skillId, this.localPlayer, performance.now())
+    const result = this.skillManager.triggerSkill(skillId, this.localPlayer, now)
+    if (!result.success) {
+      soundManager.playSkillDenied()
+      return result
+    }
+    if (skillId === 'dash') {
+      soundManager.playDash()
+      this.cameraController.addTrauma(0.26)
+      this.vfx.spawnDashTrail(
+        this.localPlayer.getPosition(),
+        this.localPlayer.mesh.rotation.y,
+        this.localPlayer.teamId === 'blue' ? 0x38bdf8 : 0xf87171,
+      )
+    } else if (skillId === 'smoke') {
+      const pos = this.localPlayer.getPosition()
+      soundManager.playSmoke(pos)
+      this.cameraController.addTrauma(0.22)
+      this.vfx.spawnSmokeBurst(pos)
+    } else if (skillId === 'adrenaline') {
+      soundManager.playAdrenaline()
+      this.cameraController.addTrauma(0.3)
+      this.vfx.spawnAdrenalineAura(this.localPlayer.getPosition())
+    }
+    return result
+  }
+
+  public triggerSkill(skillId: SkillId): SkillActivationResult {
+    return this.activateLocalSkill(skillId, performance.now())
   }
 
   public getIsPaused(): boolean {
@@ -1308,14 +1433,15 @@ export class GameEngine {
 
   private onResize(): void {
     if (!this.container) return
-    const width = this.container.clientWidth
-    const height = this.container.clientHeight || 1
-    this.camera.aspect = width / height
+    const width = this.container.clientWidth || window.innerWidth || 1280
+    const height = this.container.clientHeight || window.innerHeight || 720
+    this.camera.aspect = Math.max(0.1, width / Math.max(1, height))
     this.camera.updateProjectionMatrix()
     this.renderer.setSize(width, height)
   }
 
   public dispose(): void {
+    this.combatFeedback.reset()
     this.isRunning = false
     cancelAnimationFrame(this.animationFrameId)
     window.removeEventListener('resize', this.onResizeBound)

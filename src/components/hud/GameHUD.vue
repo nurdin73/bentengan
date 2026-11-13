@@ -99,6 +99,30 @@ defineEmits<{
     data-testid="game-hud"
     class="pointer-events-none absolute inset-0 flex flex-col justify-between p-3 sm:p-5"
   >
+    <!-- Enemy Territory Threat Danger Vignette -->
+    <div
+      v-if="gameStore.dangerVignetteIntensity > 0.02"
+      data-testid="game-danger-vignette"
+      class="pointer-events-none fixed inset-0 z-10 transition-opacity duration-150 ease-out"
+      :style="{
+        opacity: Math.min(0.85, gameStore.dangerVignetteIntensity),
+        background:
+          'radial-gradient(ellipse 72% 72% at center, rgba(0, 0, 0, 0) 52%, rgba(220, 38, 38, 0.24) 80%, rgba(185, 28, 28, 0.56) 100%)',
+      }"
+    />
+
+    <!-- Exhaustion Tunnel Vision Vignette -->
+    <div
+      v-if="gameStore.exhaustionVignetteIntensity > 0.02"
+      data-testid="game-exhaustion-vignette"
+      class="pointer-events-none fixed inset-0 z-10 transition-opacity duration-200 ease-out"
+      :style="{
+        opacity: Math.min(0.75, gameStore.exhaustionVignetteIntensity),
+        background:
+          'radial-gradient(ellipse 75% 75% at center, rgba(0, 0, 0, 0) 58%, rgba(15, 23, 42, 0.35) 85%, rgba(2, 6, 23, 0.65) 100%)',
+      }"
+    />
+
     <!-- Smoke Screen Blind Vignette Overlay (Enemy Smoke) -->
     <div
       v-if="gameStore.smokeBlindIntensity > 0"

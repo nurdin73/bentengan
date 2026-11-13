@@ -4,7 +4,7 @@ import type { PhysicsWorld } from '../physics/physics-world'
 import type { GameplayEntity, PlayerStatus, TeamId } from '../../types/game.types'
 import { GAME_CONFIG } from '../core/constants'
 import { EnergyShieldBubble } from './energy-shield-bubble'
-import { CharacterAvatar } from './character-avatar'
+import { CharacterAvatar, type AvatarAnimationExtras } from './character-avatar'
 
 export interface RemotePlayerControllerOptions {
   id: string
@@ -48,6 +48,9 @@ export class RemotePlayerController implements GameplayEntity {
   public readonly stunStarsGroup: THREE.Group
   private readonly stunStarGeo: THREE.OctahedronGeometry
   private readonly stunStarMat: THREE.MeshBasicMaterial
+  private tagSwipeTimer = 0
+  public isVictorious = false
+  private readonly animExtras: AvatarAnimationExtras = {}
 
   constructor(scene: THREE.Scene, physics: PhysicsWorld, options: RemotePlayerControllerOptions) {
     this.id = options.id
@@ -274,6 +277,10 @@ export class RemotePlayerController implements GameplayEntity {
       this.bodyMesh.rotation.z = THREE.MathUtils.lerp(this.bodyMesh.rotation.z, 0, 14 * dt)
     }
 
+    if (this.tagSwipeTimer > 0) this.tagSwipeTimer = Math.max(0, this.tagSwipeTimer - dt)
+    this.animExtras.tagSwipeProgress = this.tagSwipeTimer > 0 ? 1 - this.tagSwipeTimer / 0.28 : 0
+    this.animExtras.isVictorious = this.isVictorious
+
     const animSpeed = isMoving
       ? this.isSprinting
         ? GAME_CONFIG.movement.sprintSpeed
@@ -286,7 +293,12 @@ export class RemotePlayerController implements GameplayEntity {
       this.isSprinting,
       isStunned,
       this.status === 'jailed',
+      this.animExtras,
     )
+  }
+
+  public triggerTagSwipe(): void {
+    this.tagSwipeTimer = 0.28
   }
 
   public setVisualOpacity(opacity: number): void {

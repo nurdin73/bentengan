@@ -288,6 +288,29 @@ onUnmounted(() => {
               </button>
             </div>
           </div>
+
+          <!-- Screen Shake Toggle -->
+          <div class="flex items-center justify-between">
+            <div class="flex flex-col">
+              <span class="text-xs font-bold text-neutral-700">Getaran Kamera (Screen Shake)</span>
+              <span class="text-[10px] text-neutral-500"
+                >Guncangan saat benturan, dash, atau penangkapan</span
+              >
+            </div>
+            <button
+              type="button"
+              data-testid="settings-screenshake-toggle"
+              :class="[
+                'px-3 py-1 rounded-lg text-xs font-heading font-bold border transition-colors cursor-pointer',
+                settings.screenShakeEnabled
+                  ? 'bg-emerald-100 border-emerald-300 text-emerald-800'
+                  : 'bg-neutral-200 border-neutral-300 text-neutral-600',
+              ]"
+              @click="settings.setScreenShakeEnabled(!settings.screenShakeEnabled)"
+            >
+              {{ settings.screenShakeEnabled ? 'Aktif' : 'Nonaktif' }}
+            </button>
+          </div>
         </div>
       </div>
 

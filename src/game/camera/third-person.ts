@@ -21,6 +21,10 @@ export class ThirdPersonCameraController {
   private readonly scratchRayDir = new THREE.Vector3()
   private springRay: RAPIER.Ray | null = null
 
+  // Trauma-based camera shake state (rotation-only, squared falloff)
+  private trauma = 0
+  private shakeTime = 0
+
   constructor(camera: THREE.PerspectiveCamera) {
     this.camera = camera
     this.camera.position.set(0, 5, 10)
@@ -46,21 +50,31 @@ export class ThirdPersonCameraController {
     // 1. Accumulate mouse rotations with user settings
     let userSensitivity = 1.0
     let invertY = false
+    let screenShakeEnabled = true
     try {
       const settings = useSettingsStore()
       userSensitivity = settings.mouseSensitivity
       invertY = settings.invertY
+      screenShakeEnabled = settings.screenShakeEnabled
     } catch {
       // In headless test environments where Pinia store is not active
     }
 
+    const safeDeltaX = Number.isFinite(deltaX) ? deltaX : 0
+    const safeDeltaY = Number.isFinite(deltaY) ? deltaY : 0
     const effectiveSens = sensitivity * userSensitivity
-    this.yaw -= deltaX * effectiveSens
-    this.pitch += (invertY ? deltaY : -deltaY) * effectiveSens
+    this.yaw -= safeDeltaX * effectiveSens
+    this.pitch += (invertY ? safeDeltaY : -safeDeltaY) * effectiveSens
     this.pitch = Math.max(minPitch, Math.min(maxPitch, this.pitch))
 
     // 2. Compute camera target (player head / focal point)
-    this.scratchLookTarget.copy(targetPosition).add(this.targetOffset)
+    if (
+      Number.isFinite(targetPosition.x) &&
+      Number.isFinite(targetPosition.y) &&
+      Number.isFinite(targetPosition.z)
+    ) {
+      this.scratchLookTarget.copy(targetPosition).add(this.targetOffset)
+    }
 
     // 3. Calculate full directional offset vector
     const cosPitch = Math.cos(this.pitch)
@@ -103,7 +117,7 @@ export class ThirdPersonCameraController {
     }
 
     // 5. Asymmetric Distance Smoothing (Fast-in to avoid wall penetration, Smooth-out for clearance)
-    const dt = Math.max(0.001, frameTime)
+    const dt = Number.isFinite(frameTime) ? Math.max(0.001, Math.min(0.2, frameTime)) : 0.016
     if (targetDistance < this.currentDistance) {
       // Zooming in (hit wall): very fast response
       const fastInFactor = 1 - Math.exp(-35 * dt)
@@ -144,6 +158,34 @@ export class ThirdPersonCameraController {
     }
 
     this.camera.lookAt(this.currentTarget)
+    this.applyShake(dt, screenShakeEnabled)
+  }
+
+  public addTrauma(amount: number): void {
+    if (!Number.isFinite(amount) || amount <= 0) return
+    this.trauma = Math.min(1, this.trauma + amount)
+  }
+
+  public getTrauma(): number {
+    return this.trauma
+  }
+
+  private applyShake(dt: number, enabled: boolean): void {
+    if (!Number.isFinite(this.trauma) || this.trauma <= 0) {
+      this.trauma = 0
+      return
+    }
+
+    const shake = enabled ? this.trauma * this.trauma : 0
+    if (shake > 0.0005) {
+      this.shakeTime += dt * 42
+      const maxAngle = 0.045
+      this.camera.rotation.z += Math.sin(this.shakeTime * 1.13) * maxAngle * shake
+      this.camera.rotation.x += Math.cos(this.shakeTime * 0.91) * maxAngle * 0.65 * shake
+      this.camera.rotation.y += Math.sin(this.shakeTime * 1.47) * maxAngle * 0.45 * shake
+    }
+
+    this.trauma = Math.max(0, this.trauma - dt * 1.8)
   }
 
   public snap(targetPosition: THREE.Vector3): void {

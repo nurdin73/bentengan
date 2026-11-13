@@ -1,9 +1,23 @@
 import { useSettingsStore } from '../../stores/settings-store'
+import { computeSpatialMix, type SpatialPoint } from './audio-spatial.utils'
+import {
+  triggerAdrenalineSfx,
+  triggerCaughtStingSfx,
+  triggerDashSfx,
+  triggerSkillDeniedSfx,
+  triggerSmokeSfx,
+} from './skill-sfx'
+import { TensionLayer } from './tension-layer'
 
 export class SoundManager {
   private ctx: AudioContext | null = null
   private masterGain: GainNode | null = null
+  private compressor: DynamicsCompressorNode | null = null
   private noiseBuffer: AudioBuffer | null = null
+
+  private listenerPos: SpatialPoint | null = null
+  private listenerYaw = 0
+  private readonly tensionLayer = new TensionLayer()
 
   // Active interval/nodes for whimsical cartoon stun chimes
   private stunInterval: ReturnType<typeof setInterval> | null = null
@@ -37,7 +51,20 @@ export class SoundManager {
 
       this.ctx = new AudioCtxClass()
       this.masterGain = this.ctx.createGain()
-      this.masterGain.connect(this.ctx.destination)
+
+      if (typeof this.ctx.createDynamicsCompressor === 'function') {
+        this.compressor = this.ctx.createDynamicsCompressor()
+        this.compressor.threshold.setValueAtTime(-16, this.ctx.currentTime)
+        this.compressor.knee.setValueAtTime(18, this.ctx.currentTime)
+        this.compressor.ratio.setValueAtTime(4, this.ctx.currentTime)
+        this.compressor.attack.setValueAtTime(0.005, this.ctx.currentTime)
+        this.compressor.release.setValueAtTime(0.18, this.ctx.currentTime)
+        this.masterGain.connect(this.compressor)
+        this.compressor.connect(this.ctx.destination)
+      } else {
+        this.masterGain.connect(this.ctx.destination)
+      }
+
       this.updateMasterVolume()
 
       // Generate 1-second filtered soft noise buffer for organic air breeze & impacts
@@ -58,6 +85,12 @@ export class SoundManager {
     } catch {
       // AudioContext unavailable in headless/mock test runner
     }
+  }
+
+  public setListener(pos: SpatialPoint, yawRad: number): void {
+    if (!Number.isFinite(pos.x) || !Number.isFinite(pos.z)) return
+    this.listenerPos = pos
+    this.listenerYaw = Number.isFinite(yawRad) ? yawRad : 0
   }
 
   private getEffectiveVolume(): number {
@@ -87,6 +120,32 @@ export class SoundManager {
     return this.getEffectiveVolume() > 0
   }
 
+  private routeOutput(origin?: SpatialPoint): AudioNode | null {
+    if (!this.ctx || !this.masterGain) return null
+    if (!origin || !this.listenerPos) return this.masterGain
+
+    const mix = computeSpatialMix(this.listenerPos, this.listenerYaw, origin)
+    if (mix.gain <= 0.01) return null
+
+    if (mix.gain > 0.98 && Math.abs(mix.pan) < 0.03) {
+      return this.masterGain
+    }
+
+    const spatialGain = this.ctx.createGain()
+    spatialGain.gain.setValueAtTime(mix.gain, this.ctx.currentTime)
+
+    if (typeof this.ctx.createStereoPanner === 'function') {
+      const panner = this.ctx.createStereoPanner()
+      panner.pan.setValueAtTime(mix.pan, this.ctx.currentTime)
+      spatialGain.connect(panner)
+      panner.connect(this.masterGain)
+    } else {
+      spatialGain.connect(this.masterGain)
+    }
+
+    return spatialGain
+  }
+
   /**
    * Footstep: Ground patter on turf/dirt with body resonance + textured transient.
    * Distinct characteristics for walking vs sprinting.
@@ -100,7 +159,6 @@ export class SoundManager {
     if (!this.ensureReady() || !this.ctx || !this.masterGain) return
 
     const t = this.ctx.currentTime
-    const effectiveVol = this.getEffectiveVolume()
     const pitchJitter = 1 + (Math.random() * 0.12 - 0.06)
 
     // 1. Resonant Body Thud
@@ -120,7 +178,7 @@ export class SoundManager {
     osc.frequency.exponentialRampToValueAtTime(endFreq, t + thudDuration)
 
     const baseVolume = isSprinting ? 0.28 : 0.18
-    oscGain.gain.setValueAtTime(baseVolume * effectiveVol, t)
+    oscGain.gain.setValueAtTime(baseVolume, t)
     oscGain.gain.exponentialRampToValueAtTime(0.001, t + thudDuration)
 
     osc.connect(oscFilter)
@@ -147,7 +205,7 @@ export class SoundManager {
       )
 
       const noiseGain = this.ctx.createGain()
-      noiseGain.gain.setValueAtTime(baseVolume * 0.45 * effectiveVol, t)
+      noiseGain.gain.setValueAtTime(baseVolume * 0.45, t)
       noiseGain.gain.exponentialRampToValueAtTime(0.001, t + thudDuration)
 
       noise.connect(noiseFilter)
@@ -181,7 +239,7 @@ export class SoundManager {
 
     const gain = this.ctx.createGain()
     gain.gain.setValueAtTime(0.001, t)
-    gain.gain.linearRampToValueAtTime(0.12 * this.getEffectiveVolume(), t + 0.06)
+    gain.gain.linearRampToValueAtTime(0.14, t + 0.06)
     gain.gain.exponentialRampToValueAtTime(0.001, t + 0.22)
 
     noise.connect(filter)
@@ -194,10 +252,11 @@ export class SoundManager {
 
   /**
    * Jump: Playful cartoon bubble-spring pop (Warm sine glide 180Hz -> 420Hz).
-   * Warm, soft, and satisfying.
    */
-  public playJump(): void {
-    if (!this.ensureReady() || !this.ctx || !this.masterGain) return
+  public playJump(origin?: SpatialPoint): void {
+    if (!this.ensureReady() || !this.ctx) return
+    const dest = this.routeOutput(origin)
+    if (!dest) return
 
     const t = this.ctx.currentTime
     const osc = this.ctx.createOscillator()
@@ -212,12 +271,12 @@ export class SoundManager {
     osc.frequency.exponentialRampToValueAtTime(420, t + 0.09)
 
     gain.gain.setValueAtTime(0.001, t)
-    gain.gain.linearRampToValueAtTime(0.24 * this.getEffectiveVolume(), t + 0.012)
+    gain.gain.linearRampToValueAtTime(0.24, t + 0.012)
     gain.gain.exponentialRampToValueAtTime(0.001, t + 0.1)
 
     osc.connect(filter)
     filter.connect(gain)
-    gain.connect(this.masterGain)
+    gain.connect(dest)
 
     osc.start(t)
     osc.stop(t + 0.11)
@@ -226,8 +285,10 @@ export class SoundManager {
   /**
    * Land: Cushioned ground thump (Low sine drop 75Hz -> 32Hz, muffled).
    */
-  public playLand(): void {
-    if (!this.ensureReady() || !this.ctx || !this.masterGain) return
+  public playLand(origin?: SpatialPoint): void {
+    if (!this.ensureReady() || !this.ctx) return
+    const dest = this.routeOutput(origin)
+    if (!dest) return
 
     const t = this.ctx.currentTime
     const osc = this.ctx.createOscillator()
@@ -241,12 +302,12 @@ export class SoundManager {
     osc.frequency.setValueAtTime(75, t)
     osc.frequency.exponentialRampToValueAtTime(32, t + 0.065)
 
-    gain.gain.setValueAtTime(0.18 * this.getEffectiveVolume(), t)
+    gain.gain.setValueAtTime(0.18, t)
     gain.gain.exponentialRampToValueAtTime(0.001, t + 0.075)
 
     osc.connect(filter)
     filter.connect(gain)
-    gain.connect(this.masterGain)
+    gain.connect(dest)
 
     osc.start(t)
     osc.stop(t + 0.08)
@@ -254,7 +315,6 @@ export class SoundManager {
 
   /**
    * Stun: Whimsical cartoon dizzy celesta chimes (Soft cycling bells D5 <-> F#5 <-> A5).
-   * Replaces the harsh continuous buzz with a charming, humorous cartoon wobble.
    */
   public startStun(): void {
     if (this.isStunActive) return
@@ -277,7 +337,7 @@ export class SoundManager {
       noteIdx++
 
       gain.gain.setValueAtTime(0.001, t)
-      gain.gain.linearRampToValueAtTime(0.14 * this.getEffectiveVolume(), t + 0.015)
+      gain.gain.linearRampToValueAtTime(0.14, t + 0.015)
       gain.gain.exponentialRampToValueAtTime(0.001, t + 0.22)
 
       osc.connect(gain)
@@ -302,10 +362,11 @@ export class SoundManager {
 
   /**
    * Capture: Tactile Bamboo / Wooden Pop ("Btok!").
-   * Dual-harmonic wooden body cavity resonance (480Hz -> 240Hz), juicy and satisfying!
    */
-  public playCapture(): void {
-    if (!this.ensureReady() || !this.ctx || !this.masterGain) return
+  public playCapture(origin?: SpatialPoint): void {
+    if (!this.ensureReady() || !this.ctx) return
+    const dest = this.routeOutput(origin)
+    if (!dest) return
 
     const t = this.ctx.currentTime
 
@@ -322,12 +383,12 @@ export class SoundManager {
     bodyOsc.frequency.setValueAtTime(480, t)
     bodyOsc.frequency.exponentialRampToValueAtTime(240, t + 0.04)
 
-    bodyGain.gain.setValueAtTime(0.4 * this.getEffectiveVolume(), t)
+    bodyGain.gain.setValueAtTime(0.4, t)
     bodyGain.gain.exponentialRampToValueAtTime(0.001, t + 0.055)
 
     bodyOsc.connect(filter)
     filter.connect(bodyGain)
-    bodyGain.connect(this.masterGain)
+    bodyGain.connect(dest)
 
     bodyOsc.start(t)
     bodyOsc.stop(t + 0.06)
@@ -340,11 +401,11 @@ export class SoundManager {
     tapOsc.frequency.setValueAtTime(960, t)
     tapOsc.frequency.exponentialRampToValueAtTime(520, t + 0.02)
 
-    tapGain.gain.setValueAtTime(0.25 * this.getEffectiveVolume(), t)
+    tapGain.gain.setValueAtTime(0.25, t)
     tapGain.gain.exponentialRampToValueAtTime(0.001, t + 0.028)
 
     tapOsc.connect(tapGain)
-    tapGain.connect(this.masterGain)
+    tapGain.connect(dest)
 
     tapOsc.start(t)
     tapOsc.stop(t + 0.03)
@@ -352,46 +413,42 @@ export class SoundManager {
 
   /**
    * Rescue: Indonesian Gamelan Bonang / Saron Arpeggio (Pelog Pentatonic Laras).
-   * Warm bronze metallic bell resonance, uplifting and deeply rewarding.
    */
-  public playRescue(): void {
-    if (!this.ensureReady() || !this.ctx || !this.masterGain) return
+  public playRescue(origin?: SpatialPoint): void {
+    if (!this.ensureReady() || !this.ctx) return
+    const dest = this.routeOutput(origin)
+    if (!dest) return
 
     const t = this.ctx.currentTime
-    // Gamelan Pelog scale frequencies: Nem (560Hz) -> Barang (672Hz) -> Manyura (840Hz)
     const gamelanTones = [560, 672, 840]
     const step = 0.06
 
     gamelanTones.forEach((baseFreq, idx) => {
-      if (!this.ctx || !this.masterGain) return
+      if (!this.ctx) return
       const startT = t + idx * step
 
-      // Primary tone
       const carrier = this.ctx.createOscillator()
       const gain = this.ctx.createGain()
       carrier.type = 'sine'
       carrier.frequency.setValueAtTime(baseFreq, startT)
 
-      // Gamelan bronze harmonic overtone (2.76x ratio characteristic of struck bronze slabs)
       const overtone = this.ctx.createOscillator()
       const overGain = this.ctx.createGain()
       overtone.type = 'sine'
       overtone.frequency.setValueAtTime(baseFreq * 2.76, startT)
 
-      // Primary gain envelope
       gain.gain.setValueAtTime(0.001, startT)
-      gain.gain.linearRampToValueAtTime(0.28 * this.getEffectiveVolume(), startT + 0.008)
+      gain.gain.linearRampToValueAtTime(0.28, startT + 0.008)
       gain.gain.exponentialRampToValueAtTime(0.001, startT + 0.45)
 
-      // Metallic shimmer gain envelope (faster decay)
       overGain.gain.setValueAtTime(0.001, startT)
-      overGain.gain.linearRampToValueAtTime(0.12 * this.getEffectiveVolume(), startT + 0.006)
+      overGain.gain.linearRampToValueAtTime(0.12, startT + 0.006)
       overGain.gain.exponentialRampToValueAtTime(0.001, startT + 0.18)
 
       carrier.connect(gain)
       overtone.connect(overGain)
-      gain.connect(this.masterGain)
-      overGain.connect(this.masterGain)
+      gain.connect(dest)
+      overGain.connect(dest)
 
       carrier.start(startT)
       overtone.start(startT)
@@ -402,21 +459,19 @@ export class SoundManager {
 
   /**
    * Base Touch: Deep Indonesian Gong Ageng (65Hz sub-bass, 130Hz harmonic, 2.2s warm reverb).
-   * Majestic, resonant, and solemn fortress conquest announcement.
    */
   public playBaseTouch(): void {
     if (!this.ensureReady() || !this.ctx || !this.masterGain) return
 
     const t = this.ctx.currentTime
 
-    // 1. Gong Fundamental (Deep 65Hz C2)
     const gongSub = this.ctx.createOscillator()
     const subGain = this.ctx.createGain()
     gongSub.type = 'sine'
     gongSub.frequency.setValueAtTime(65, t)
 
     subGain.gain.setValueAtTime(0.001, t)
-    subGain.gain.linearRampToValueAtTime(0.42 * this.getEffectiveVolume(), t + 0.035)
+    subGain.gain.linearRampToValueAtTime(0.42, t + 0.035)
     subGain.gain.exponentialRampToValueAtTime(0.001, t + 2.2)
 
     gongSub.connect(subGain)
@@ -424,14 +479,13 @@ export class SoundManager {
     gongSub.start(t)
     gongSub.stop(t + 2.3)
 
-    // 2. Gong Body Overtone (130Hz & 195Hz warmth)
     const gongHarmonic = this.ctx.createOscillator()
     const harmGain = this.ctx.createGain()
     gongHarmonic.type = 'sine'
     gongHarmonic.frequency.setValueAtTime(130, t)
 
     harmGain.gain.setValueAtTime(0.001, t)
-    harmGain.gain.linearRampToValueAtTime(0.24 * this.getEffectiveVolume(), t + 0.02)
+    harmGain.gain.linearRampToValueAtTime(0.24, t + 0.02)
     harmGain.gain.exponentialRampToValueAtTime(0.001, t + 1.5)
 
     gongHarmonic.connect(harmGain)
@@ -440,9 +494,52 @@ export class SoundManager {
     gongHarmonic.stop(t + 1.6)
   }
 
+  public playDash(): void {
+    if (!this.ensureReady() || !this.ctx || !this.masterGain) return
+    triggerDashSfx(this.ctx, this.masterGain, this.noiseBuffer)
+  }
+
+  public playSmoke(origin?: SpatialPoint): void {
+    if (!this.ensureReady() || !this.ctx) return
+    const dest = this.routeOutput(origin)
+    if (!dest) return
+    triggerSmokeSfx(this.ctx, dest, this.noiseBuffer)
+  }
+
+  public playAdrenaline(): void {
+    if (!this.ensureReady() || !this.ctx || !this.masterGain) return
+    triggerAdrenalineSfx(this.ctx, this.masterGain)
+  }
+
+  public playSkillDenied(): void {
+    if (!this.ensureReady() || !this.ctx || !this.masterGain) return
+    triggerSkillDeniedSfx(this.ctx, this.masterGain)
+  }
+
+  public playCaughtSting(): void {
+    if (!this.ensureReady() || !this.ctx || !this.masterGain) return
+    triggerCaughtStingSfx(this.ctx, this.masterGain)
+  }
+
+  public updateTension(dt: number, threatLevel: number, isExhausted: boolean): void {
+    if (!this.ctx || !this.masterGain || this.getEffectiveVolume() <= 0) return
+    if (this.ctx.state === 'suspended') return
+    this.tensionLayer.update(
+      dt,
+      threatLevel,
+      isExhausted,
+      this.ctx,
+      this.masterGain,
+      this.noiseBuffer,
+    )
+  }
+
+  public resetTension(): void {
+    this.tensionLayer.reset()
+  }
+
   /**
    * Victory: Joyful Gamelan & Triumphant Fanfare (Pentatonic C5 -> E5 -> G5 -> C6).
-   * Bright, festive, and celebration-worthy.
    */
   public playVictory(): void {
     if (!this.ensureReady() || !this.ctx || !this.masterGain) return
@@ -452,7 +549,7 @@ export class SoundManager {
       { f: 523.25, t: 0.0, d: 0.12 },
       { f: 659.25, t: 0.11, d: 0.12 },
       { f: 783.99, t: 0.22, d: 0.16 },
-      { f: 1046.5, t: 0.36, d: 1.4 }, // High triumphant tone
+      { f: 1046.5, t: 0.36, d: 1.4 },
     ]
 
     melody.forEach((note) => {
@@ -469,7 +566,7 @@ export class SoundManager {
       osc.frequency.setValueAtTime(note.f, startT)
 
       gain.gain.setValueAtTime(0.001, startT)
-      gain.gain.linearRampToValueAtTime(0.32 * this.getEffectiveVolume(), startT + 0.015)
+      gain.gain.linearRampToValueAtTime(0.32, startT + 0.015)
       gain.gain.exponentialRampToValueAtTime(0.001, startT + note.d)
 
       osc.connect(filter)
@@ -483,7 +580,6 @@ export class SoundManager {
 
   /**
    * Defeat: Gentle Mellow Slide (Soft descending tones 440Hz -> 370Hz -> 293Hz).
-   * Respectful and gentle, avoiding harsh dissonant screeching.
    */
   public playDefeat(): void {
     if (!this.ensureReady() || !this.ctx || !this.masterGain) return
@@ -509,7 +605,7 @@ export class SoundManager {
       osc.frequency.setValueAtTime(note.f, startT)
 
       gain.gain.setValueAtTime(0.001, startT)
-      gain.gain.linearRampToValueAtTime(0.2 * this.getEffectiveVolume(), startT + 0.02)
+      gain.gain.linearRampToValueAtTime(0.2, startT + 0.02)
       gain.gain.exponentialRampToValueAtTime(0.001, startT + note.d)
 
       osc.connect(filter)
@@ -523,6 +619,7 @@ export class SoundManager {
 
   public dispose(): void {
     this.stopStun()
+    this.resetTension()
     try {
       this.ctx?.close()
     } catch {
@@ -530,7 +627,9 @@ export class SoundManager {
     }
     this.ctx = null
     this.masterGain = null
+    this.compressor = null
     this.noiseBuffer = null
+    this.listenerPos = null
   }
 }
 

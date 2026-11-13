@@ -133,6 +133,31 @@ describe('Milestone 6 — Visual Polish, VFX & Arena Polish', () => {
 
       vfx.dispose()
     })
+
+    it('spawns jump/land dust, tag hit-sparks, dash trail, adrenaline aura, smoke burst, and speed-lines cleanly', () => {
+      const scene = new THREE.Scene()
+      const vfx = new VFXManager(scene)
+
+      vfx.spawnJumpLandDust({ x: 0, y: 0.8, z: 0 }, 1.2)
+      vfx.spawnTagHitSpark({ x: 2, y: 0.8, z: 2 }, 0x60a5fa)
+      vfx.spawnDashTrail({ x: 1, y: 0.8, z: 1 }, 0.5, 0x38bdf8)
+      vfx.spawnAdrenalineAura({ x: -1, y: 0.8, z: 3 })
+      vfx.spawnSmokeBurst({ x: 0, y: 0.8, z: 4 }, 4.5)
+      vfx.spawnSpeedLine({ x: 0, y: 0.8, z: 0 }, 0)
+
+      const activeChildren = vfx.group.children.filter((c) => c.visible)
+      expect(activeChildren.length).toBeGreaterThanOrEqual(12)
+
+      // Guard invalid NaN coordinates without breaking update
+      vfx.spawnDashTrail({ x: Number.NaN, y: 0, z: 0 }, 0)
+      vfx.update(0.1)
+      vfx.update(1.5)
+
+      const remainingParticles = vfx.group.children.filter((c) => c.visible)
+      expect(remainingParticles.length).toBe(0)
+
+      vfx.dispose()
+    })
   })
 
   describe('Arena Greybox & Polish Integrity', () => {

@@ -5,7 +5,7 @@ import type { GameplayEntity, MovementInput, PlayerStatus, TeamId } from '../../
 import { GAME_CONFIG } from '../core/constants'
 import { EnergyShieldBubble } from './energy-shield-bubble'
 import { soundManager } from '../audio/sound-manager'
-import { CharacterAvatar } from './character-avatar'
+import { CharacterAvatar, type AvatarAnimationExtras } from './character-avatar'
 
 function drawRoundedRect(
   ctx: CanvasRenderingContext2D,
@@ -56,6 +56,12 @@ export class PlayerController implements GameplayEntity {
   public isExhausted = false
   public isGrounded = false
   private wasGrounded = true
+  public justJumped = false
+  public justLanded = false
+  private landSquashTimer = 0
+  private tagSwipeTimer = 0
+  public isVictorious = false
+  private readonly animExtras: AvatarAnimationExtras = {}
   private footstepTimer = 0
   private runAnimCycle = 0
   private readonly normalScale = new THREE.Vector3(1, 1, 1)
@@ -407,6 +413,8 @@ export class PlayerController implements GameplayEntity {
 
     if (!this.wasGrounded && newlyGrounded) {
       soundManager.playLand()
+      this.justLanded = true
+      this.landSquashTimer = 0.22
     }
     this.isGrounded = newlyGrounded
     this.wasGrounded = newlyGrounded
@@ -434,6 +442,7 @@ export class PlayerController implements GameplayEntity {
       targetVelY = GAME_CONFIG.movement.jumpImpulse
       this.isGrounded = false
       this.wasGrounded = false
+      this.justJumped = true
       soundManager.playJump()
     }
 
@@ -524,6 +533,17 @@ export class PlayerController implements GameplayEntity {
       this.bodyMesh.rotation.z = Math.sin(now * 0.008) * 0.12
     }
 
+    if (this.landSquashTimer > 0) this.landSquashTimer = Math.max(0, this.landSquashTimer - dt)
+    if (this.tagSwipeTimer > 0) this.tagSwipeTimer = Math.max(0, this.tagSwipeTimer - dt)
+
+    this.animExtras.isDashing = now < this.dashUntil
+    this.animExtras.isAdrenaline = now < this.adrenalineUntil
+    this.animExtras.isExhausted = this.isExhausted
+    this.animExtras.tagSwipeProgress = this.tagSwipeTimer > 0 ? 1 - this.tagSwipeTimer / 0.28 : 0
+    this.animExtras.landSquashProgress =
+      this.landSquashTimer > 0 ? 1 - this.landSquashTimer / 0.22 : 0
+    this.animExtras.isVictorious = this.isVictorious
+
     // Update modular 3D character avatar animation
     this.avatar.updateAnimation(
       dt,
@@ -532,6 +552,7 @@ export class PlayerController implements GameplayEntity {
       this.isSprinting,
       this.status === 'stunned',
       this.status === 'jailed',
+      this.animExtras,
     )
 
     // Overhead 3D nameplate & stamina bar update
@@ -623,6 +644,10 @@ export class PlayerController implements GameplayEntity {
 
   public setNameplateVisible(visible: boolean): void {
     this.overheadSprite.visible = visible
+  }
+
+  public triggerTagSwipe(): void {
+    this.tagSwipeTimer = 0.28
   }
 
   public applyDash(durationMs: number, speedMultiplier: number): void {

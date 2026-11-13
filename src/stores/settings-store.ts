@@ -13,6 +13,7 @@ export interface GameSettingsState {
   // Graphics options
   shadowsEnabled: boolean
   particleDensity: 'low' | 'high'
+  screenShakeEnabled: boolean
 }
 
 const STORAGE_KEY = 'bentengan_game_settings'
@@ -25,6 +26,7 @@ export const DEFAULT_SETTINGS: GameSettingsState = {
   isMuted: false,
   shadowsEnabled: true,
   particleDensity: 'high',
+  screenShakeEnabled: true,
 }
 
 function loadFromStorage(): Partial<GameSettingsState> {
@@ -70,6 +72,10 @@ export const useSettingsStore = defineStore('settings', {
         saved.particleDensity === 'low' || saved.particleDensity === 'high'
           ? saved.particleDensity
           : DEFAULT_SETTINGS.particleDensity,
+      screenShakeEnabled:
+        typeof saved.screenShakeEnabled === 'boolean'
+          ? saved.screenShakeEnabled
+          : DEFAULT_SETTINGS.screenShakeEnabled,
     }
   },
 
@@ -116,6 +122,11 @@ export const useSettingsStore = defineStore('settings', {
       persistToStorage(this.$state)
     },
 
+    setScreenShakeEnabled(val: boolean): void {
+      this.screenShakeEnabled = val
+      persistToStorage(this.$state)
+    },
+
     resetToDefaults(): void {
       this.mouseSensitivity = DEFAULT_SETTINGS.mouseSensitivity
       this.invertY = DEFAULT_SETTINGS.invertY
@@ -124,6 +135,7 @@ export const useSettingsStore = defineStore('settings', {
       this.isMuted = DEFAULT_SETTINGS.isMuted
       this.shadowsEnabled = DEFAULT_SETTINGS.shadowsEnabled
       this.particleDensity = DEFAULT_SETTINGS.particleDensity
+      this.screenShakeEnabled = DEFAULT_SETTINGS.screenShakeEnabled
       persistToStorage(this.$state)
     },
   },

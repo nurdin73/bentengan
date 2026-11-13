@@ -1,6 +1,9 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, beforeEach } from 'vitest'
 import * as THREE from 'three'
+import { setActivePinia, createPinia } from 'pinia'
 import { GAME_CONFIG } from '../game/core/constants'
+import { ThirdPersonCameraController } from '../game/camera/third-person'
+import { useSettingsStore } from '../stores/settings-store'
 
 describe('Camera SpringArm Collision & Distance Clamping', () => {
   it('should clamp camera distance before obstacles with safety buffer', () => {
@@ -55,5 +58,53 @@ describe('Camera SpringArm Collision & Distance Clamping', () => {
 
     // Fast-in factor should respond significantly quicker than smooth-out recovery
     expect(fastInFactor).toBeGreaterThan(smoothOutFactor * 2)
+  })
+})
+
+describe('Camera Trauma Shake & NaN Resilience', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia())
+  })
+
+  it('clamps trauma to [0, 1], decays over updates, and respects screenShakeEnabled setting', () => {
+    const cam = new THREE.PerspectiveCamera(60, 16 / 9, 0.1, 150)
+    const ctrl = new ThirdPersonCameraController(cam)
+    const target = new THREE.Vector3(0, 1, 0)
+
+    ctrl.addTrauma(0.6)
+    ctrl.addTrauma(0.9)
+    expect(ctrl.getTrauma()).toBe(1)
+
+    ctrl.update(target, 0, 0, 0.05)
+    expect(ctrl.getTrauma()).toBeLessThan(1)
+    expect(Number.isFinite(cam.position.x)).toBe(true)
+
+    const store = useSettingsStore()
+    store.setScreenShakeEnabled(false)
+    ctrl.addTrauma(0.5)
+
+    // Compare rotation against a clean camera when shake is disabled
+    const refCam = new THREE.PerspectiveCamera(60, 16 / 9, 0.1, 150)
+    const refCtrl = new ThirdPersonCameraController(refCam)
+    refCtrl.snap(target)
+    ctrl.snap(target)
+    ctrl.update(target, 0, 0, 0.016)
+    refCtrl.update(target, 0, 0, 0.016)
+
+    expect(cam.rotation.z).toBeCloseTo(refCam.rotation.z, 5)
+  })
+
+  it('ignores NaN frameTime and delta inputs without poisoning camera transforms', () => {
+    const cam = new THREE.PerspectiveCamera(60, 16 / 9, 0.1, 150)
+    const ctrl = new ThirdPersonCameraController(cam)
+    const target = new THREE.Vector3(0, 1, 0)
+
+    ctrl.snap(target)
+    ctrl.update(target, Number.NaN, Number.POSITIVE_INFINITY, Number.NaN)
+
+    expect(Number.isFinite(cam.position.x)).toBe(true)
+    expect(Number.isFinite(cam.position.y)).toBe(true)
+    expect(Number.isFinite(cam.position.z)).toBe(true)
+    expect(Number.isFinite(cam.rotation.z)).toBe(true)
   })
 })

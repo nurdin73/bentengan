@@ -288,4 +288,37 @@ describe('Entity Controllers CharacterAvatar Integration', () => {
 
     bot.dispose()
   })
+
+  it('applies procedural dash, tag swipe, land squash, exhausted idle, jailed struggle, and victory poses safely', () => {
+    setCharacterModelTemplate(null as unknown as THREE.Group)
+    const avatar = new CharacterAvatar({ teamId: 'blue', outfitId: 1 })
+
+    // Dash forward lean
+    avatar.updateAnimation(0.05, 8, true, true, false, false, { isDashing: true })
+    expect(avatar.pivotTorso!.rotation.x).toBeGreaterThan(0.1)
+
+    // Tag swipe twist & arm reach
+    avatar.updateAnimation(0.016, 4, true, false, false, false, { tagSwipeProgress: 0.5 })
+    expect(avatar.pivotArmR!.rotation.x).toBeLessThan(-0.3)
+    expect(avatar.pivotTorso!.rotation.y).toBeGreaterThan(0.1)
+
+    // Land squash vertical compression
+    avatar.updateAnimation(0.016, 0, true, false, false, false, { landSquashProgress: 0.5 })
+    expect(avatar.rootGroup.scale.y).toBeLessThan(0.95)
+
+    // Jailed struggle
+    avatar.updateAnimation(0.1, 0, true, false, false, true)
+    expect(Number.isFinite(avatar.pivotTorso!.rotation.x)).toBe(true)
+
+    // Victory celebratory arms raised
+    avatar.updateAnimation(0.2, 0, true, false, false, false, { isVictorious: true })
+    expect(avatar.pivotArmL!.rotation.x).toBeLessThan(-1.0)
+    expect(avatar.pivotArmR!.rotation.x).toBeLessThan(-1.0)
+
+    // Exhausted & NaN dt safety
+    avatar.updateAnimation(Number.NaN, 0, true, false, false, false, { isExhausted: true })
+    expect(Number.isFinite(avatar.pivotTorso!.rotation.x)).toBe(true)
+
+    avatar.dispose()
+  })
 })

@@ -3,6 +3,9 @@ import { setActivePinia, createPinia } from 'pinia'
 import { mount } from '@vue/test-utils'
 import { useSettingsStore, DEFAULT_SETTINGS } from '../stores/settings-store'
 import { SoundManager } from '../game/audio/sound-manager'
+import { computeSpatialMix } from '../game/audio/audio-spatial.utils'
+import { computeEnemyTerritoryThreat } from '../game/systems/threat-level.utils'
+import type { GameplayEntity } from '../types/game.types'
 import SettingsModal from '../components/settings/SettingsModal.vue'
 
 describe('Milestone 6 — Audio System & Game Settings', () => {
@@ -173,6 +176,19 @@ describe('Milestone 6 — Audio System & Game Settings', () => {
       await saveBtn.trigger('click')
       expect(wrapper.emitted('close')?.length).toBe(2)
     })
+
+    it('toggles screenShakeEnabled via settings modal toggle button', async () => {
+      const wrapper = mount(SettingsModal)
+      const store = useSettingsStore()
+      const toggleBtn = wrapper.find('[data-testid="settings-screenshake-toggle"]')
+
+      expect(store.screenShakeEnabled).toBe(true)
+      expect(toggleBtn.text()).toBe('Aktif')
+
+      await toggleBtn.trigger('click')
+      expect(store.screenShakeEnabled).toBe(false)
+      expect(toggleBtn.text()).toBe('Nonaktif')
+    })
   })
 
   describe('Sound Manager (Web Audio API Synthesizer)', () => {
@@ -180,20 +196,77 @@ describe('Milestone 6 — Audio System & Game Settings', () => {
       const sm = new SoundManager()
       expect(() => {
         sm.init()
+        sm.setListener({ x: 0, y: 1, z: 0 }, 0)
         sm.playFootstep(false)
         sm.playFootstep(true)
         sm.playSprintWhoosh()
-        sm.playJump()
-        sm.playLand()
+        sm.playJump({ x: 2, y: 1, z: 0 })
+        sm.playLand({ x: -2, y: 1, z: 0 })
+        sm.playDash()
+        sm.playSmoke({ x: 0, y: 1, z: 5 })
+        sm.playAdrenaline()
+        sm.playSkillDenied()
+        sm.playCaughtSting()
         sm.startStun()
         sm.stopStun()
-        sm.playCapture()
-        sm.playRescue()
+        sm.playCapture({ x: 3, y: 1, z: -2 })
+        sm.playRescue({ x: -3, y: 1, z: 4 })
         sm.playBaseTouch()
+        sm.updateTension(0.1, 0.8, true)
+        sm.resetTension()
         sm.playVictory()
         sm.playDefeat()
         sm.dispose()
       }).not.toThrow()
+    })
+
+    it('computes spatial distance falloff and stereo pan correctly', () => {
+      const center = computeSpatialMix({ x: 0, z: 0 }, 0, { x: 0, z: 0 })
+      expect(center.gain).toBe(1)
+      expect(center.pan).toBe(0)
+
+      const right = computeSpatialMix({ x: 0, z: 0 }, 0, { x: 10, z: 0 })
+      expect(right.pan).toBeGreaterThan(0.5)
+      expect(right.gain).toBeLessThan(1)
+      expect(right.gain).toBeGreaterThan(0)
+
+      const left = computeSpatialMix({ x: 0, z: 0 }, 0, { x: -10, z: 0 })
+      expect(left.pan).toBeLessThan(-0.5)
+
+      const far = computeSpatialMix({ x: 0, z: 0 }, 0, { x: 40, z: 0 })
+      expect(far.gain).toBe(0)
+    })
+
+    it('computes enemy territory threat strictly when local entity is inside enemy territory', () => {
+      const makeEntity = (
+        id: string,
+        teamId: 'blue' | 'red',
+        z: number,
+        status: 'normal' | 'jailed' | 'stunned' = 'normal',
+      ): GameplayEntity => ({
+        id,
+        name: id,
+        teamId,
+        status,
+        immunityUntil: 0,
+        getPosition: () => ({ x: 0, y: 1, z }),
+        teleportTo: () => {},
+      })
+
+      // Blue player safely in home territory (z = -5): zero threat even if red is close
+      const safeLocal = makeEntity('local', 'blue', -5)
+      const nearbyEnemy = makeEntity('enemy', 'red', 1)
+      expect(computeEnemyTerritoryThreat(safeLocal, [safeLocal, nearbyEnemy])).toBe(0)
+
+      // Blue player inside enemy territory (z = +5) near active red enemy (z = +8, dist = 3m)
+      const invadingLocal = makeEntity('local', 'blue', 5)
+      const chasingEnemy = makeEntity('enemy', 'red', 8)
+      const threat = computeEnemyTerritoryThreat(invadingLocal, [invadingLocal, chasingEnemy])
+      expect(threat).toBeGreaterThan(0.7)
+
+      // Jailed enemy nearby inside enemy territory produces no threat
+      const jailedEnemy = makeEntity('enemy-jailed', 'red', 7, 'jailed')
+      expect(computeEnemyTerritoryThreat(invadingLocal, [invadingLocal, jailedEnemy])).toBe(0)
     })
   })
 })

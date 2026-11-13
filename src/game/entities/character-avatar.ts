@@ -1,6 +1,20 @@
 import * as THREE from 'three'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 import type { TeamId } from '../../types/game.types'
+import type { AvatarAnimationExtras, AvatarRigPivots } from './avatar-animation.types'
+import {
+  applyAirbornePose,
+  applyDashLungePose,
+  applyIdleBreathingPose,
+  applyJailedStrugglePose,
+  applyLandSquashOverlay,
+  applyLocomotionPose,
+  applyStunnedPose,
+  applyTagSwipeOverlay,
+  applyVictoryTauntPose,
+} from './avatar-procedural-poses'
+
+export type { AvatarAnimationExtras }
 
 export type OutfitPresetId = 1 | 2 | 3 | 4 | 5 | 6
 
@@ -155,6 +169,7 @@ export class CharacterAvatar {
   private readonly materials = new Set<THREE.Material>()
   private walkCycle = 0
   private isModelAttached = false
+  private rigPivots: AvatarRigPivots | null = null
 
   constructor(options: CharacterAvatarOptions) {
     this.teamId = options.teamId
@@ -362,149 +377,68 @@ export class CharacterAvatar {
     isSprinting: boolean,
     isStunned = false,
     isJailed = false,
+    extras?: AvatarAnimationExtras,
   ): void {
     if (!this.pivotTorso) return
 
+    if (!this.rigPivots) {
+      this.rigPivots = {
+        rootGroup: this.rootGroup,
+        pivotTorso: this.pivotTorso,
+        pivotHead: this.pivotHead,
+        pivotArmL: this.pivotArmL,
+        pivotArmR: this.pivotArmR,
+        pivotLegL: this.pivotLegL,
+        pivotLegR: this.pivotLegR,
+      }
+    } else {
+      this.rigPivots.pivotTorso = this.pivotTorso
+      this.rigPivots.pivotHead = this.pivotHead
+      this.rigPivots.pivotArmL = this.pivotArmL
+      this.rigPivots.pivotArmR = this.pivotArmR
+      this.rigPivots.pivotLegL = this.pivotLegL
+      this.rigPivots.pivotLegR = this.pivotLegR
+    }
+
+    const rig = this.rigPivots
     const now = performance.now()
+    const safeDt = Number.isFinite(dt) && dt >= 0 ? dt : 0
 
     if (isStunned) {
-      // Stunned: Wobbling head and drooping torso
-      const wobble = Math.sin(now * 0.008) * 0.16
-      if (this.pivotHead) this.pivotHead.rotation.z = wobble
-      if (this.pivotTorso) this.pivotTorso.rotation.z = wobble * 0.6
-      if (this.pivotArmL) this.pivotArmL.rotation.x = 0.2
-      if (this.pivotArmR) this.pivotArmR.rotation.x = 0.2
+      applyStunnedPose(rig, now)
       return
     }
 
     if (isJailed) {
-      // Jailed: Slumped posture
-      const damping = 1 - Math.exp(-10 * dt)
-      if (this.pivotTorso)
-        this.pivotTorso.rotation.x = THREE.MathUtils.lerp(this.pivotTorso.rotation.x, 0.1, damping)
-      if (this.pivotHead)
-        this.pivotHead.rotation.x = THREE.MathUtils.lerp(this.pivotHead.rotation.x, 0.15, damping)
-      if (this.pivotArmL)
-        this.pivotArmL.rotation.x = THREE.MathUtils.lerp(this.pivotArmL.rotation.x, 0.1, damping)
-      if (this.pivotArmR)
-        this.pivotArmR.rotation.x = THREE.MathUtils.lerp(this.pivotArmR.rotation.x, 0.1, damping)
+      applyJailedStrugglePose(rig, safeDt, now)
       return
     }
 
+    if (extras?.isVictorious) {
+      applyVictoryTauntPose(rig, safeDt, now)
+      return
+    }
+
+    const isDashing = Boolean(extras?.isDashing)
+    const isAdrenaline = Boolean(extras?.isAdrenaline)
+    const isExhausted = Boolean(extras?.isExhausted)
     const isMovingGrounded = speed > 0.4 && isGrounded
 
-    if (isMovingGrounded) {
-      const animSpeed = isSprinting ? 14 : 9
-      this.walkCycle += dt * animSpeed
-
-      const armAmp = isSprinting ? 0.75 : 0.45
-      const legAmp = isSprinting ? 0.68 : 0.38
-
-      const sinWalk = Math.sin(this.walkCycle)
-
-      // Inverse limb swing
-      if (this.pivotArmL) this.pivotArmL.rotation.x = sinWalk * armAmp
-      if (this.pivotArmR) this.pivotArmR.rotation.x = -sinWalk * armAmp
-      if (this.pivotLegL) this.pivotLegL.rotation.x = -sinWalk * legAmp
-      if (this.pivotLegR) this.pivotLegR.rotation.x = sinWalk * legAmp
-
-      // Subtle torso forward tilt & waddle
-      const targetTorsoTilt = isSprinting ? 0.18 : 0.08
-      const tiltDamping = 1 - Math.exp(-12 * dt)
-      this.pivotTorso.rotation.x = THREE.MathUtils.lerp(
-        this.pivotTorso.rotation.x,
-        targetTorsoTilt,
-        tiltDamping,
-      )
-      this.pivotTorso.rotation.z = Math.sin(this.walkCycle) * (isSprinting ? 0.04 : 0.02)
-
-      // Head bobbing
-      if (this.pivotHead) {
-        this.pivotHead.rotation.x = Math.sin(this.walkCycle * 2) * 0.04
-        this.pivotHead.rotation.z = 0
-      }
+    if (isDashing) {
+      this.walkCycle += safeDt * 18
+      applyDashLungePose(rig, safeDt, this.walkCycle)
+    } else if (isMovingGrounded) {
+      const animSpeed = (isSprinting ? 14 : 9) * (isAdrenaline ? 1.2 : 1)
+      this.walkCycle += safeDt * animSpeed
+      applyLocomotionPose(rig, safeDt, this.walkCycle, isSprinting || isAdrenaline)
     } else if (!isGrounded) {
-      // Airborne / Jump Pose: Arms up, legs bent back
-      const jumpDamping = 1 - Math.exp(-10 * dt)
-      if (this.pivotArmL)
-        this.pivotArmL.rotation.x = THREE.MathUtils.lerp(
-          this.pivotArmL.rotation.x,
-          -0.35,
-          jumpDamping,
-        )
-      if (this.pivotArmR)
-        this.pivotArmR.rotation.x = THREE.MathUtils.lerp(
-          this.pivotArmR.rotation.x,
-          -0.35,
-          jumpDamping,
-        )
-      if (this.pivotLegL)
-        this.pivotLegL.rotation.x = THREE.MathUtils.lerp(
-          this.pivotLegL.rotation.x,
-          0.3,
-          jumpDamping,
-        )
-      if (this.pivotLegR)
-        this.pivotLegR.rotation.x = THREE.MathUtils.lerp(
-          this.pivotLegR.rotation.x,
-          0.3,
-          jumpDamping,
-        )
-      this.pivotTorso.rotation.x = THREE.MathUtils.lerp(
-        this.pivotTorso.rotation.x,
-        0.05,
-        jumpDamping,
-      )
+      applyAirbornePose(rig, safeDt)
     } else {
-      // Grounded Idle: Smoothly return all joints to zero
-      const returnDamping = 1 - Math.exp(-12 * dt)
-      if (this.pivotArmL)
-        this.pivotArmL.rotation.x = THREE.MathUtils.lerp(
-          this.pivotArmL.rotation.x,
-          0,
-          returnDamping,
-        )
-      if (this.pivotArmR)
-        this.pivotArmR.rotation.x = THREE.MathUtils.lerp(
-          this.pivotArmR.rotation.x,
-          0,
-          returnDamping,
-        )
-      if (this.pivotLegL)
-        this.pivotLegL.rotation.x = THREE.MathUtils.lerp(
-          this.pivotLegL.rotation.x,
-          0,
-          returnDamping,
-        )
-      if (this.pivotLegR)
-        this.pivotLegR.rotation.x = THREE.MathUtils.lerp(
-          this.pivotLegR.rotation.x,
-          0,
-          returnDamping,
-        )
-      this.pivotTorso.rotation.x = THREE.MathUtils.lerp(
-        this.pivotTorso.rotation.x,
-        0,
-        returnDamping,
-      )
-      this.pivotTorso.rotation.z = THREE.MathUtils.lerp(
-        this.pivotTorso.rotation.z,
-        0,
-        returnDamping,
-      )
-      if (this.pivotHead) {
-        this.pivotHead.rotation.x = THREE.MathUtils.lerp(
-          this.pivotHead.rotation.x,
-          0,
-          returnDamping,
-        )
-        this.pivotHead.rotation.z = THREE.MathUtils.lerp(
-          this.pivotHead.rotation.z,
-          0,
-          returnDamping,
-        )
-      }
+      applyIdleBreathingPose(rig, safeDt, now, isExhausted)
     }
+
+    applyTagSwipeOverlay(rig, extras?.tagSwipeProgress ?? 0)
+    applyLandSquashOverlay(rig, safeDt, extras?.landSquashProgress ?? 0)
   }
 
   public dispose(): void {

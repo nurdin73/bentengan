@@ -5,7 +5,7 @@ import type { GameplayEntity, PlayerStatus, TeamId } from '../../types/game.type
 import { GameplayRules } from '../systems/gameplay-rules'
 import { GAME_CONFIG } from '../core/constants'
 import { EnergyShieldBubble } from './energy-shield-bubble'
-import { CharacterAvatar } from './character-avatar'
+import { CharacterAvatar, type AvatarAnimationExtras } from './character-avatar'
 
 function drawRoundedRect(
   ctx: CanvasRenderingContext2D,
@@ -76,6 +76,13 @@ export class BotController implements GameplayEntity {
   public rescueCooldownUntil = 0
   public confoundedUntil = 0
   public isFrozen = false
+  public justJumped = false
+  public justLanded = false
+  private wasGrounded = true
+  private landSquashTimer = 0
+  private tagSwipeTimer = 0
+  public isVictorious = false
+  private readonly animExtras: AvatarAnimationExtras = {}
 
   // Visual interpolation transforms
   public readonly previousPosition = new THREE.Vector3()
@@ -1112,18 +1119,41 @@ export class BotController implements GameplayEntity {
       this.bodyMesh.rotation.z = Math.sin(now * 0.008) * 0.12
     }
 
+    const isGrounded = Math.abs(currentLinVel.y) < 0.3
+    if (!this.wasGrounded && isGrounded) {
+      this.justLanded = true
+      this.landSquashTimer = 0.22
+    } else if (this.wasGrounded && !isGrounded && currentLinVel.y > 2.0) {
+      this.justJumped = true
+    }
+    this.wasGrounded = isGrounded
+
+    if (this.landSquashTimer > 0) this.landSquashTimer = Math.max(0, this.landSquashTimer - dt)
+    if (this.tagSwipeTimer > 0) this.tagSwipeTimer = Math.max(0, this.tagSwipeTimer - dt)
+
+    this.animExtras.isExhausted = this.isExhausted
+    this.animExtras.tagSwipeProgress = this.tagSwipeTimer > 0 ? 1 - this.tagSwipeTimer / 0.28 : 0
+    this.animExtras.landSquashProgress =
+      this.landSquashTimer > 0 ? 1 - this.landSquashTimer / 0.22 : 0
+    this.animExtras.isVictorious = this.isVictorious
+
     // Update modular 3D character avatar animation
     this.avatar.updateAnimation(
       dt,
       horizSpeed,
-      Math.abs(currentLinVel.y) < 0.3,
+      isGrounded,
       this.isSprinting,
       this.status === 'stunned',
       this.status === 'jailed',
+      this.animExtras,
     )
 
     // Overhead 3D nameplate & stamina bar update
     this.updateOverheadDisplay()
+  }
+
+  public triggerTagSwipe(): void {
+    this.tagSwipeTimer = 0.28
   }
 
   public updateOverheadDisplay(): void {
