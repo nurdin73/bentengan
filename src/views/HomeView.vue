@@ -8,6 +8,7 @@ import { useHomeBgm } from '../components/home/use-home-bgm'
 import HomeTopHud from '../components/home/HomeTopHud.vue'
 import HomeMobileDrawer from '../components/home/HomeMobileDrawer.vue'
 import HomeCharacterStage from '../components/home/HomeCharacterStage.vue'
+import HomeAmbientWind from '../components/home/HomeAmbientWind.vue'
 import LobbyModeSelector from '../components/lobby/LobbyModeSelector.vue'
 import GameRulesModal from '../components/guide/GameRulesModal.vue'
 import GameControlsModal from '../components/guide/GameControlsModal.vue'
@@ -81,6 +82,9 @@ const openModalFromDrawer = (target: 'rules' | 'controls' | 'character' | 'setti
         class="absolute bottom-0 inset-x-0 h-24 sm:h-28 bg-gradient-to-t from-emerald-700/35 via-emerald-500/15 to-transparent"
       />
     </div>
+
+    <!-- Ambient Wind & Falling Leaves Layer -->
+    <HomeAmbientWind :density="settingsStore.particleDensity" />
 
     <!-- Top Game HUD -->
     <HomeTopHud

@@ -1,105 +1,76 @@
-const STEP_DURATION_SEC = 0.326 // ~92 BPM eighth-note grid
-const LOOKAHEAD_MS = 90
-const SCHEDULE_AHEAD_SEC = 0.22
-const TOTAL_STEPS = 32 // 4-bar phrase (8 steps per bar)
-const MAX_MASTER_GAIN = 0.38
-
-// Warm Indonesian Slendro/Pelog-inspired C Major Pentatonic melody (Hz, 0 = rest)
-const MELODY_PATTERN: readonly number[] = [
-  523.25, 0, 587.33, 659.25, 783.99, 0, 659.25, 587.33,
-  523.25, 0, 440.0, 523.25, 587.33, 0, 0, 0,
-  659.25, 0, 783.99, 880.0, 783.99, 0, 659.25, 587.33,
-  659.25, 0, 587.33, 523.25, 440.0, 0, 392.0, 0,
-]
-
-// Gentle harmonic accompaniment notes on downbeats / offbeats (Hz, 0 = rest)
-const BASS_PATTERN: readonly number[] = [
-  130.81, 0, 0, 0, 196.0, 0, 0, 0,
-  174.61, 0, 0, 0, 130.81, 0, 0, 0,
-  164.81, 0, 0, 0, 220.0, 0, 0, 0,
-  196.0, 0, 0, 0, 130.81, 0, 0, 0,
-]
-
-// Bar-start warm pad chords (every 8 steps)
-const PAD_CHORDS: readonly (readonly [number, number])[] = [
-  [261.63, 392.0], // C4 + G4
-  [220.0, 329.63], // A3 + E4
-  [174.61, 261.63], // F3 + C4
-  [196.0, 293.66], // G3 + D4
-]
+const HOME_BGM_SRC = `${import.meta.env.BASE_URL ?? '/'}audio/homepage.mp3`.replace(/\/{2,}/g, '/')
+const FADE_STEP_MS = 25
+const FADE_IN_MS = 450
+const FADE_OUT_MS = 220
 
 function clampVolume(volume: number): number {
   if (!Number.isFinite(volume)) return 0
   return Math.max(0, Math.min(1, volume))
 }
 
-function getAudioContextConstructor(): typeof AudioContext | null {
-  if (typeof window === 'undefined') return null
-  const legacyWindow = window as unknown as { webkitAudioContext?: typeof AudioContext }
-  return window.AudioContext ?? legacyWindow.webkitAudioContext ?? null
-}
-
 /**
- * Procedural Web Audio background music player for the Bentengan 3D homepage.
- * Synthesizes a warm, looping Indonesian pentatonic marimba/bonang & pad motif
- * with lookahead scheduling and browser autoplay unlock support.
+ * Background music player for the Bentengan 3D homepage backed by /audio/homepage.mp3.
+ * Handles streaming playback, looping, smooth volume fades, browser autoplay unlock,
+ * and clean disposal when navigating away from the homepage.
  */
 export class HomeBgmPlayer {
-  private ctx: AudioContext | null = null
-  private masterGain: GainNode | null = null
-  private warmthFilter: BiquadFilterNode | null = null
-  private schedulerTimer: ReturnType<typeof setInterval> | null = null
-  private stopTimeout: ReturnType<typeof setTimeout> | null = null
+  private audio: HTMLAudioElement | null = null
+  private fadeTimer: ReturnType<typeof setInterval> | null = null
 
-  private isRunning = false
-  private isPaused = false
-  private currentStep = 0
-  private nextNoteTime = 0
+  private isPlayingState = false
+  private isPausedState = false
+  private awaitingGesture = false
   private targetVolume = 0.45
 
   public get playing(): boolean {
-    return this.isRunning && !this.isPaused && this.ctx?.state === 'running'
+    return (
+      this.isPlayingState &&
+      !this.isPausedState &&
+      this.audio !== null &&
+      !this.audio.paused
+    )
   }
 
   public get needsUserGesture(): boolean {
-    return this.ctx?.state === 'suspended'
+    return this.awaitingGesture
   }
 
   /**
-   * Initializes AudioContext and starts the BGM loop if allowed by autoplay policy.
-   * Returns true if AudioContext is actively running, false if awaiting user gesture.
+   * Loads /audio/homepage.mp3 if needed and starts looping playback.
+   * Returns true if playback started, or false if blocked by browser autoplay policy.
    */
   public async start(volume: number): Promise<boolean> {
-    this.clearPendingStop()
+    this.clearFadeTimer()
     this.targetVolume = clampVolume(volume)
 
-    if (!this.ensureGraph()) {
-      return false
-    }
-    if (!this.ctx || !this.masterGain) {
-      return false
-    }
+    const audio = this.ensureAudioElement()
+    if (!audio) return false
 
-    if (this.ctx.state === 'suspended') {
-      try {
-        await this.ctx.resume()
-      } catch {
-        // Blocked by browser autoplay policy until user gesture
-      }
-    }
-
-    if (this.ctx.state !== 'running') {
+    if (this.targetVolume <= 0) {
+      audio.volume = 0
+      audio.muted = true
       return false
     }
 
-    this.isPaused = false
-    this.beginScheduler()
-    this.rampGain(this.targetVolume * MAX_MASTER_GAIN, 0.55)
+    audio.volume = 0
+    audio.muted = false
+
+    const started = await this.tryPlay(audio)
+    if (!started) {
+      this.isPlayingState = false
+      this.awaitingGesture = true
+      return false
+    }
+
+    this.awaitingGesture = false
+    this.isPlayingState = true
+    this.isPausedState = false
+    this.fadeTo(this.targetVolume, FADE_IN_MS)
     return true
   }
 
   /**
-   * Resumes a suspended AudioContext inside a user gesture handler and starts playback.
+   * Attempts playback inside a user gesture handler to satisfy browser autoplay policy.
    */
   public async unlockAndStart(volume: number): Promise<boolean> {
     return this.start(volume)
@@ -107,301 +78,186 @@ export class HomeBgmPlayer {
 
   public setVolume(volume: number): void {
     this.targetVolume = clampVolume(volume)
-    if (!this.ctx || !this.masterGain || !this.isRunning || this.isPaused) return
-    this.rampGain(this.targetVolume * MAX_MASTER_GAIN, 0.08)
+    if (!this.audio || !this.isPlayingState || this.isPausedState) return
+
+    this.fadeTo(this.targetVolume, 80)
   }
 
   public pause(): void {
-    if (!this.isRunning || this.isPaused) return
-    this.isPaused = true
-    this.clearScheduler()
-    this.rampGain(0, 0.12)
+    if (!this.audio || !this.isPlayingState || this.isPausedState) return
+    this.isPausedState = true
+    const audio = this.audio
+
+    this.fadeTo(0, 120, () => {
+      if (this.isPausedState) {
+        audio.pause()
+      }
+    })
   }
 
   public async resume(volume: number): Promise<void> {
     this.targetVolume = clampVolume(volume)
-    if (!this.isRunning) {
+    if (!this.isPlayingState || !this.audio) {
       await this.start(this.targetVolume)
       return
     }
-    if (!this.isPaused || !this.ctx) return
-
-    if (this.ctx.state === 'suspended') {
-      try {
-        await this.ctx.resume()
-      } catch {
-        return
-      }
-    }
-    if (this.ctx.state !== 'running') return
-
-    this.isPaused = false
-    this.nextNoteTime = this.ctx.currentTime + 0.05
-    this.beginScheduler()
-    this.rampGain(this.targetVolume * MAX_MASTER_GAIN, 0.35)
-  }
-
-  /**
-   * Smoothly fades out and stops the BGM scheduler.
-   */
-  public stop(): void {
-    this.clearScheduler()
-    this.clearPendingStop()
-
-    if (!this.isRunning) {
+    if (!this.isPausedState) {
+      this.setVolume(this.targetVolume)
       return
     }
 
-    this.isRunning = false
-    this.isPaused = false
-    this.rampGain(0, 0.2)
-
-    if (this.ctx && this.ctx.state === 'running') {
-      this.stopTimeout = setTimeout(() => {
-        if (!this.isRunning && this.ctx && this.ctx.state === 'running') {
-          this.ctx.suspend().catch(() => {})
-        }
-      }, 240)
+    if (this.targetVolume <= 0) {
+      this.audio.volume = 0
+      this.audio.muted = true
+      return
     }
+
+    this.audio.muted = false
+    const started = await this.tryPlay(this.audio)
+    if (!started) {
+      this.awaitingGesture = true
+      return
+    }
+
+    this.awaitingGesture = false
+    this.isPausedState = false
+    this.fadeTo(this.targetVolume, 300)
+  }
+
+  /**
+   * Smoothly fades out, pauses playback, and rewinds the track for the next visit.
+   */
+  public stop(): void {
+    this.clearFadeTimer()
+
+    if (!this.audio) {
+      this.isPlayingState = false
+      this.isPausedState = false
+      this.awaitingGesture = false
+      return
+    }
+
+    const audio = this.audio
+    const wasActive = this.isPlayingState && !audio.paused
+    this.isPlayingState = false
+    this.isPausedState = false
+    this.awaitingGesture = false
+
+    if (!wasActive) {
+      audio.pause()
+      this.resetCurrentTime(audio)
+      return
+    }
+
+    this.fadeTo(0, FADE_OUT_MS, () => {
+      if (!this.isPlayingState) {
+        audio.pause()
+        this.resetCurrentTime(audio)
+      }
+    })
   }
 
   public dispose(): void {
-    this.clearScheduler()
-    this.clearPendingStop()
-    this.isRunning = false
-    this.isPaused = false
+    this.clearFadeTimer()
+    this.isPlayingState = false
+    this.isPausedState = false
+    this.awaitingGesture = false
 
-    try {
-      this.ctx?.close()
-    } catch {
-      // Ignore cleanup error in headless environments
+    if (this.audio) {
+      try {
+        this.audio.pause()
+        this.audio.removeAttribute('src')
+        this.audio.load()
+      } catch {
+        // Ignore cleanup error in headless environments
+      }
+      this.audio = null
     }
-
-    this.ctx = null
-    this.masterGain = null
-    this.warmthFilter = null
   }
 
-  private ensureGraph(): boolean {
-    if (this.ctx && this.masterGain && this.warmthFilter) {
-      return true
-    }
+  private ensureAudioElement(): HTMLAudioElement | null {
+    if (this.audio) return this.audio
+    if (typeof Audio !== 'function') return null
 
     try {
-      const AudioCtx = getAudioContextConstructor()
-      if (!AudioCtx) return false
+      const audio = new Audio(HOME_BGM_SRC)
+      audio.loop = true
+      audio.preload = 'auto'
+      audio.volume = 0
+      this.audio = audio
+      return audio
+    } catch {
+      return null
+    }
+  }
 
-      this.ctx = new AudioCtx()
-      this.masterGain = this.ctx.createGain()
-      this.masterGain.gain.setValueAtTime(0, this.ctx.currentTime)
+  private async tryPlay(audio: HTMLAudioElement): Promise<boolean> {
+    if (typeof audio.play !== 'function') return false
 
-      this.warmthFilter = this.ctx.createBiquadFilter()
-      this.warmthFilter.type = 'lowpass'
-      this.warmthFilter.frequency.setValueAtTime(2600, this.ctx.currentTime)
-
-      this.masterGain.connect(this.warmthFilter)
-      this.warmthFilter.connect(this.ctx.destination)
-      return true
+    try {
+      const maybePromise = audio.play() as Promise<void> | undefined
+      if (maybePromise && typeof maybePromise.then === 'function') {
+        await maybePromise
+        return !audio.paused
+      }
+      return !audio.paused
     } catch {
       return false
     }
   }
 
-  private beginScheduler(): void {
-    if (!this.ctx) return
-
-    if (!this.isRunning) {
-      this.isRunning = true
-      this.currentStep = 0
-      this.nextNoteTime = this.ctx.currentTime + 0.06
-    }
-
-    if (this.schedulerTimer) return
-
-    this.schedulerLoop()
-    this.schedulerTimer = setInterval(() => {
-      this.schedulerLoop()
-    }, LOOKAHEAD_MS)
-  }
-
-  private schedulerLoop(): void {
-    if (!this.ctx || !this.isRunning || this.isPaused) return
-    if (this.ctx.state !== 'running') return
-
-    const horizon = this.ctx.currentTime + SCHEDULE_AHEAD_SEC
-    while (this.nextNoteTime < horizon) {
-      this.scheduleStep(this.currentStep, this.nextNoteTime)
-      this.nextNoteTime += STEP_DURATION_SEC
-      this.currentStep = (this.currentStep + 1) % TOTAL_STEPS
+  private resetCurrentTime(audio: HTMLAudioElement): void {
+    try {
+      audio.currentTime = 0
+    } catch {
+      // Ignore seek error if metadata is not yet loaded
     }
   }
 
-  private scheduleStep(step: number, time: number): void {
-    if (!this.ctx || !this.masterGain) return
-
-    const melodyFreq = MELODY_PATTERN[step] ?? 0
-    if (melodyFreq > 0) {
-      this.triggerBonangNote(this.ctx, this.masterGain, melodyFreq, time)
+  private fadeTo(targetVol: number, durationMs: number, onComplete?: () => void): void {
+    this.clearFadeTimer()
+    if (!this.audio) {
+      onComplete?.()
+      return
     }
 
-    const bassFreq = BASS_PATTERN[step] ?? 0
-    if (bassFreq > 0) {
-      this.triggerWarmBass(this.ctx, this.masterGain, bassFreq, time)
+    const audio = this.audio
+    const clampedTarget = clampVolume(targetVol)
+    if (clampedTarget > 0) {
+      audio.muted = false
     }
 
-    if (step % 8 === 0) {
-      const chordIndex = Math.floor(step / 8) % PAD_CHORDS.length
-      const chord = PAD_CHORDS[chordIndex]
-      if (chord) {
-        this.triggerPadChord(this.ctx, this.masterGain, chord, time)
+    const startVol = audio.volume
+    const steps = Math.max(1, Math.round(durationMs / FADE_STEP_MS))
+    if (steps <= 1 || Math.abs(clampedTarget - startVol) < 0.005) {
+      audio.volume = clampedTarget
+      if (clampedTarget <= 0) {
+        audio.muted = true
       }
+      onComplete?.()
+      return
     }
 
-    if (step % 2 === 0) {
-      const isDownbeat = step % 4 === 0
-      this.triggerBambooPulse(this.ctx, this.masterGain, time, isDownbeat)
-    }
+    let step = 0
+    this.fadeTimer = setInterval(() => {
+      step++
+      const progress = Math.min(1, step / steps)
+      audio.volume = clampVolume(startVol + (clampedTarget - startVol) * progress)
+
+      if (progress >= 1) {
+        this.clearFadeTimer()
+        if (clampedTarget <= 0) {
+          audio.muted = true
+        }
+        onComplete?.()
+      }
+    }, FADE_STEP_MS)
   }
 
-  private triggerBonangNote(
-    ctx: AudioContext,
-    dest: AudioNode,
-    freq: number,
-    time: number,
-  ): void {
-    const carrier = ctx.createOscillator()
-    const overtone = ctx.createOscillator()
-    const carrierGain = ctx.createGain()
-    const overtoneGain = ctx.createGain()
-
-    carrier.type = 'sine'
-    carrier.frequency.setValueAtTime(freq, time)
-
-    overtone.type = 'sine'
-    overtone.frequency.setValueAtTime(freq * 2, time)
-
-    carrierGain.gain.setValueAtTime(0.001, time)
-    carrierGain.gain.linearRampToValueAtTime(0.24, time + 0.012)
-    carrierGain.gain.exponentialRampToValueAtTime(0.001, time + 0.44)
-
-    overtoneGain.gain.setValueAtTime(0.001, time)
-    overtoneGain.gain.linearRampToValueAtTime(0.07, time + 0.008)
-    overtoneGain.gain.exponentialRampToValueAtTime(0.001, time + 0.18)
-
-    carrier.connect(carrierGain)
-    overtone.connect(overtoneGain)
-    carrierGain.connect(dest)
-    overtoneGain.connect(dest)
-
-    carrier.start(time)
-    overtone.start(time)
-    carrier.stop(time + 0.46)
-    overtone.stop(time + 0.2)
-  }
-
-  private triggerWarmBass(
-    ctx: AudioContext,
-    dest: AudioNode,
-    freq: number,
-    time: number,
-  ): void {
-    const osc = ctx.createOscillator()
-    const filter = ctx.createBiquadFilter()
-    const gain = ctx.createGain()
-
-    osc.type = 'triangle'
-    osc.frequency.setValueAtTime(freq, time)
-
-    filter.type = 'lowpass'
-    filter.frequency.setValueAtTime(340, time)
-
-    gain.gain.setValueAtTime(0.001, time)
-    gain.gain.linearRampToValueAtTime(0.2, time + 0.03)
-    gain.gain.exponentialRampToValueAtTime(0.001, time + 0.95)
-
-    osc.connect(filter)
-    filter.connect(gain)
-    gain.connect(dest)
-
-    osc.start(time)
-    osc.stop(time + 1.0)
-  }
-
-  private triggerPadChord(
-    ctx: AudioContext,
-    dest: AudioNode,
-    chord: readonly [number, number],
-    time: number,
-  ): void {
-    const duration = STEP_DURATION_SEC * 8
-
-    for (const freq of chord) {
-      const osc = ctx.createOscillator()
-      const gain = ctx.createGain()
-
-      osc.type = 'sine'
-      osc.frequency.setValueAtTime(freq, time)
-
-      gain.gain.setValueAtTime(0.001, time)
-      gain.gain.linearRampToValueAtTime(0.075, time + 0.45)
-      gain.gain.linearRampToValueAtTime(0.055, time + duration - 0.4)
-      gain.gain.exponentialRampToValueAtTime(0.001, time + duration)
-
-      osc.connect(gain)
-      gain.connect(dest)
-
-      osc.start(time)
-      osc.stop(time + duration + 0.04)
-    }
-  }
-
-  private triggerBambooPulse(
-    ctx: AudioContext,
-    dest: AudioNode,
-    time: number,
-    isDownbeat: boolean,
-  ): void {
-    const osc = ctx.createOscillator()
-    const gain = ctx.createGain()
-
-    osc.type = 'sine'
-    osc.frequency.setValueAtTime(isDownbeat ? 150 : 220, time)
-    osc.frequency.exponentialRampToValueAtTime(isDownbeat ? 72 : 125, time + 0.04)
-
-    gain.gain.setValueAtTime(0.001, time)
-    gain.gain.linearRampToValueAtTime(isDownbeat ? 0.11 : 0.055, time + 0.005)
-    gain.gain.exponentialRampToValueAtTime(0.001, time + 0.06)
-
-    osc.connect(gain)
-    gain.connect(dest)
-
-    osc.start(time)
-    osc.stop(time + 0.07)
-  }
-
-  private rampGain(target: number, timeConstantSec: number): void {
-    if (!this.ctx || !this.masterGain) return
-    const now = this.ctx.currentTime
-    const gainParam = this.masterGain.gain
-
-    if (typeof gainParam.setTargetAtTime === 'function') {
-      gainParam.setTargetAtTime(target, now, Math.max(0.01, timeConstantSec / 3))
-    } else {
-      gainParam.setValueAtTime(target, now)
-    }
-  }
-
-  private clearScheduler(): void {
-    if (this.schedulerTimer) {
-      clearInterval(this.schedulerTimer)
-      this.schedulerTimer = null
-    }
-  }
-
-  private clearPendingStop(): void {
-    if (this.stopTimeout) {
-      clearTimeout(this.stopTimeout)
-      this.stopTimeout = null
+  private clearFadeTimer(): void {
+    if (this.fadeTimer) {
+      clearInterval(this.fadeTimer)
+      this.fadeTimer = null
     }
   }
 }

@@ -18,43 +18,22 @@ vi.mock('vue-router', () => ({
   onBeforeRouteLeave: vi.fn<(cb: () => void) => void>(),
 }))
 
-interface MockAudioParam {
-  setValueAtTime: ReturnType<typeof vi.fn<() => void>>
-  linearRampToValueAtTime: ReturnType<typeof vi.fn<() => void>>
-  exponentialRampToValueAtTime: ReturnType<typeof vi.fn<() => void>>
-  setTargetAtTime: ReturnType<typeof vi.fn<() => void>>
-}
-
-interface MockGainNode {
-  gain: MockAudioParam
-  connect: ReturnType<typeof vi.fn<() => void>>
-}
-
-interface MockOscillatorNode {
-  type: OscillatorType
-  frequency: MockAudioParam
-  connect: ReturnType<typeof vi.fn<() => void>>
-  start: ReturnType<typeof vi.fn<() => void>>
-  stop: ReturnType<typeof vi.fn<() => void>>
-}
-
-interface MockBiquadFilterNode {
-  type: BiquadFilterType
-  frequency: MockAudioParam
-  connect: ReturnType<typeof vi.fn<() => void>>
-}
-
-function createMockAudioParam(): MockAudioParam {
-  return {
-    setValueAtTime: vi.fn<() => void>(),
-    linearRampToValueAtTime: vi.fn<() => void>(),
-    exponentialRampToValueAtTime: vi.fn<() => void>(),
-    setTargetAtTime: vi.fn<() => void>(),
-  }
+interface MockAudioInstance {
+  src: string
+  loop: boolean
+  preload: string
+  volume: number
+  muted: boolean
+  paused: boolean
+  currentTime: number
+  play: ReturnType<typeof vi.fn<() => Promise<void>>>
+  pause: ReturnType<typeof vi.fn<() => void>>
+  load: ReturnType<typeof vi.fn<() => void>>
+  removeAttribute: ReturnType<typeof vi.fn<(attr: string) => void>>
 }
 
 describe('Homepage Background Music (HomeBgmPlayer & HUD Integration)', () => {
-  const originalAudioContext = window.AudioContext
+  const originalAudio = globalThis.Audio
 
   beforeEach(() => {
     setActivePinia(createPinia())
@@ -63,13 +42,12 @@ describe('Homepage Background Music (HomeBgmPlayer & HUD Integration)', () => {
 
   afterEach(() => {
     vi.useRealTimers()
-    window.AudioContext = originalAudioContext
+    globalThis.Audio = originalAudio
     vi.restoreAllMocks()
   })
 
   it('handles all lifecycle methods safely without crashing in headless environment', async () => {
-    // Ensure AudioContext is unavailable
-    Object.defineProperty(window, 'AudioContext', {
+    Object.defineProperty(globalThis, 'Audio', {
       value: undefined,
       configurable: true,
       writable: true,
@@ -87,64 +65,34 @@ describe('Homepage Background Music (HomeBgmPlayer & HUD Integration)', () => {
     expect(player.playing).toBe(false)
   })
 
-  it('schedules Web Audio nodes when AudioContext is running and handles pause/resume/stop', async () => {
-    const createdOscillators: MockOscillatorNode[] = []
-    const createdGains: MockGainNode[] = []
-    let ctxState: AudioContextState = 'running'
-
-    class MockAudioContext {
-      public currentTime = 0
-      public destination = {} as AudioDestinationNode
-
-      public get state(): AudioContextState {
-        return ctxState
-      }
-
-      public resume = vi.fn<() => Promise<void>>(async () => {
-        ctxState = 'running'
-      })
-
-      public suspend = vi.fn<() => Promise<void>>(async () => {
-        ctxState = 'suspended'
-      })
-
-      public close = vi.fn<() => Promise<void>>(async () => {
-        ctxState = 'closed'
-      })
-
-      public createGain = vi.fn<() => GainNode>(() => {
-        const node: MockGainNode = {
-          gain: createMockAudioParam(),
-          connect: vi.fn<() => void>(),
-        }
-        createdGains.push(node)
-        return node as unknown as GainNode
-      })
-
-      public createBiquadFilter = vi.fn<() => BiquadFilterNode>(() => {
-        const node: MockBiquadFilterNode = {
-          type: 'lowpass',
-          frequency: createMockAudioParam(),
-          connect: vi.fn<() => void>(),
-        }
-        return node as unknown as BiquadFilterNode
-      })
-
-      public createOscillator = vi.fn<() => OscillatorNode>(() => {
-        const node: MockOscillatorNode = {
-          type: 'sine',
-          frequency: createMockAudioParam(),
-          connect: vi.fn<() => void>(),
-          start: vi.fn<() => void>(),
-          stop: vi.fn<() => void>(),
-        }
-        createdOscillators.push(node)
-        return node as unknown as OscillatorNode
-      })
+  it('streams /audio/homepage.mp3 in a loop and handles volume, pause, resume, and stop', async () => {
+    const mockAudio: MockAudioInstance = {
+      src: '',
+      loop: false,
+      preload: '',
+      volume: 1,
+      muted: false,
+      paused: true,
+      currentTime: 12,
+      play: vi.fn<() => Promise<void>>(async () => {
+        mockAudio.paused = false
+      }),
+      pause: vi.fn<() => void>(() => {
+        mockAudio.paused = true
+      }),
+      load: vi.fn<() => void>(),
+      removeAttribute: vi.fn<(attr: string) => void>(),
     }
 
-    Object.defineProperty(window, 'AudioContext', {
-      value: MockAudioContext,
+    class MockAudio {
+      constructor(src = '') {
+        mockAudio.src = src
+        return mockAudio as unknown as MockAudio
+      }
+    }
+
+    Object.defineProperty(globalThis, 'Audio', {
+      value: MockAudio,
       configurable: true,
       writable: true,
     })
@@ -154,108 +102,89 @@ describe('Homepage Background Music (HomeBgmPlayer & HUD Integration)', () => {
 
     expect(started).toBe(true)
     expect(player.playing).toBe(true)
-    expect(createdOscillators.length).toBeGreaterThan(0)
+    expect(mockAudio.src).toBe('/audio/homepage.mp3')
+    expect(mockAudio.loop).toBe(true)
+    expect(mockAudio.preload).toBe('auto')
 
-    // Master gain ramps up
-    const masterGain = createdGains[0]
-    expect(masterGain?.gain.setTargetAtTime).toHaveBeenCalled()
+    // Fade-in finishes to target volume
+    vi.advanceTimersByTime(500)
+    expect(mockAudio.volume).toBeCloseTo(0.6, 2)
+    expect(mockAudio.muted).toBe(false)
 
-    // Volume update while running
+    // Volume update while playing
     player.setVolume(0.25)
-    expect(masterGain?.gain.setTargetAtTime).toHaveBeenCalledTimes(2)
+    vi.advanceTimersByTime(120)
+    expect(mockAudio.volume).toBeCloseTo(0.25, 2)
 
-    // Pause silences master gain
+    // Pause fades out and pauses audio
     player.pause()
+    vi.advanceTimersByTime(160)
+    expect(mockAudio.pause).toHaveBeenCalled()
     expect(player.playing).toBe(false)
 
-    // Resume restores playback
+    // Resume restarts playback and fades back up
     await player.resume(0.5)
+    vi.advanceTimersByTime(350)
     expect(player.playing).toBe(true)
+    expect(mockAudio.volume).toBeCloseTo(0.5, 2)
 
-    // Stop schedules fade out and suspends
+    // Stop fades out, pauses, and rewinds currentTime
     player.stop()
+    vi.advanceTimersByTime(260)
     expect(player.playing).toBe(false)
-    vi.advanceTimersByTime(300)
+    expect(mockAudio.currentTime).toBe(0)
 
     player.dispose()
+    expect(mockAudio.removeAttribute).toHaveBeenCalledWith('src')
   })
 
-  it('defers playback when browser autoplay suspends AudioContext until user gesture unlock', async () => {
-    let ctxState: AudioContextState = 'suspended'
-
-    class SuspendedAudioContext {
+  it('defers playback when browser autoplay rejects play() until user gesture unlock', async () => {
+    class AutoplayBlockedAudio {
+      public src: string
+      public loop = false
+      public preload = ''
+      public volume = 1
+      public muted = false
+      public paused = true
       public currentTime = 0
-      public destination = {} as AudioDestinationNode
 
-      public get state(): AudioContextState {
-        return ctxState
-      }
-
-      // First resume (without gesture) remains suspended; second (with gesture) unlocks
-      public resume = vi
+      // First attempt blocked by autoplay; second attempt (gesture) succeeds
+      public play = vi
         .fn<() => Promise<void>>()
+        .mockRejectedValueOnce(new Error('NotAllowedError'))
         .mockImplementationOnce(async () => {
-          ctxState = 'suspended'
-        })
-        .mockImplementationOnce(async () => {
-          ctxState = 'running'
+          this.paused = false
         })
 
-      public suspend = vi.fn<() => Promise<void>>(async () => {
-        ctxState = 'suspended'
+      public pause = vi.fn<() => void>(() => {
+        this.paused = true
       })
 
-      public close = vi.fn<() => Promise<void>>(async () => {
-        ctxState = 'closed'
-      })
+      public load = vi.fn<() => void>()
+      public removeAttribute = vi.fn<(attr: string) => void>()
 
-      public createGain = vi.fn<() => GainNode>(
-        () =>
-          ({
-            gain: createMockAudioParam(),
-            connect: vi.fn<() => void>(),
-          }) as unknown as GainNode,
-      )
-
-      public createBiquadFilter = vi.fn<() => BiquadFilterNode>(
-        () =>
-          ({
-            type: 'lowpass',
-            frequency: createMockAudioParam(),
-            connect: vi.fn<() => void>(),
-          }) as unknown as BiquadFilterNode,
-      )
-
-      public createOscillator = vi.fn<() => OscillatorNode>(
-        () =>
-          ({
-            type: 'sine',
-            frequency: createMockAudioParam(),
-            connect: vi.fn<() => void>(),
-            start: vi.fn<() => void>(),
-            stop: vi.fn<() => void>(),
-          }) as unknown as OscillatorNode,
-      )
+      constructor(src = '') {
+        this.src = src
+      }
     }
 
-    Object.defineProperty(window, 'AudioContext', {
-      value: SuspendedAudioContext,
+    Object.defineProperty(globalThis, 'Audio', {
+      value: AutoplayBlockedAudio,
       configurable: true,
       writable: true,
     })
 
     const player = new HomeBgmPlayer()
 
-    // Initial cold-load start blocked by autoplay policy
     const firstTry = await player.start(0.5)
     expect(firstTry).toBe(false)
     expect(player.playing).toBe(false)
     expect(player.needsUserGesture).toBe(true)
 
-    // User gesture triggers unlockAndStart
     const unlocked = await player.unlockAndStart(0.5)
     expect(unlocked).toBe(true)
     expect(player.playing).toBe(true)
+    expect(player.needsUserGesture).toBe(false)
 
     player.dispose()
   })
