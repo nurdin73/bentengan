@@ -1,5 +1,12 @@
 import * as THREE from 'three'
 import { useSettingsStore } from '../../stores/settings-store'
+import {
+  createDustMoteTexture,
+  createLeafGeometry,
+  createLeafVeinTexture,
+  createRibbonGeometry,
+  type LeafShapeVariant,
+} from './arena-ambient-wind.geometry'
 
 export interface LeafParticle {
   mesh: THREE.Mesh
@@ -43,113 +50,40 @@ const DEFAULT_ARENA_BOUNDS: ArenaWindBounds = {
 }
 
 const LEAF_COLORS = [0x34d399, 0xa3e635, 0xfbbf24] as const
+const LEAF_VARIANTS: readonly LeafShapeVariant[] = ['tropical-broad', 'tropical-slender']
+const DUST_COLORS = [0xe7d3b0, 0xd9b77e, 0xf3e5cc] as const
 
 const MAX_LEAVES = 32
 const LOW_DENSITY_LEAVES = 12
 const MAX_RIBBONS = 5
 const LOW_DENSITY_RIBBONS = 2
-
-/**
- * Creates an organic multi-segment leaf geometry with a raised midrib spine,
- * asymmetric oval silhouette, pointed tip, and subtle lateral curvature.
- *
- * Layout (top-down, Z = forward):
- *   Tip (0) at front, Stem (6) at back, midrib raised along Y.
- *   Left lobes (1,3,5) and right lobes (2,4,6) curve outward with
- *   alternating Y offsets to produce a natural crease.
- *
- *        0  (tip)
- *       / \
- *      1   2     (upper lobes)
- *       \ /
- *      3   4     (widest mid lobes)
- *       \ /
- *      5   6     (lower lobes)
- *        |
- *        7  (stem)
- */
-function createLeafGeometry(): THREE.BufferGeometry {
-  const geo = new THREE.BufferGeometry()
-
-  // prettier-ignore
-  const vertices = new Float32Array([
-    //  x       y       z
-     0.0,    0.06,  -0.30,  // 0  tip (pointed, slightly raised)
-    -0.08,   0.02,  -0.16,  // 1  upper-left lobe
-     0.09,   0.02,  -0.14,  // 2  upper-right lobe (asymmetric)
-    -0.14,   0.00,   0.0,   // 3  mid-left lobe (widest)
-     0.13,   0.01,   0.02,  // 4  mid-right lobe (slightly offset)
-    -0.09,   0.01,   0.16,  // 5  lower-left lobe
-     0.08,   0.00,   0.18,  // 6  lower-right lobe
-     0.0,    0.04,   0.28,  // 7  stem base (raised midrib end)
-  ])
-
-  // prettier-ignore
-  const indices = new Uint16Array([
-    // Upper section
-    0, 1, 2,
-    // Mid-upper left & right
-    1, 3, 4,   1, 4, 2,
-    // Mid-lower left & right
-    3, 5, 6,   3, 6, 4,
-    // Lower section
-    5, 7, 6,
-  ])
-
-  geo.setAttribute('position', new THREE.BufferAttribute(vertices, 3))
-  geo.setIndex(new THREE.BufferAttribute(indices, 1))
-  geo.computeVertexNormals()
-  return geo
-}
-
-/**
- * Creates a tapered, curved ribbon strip geometry for wind streaks.
- */
-function createRibbonGeometry(): THREE.BufferGeometry {
-  const geo = new THREE.BufferGeometry()
-  const segments = 8
-  const length = 7.5
-  const positions: number[] = []
-  const indices: number[] = []
-
-  for (let i = 0; i <= segments; i++) {
-    const t = i / segments
-    const z = (t - 0.5) * length
-    // Gentle S-curve lateral offset
-    const xOffset = Math.sin(t * Math.PI) * 0.8
-    // Tapered width (narrow at ends, wider in middle)
-    const halfWidth = Math.sin(t * Math.PI) * 0.14 + 0.02
-
-    positions.push(xOffset - halfWidth, 0, z)
-    positions.push(xOffset + halfWidth, 0, z)
-
-    if (i < segments) {
-      const base = i * 2
-      indices.push(base, base + 1, base + 2)
-      indices.push(base + 1, base + 3, base + 2)
-    }
-  }
-
-  geo.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3))
-  geo.setIndex(indices)
-  geo.computeVertexNormals()
-  return geo
-}
+const MAX_DUST_MOTES = 120
+const LOW_DENSITY_DUST_MOTES = 45
+const DUST_MIN_Y = 0.15
+const DUST_MAX_Y = 3.8
 
 export class ArenaAmbientWind {
   public readonly group: THREE.Group
   private readonly scene: THREE.Scene
   private readonly bounds: ArenaWindBounds = { ...DEFAULT_ARENA_BOUNDS }
 
-  // Shared Geometries & Materials
-  private readonly leafGeo: THREE.BufferGeometry
-  private readonly leafMaterials: THREE.MeshBasicMaterial[] = []
+  // Shared Geometries, Textures & Materials
+  private readonly leafGeometries: THREE.BufferGeometry[] = []
+  private readonly leafVeinTexture: THREE.DataTexture
+  private readonly leafMaterials: THREE.MeshLambertMaterial[] = []
   private readonly ribbonGeo: THREE.BufferGeometry
   private readonly ribbonMat: THREE.MeshBasicMaterial
+  private readonly dustGeo: THREE.BufferGeometry
+  private readonly dustTexture: THREE.DataTexture
+  private readonly dustMat: THREE.PointsMaterial
 
   // Pools
   public readonly leaves: LeafParticle[] = []
   public readonly ribbons: WindRibbon[] = []
+  public readonly dustPoints: THREE.Points
+  private readonly dustSpeedMultipliers = new Float32Array(MAX_DUST_MOTES)
+  private readonly dustPhases = new Float32Array(MAX_DUST_MOTES)
+  private activeDustCount = MAX_DUST_MOTES
 
   // Prevailing wind direction vector (normalized X and Z drift)
   private readonly windDirection = new THREE.Vector3(1.8, -0.08, 0.95)
@@ -162,18 +96,25 @@ export class ArenaAmbientWind {
     this.group.name = 'ArenaAmbientWind_Root'
     this.scene.add(this.group)
 
-    // Pre-allocate shared geometries
-    this.leafGeo = createLeafGeometry()
+    // Pre-allocate shared geometries & vein texture
+    for (const variant of LEAF_VARIANTS) {
+      this.leafGeometries.push(createLeafGeometry(variant))
+    }
+    this.leafVeinTexture = createLeafVeinTexture()
     this.ribbonGeo = createRibbonGeometry()
 
-    // Pre-allocate shared materials
+    // Pre-allocate shared materials (lit Lambert + vertexColors so 3D V-fold & midrib catch light)
     for (const color of LEAF_COLORS) {
       this.leafMaterials.push(
-        new THREE.MeshBasicMaterial({
+        new THREE.MeshLambertMaterial({
           color,
+          map: this.leafVeinTexture,
+          vertexColors: true,
+          emissive: color,
+          emissiveIntensity: 0.16,
           side: THREE.DoubleSide,
           transparent: true,
-          opacity: 0.85,
+          opacity: 0.94,
           depthWrite: false,
         }),
       )
@@ -187,15 +128,32 @@ export class ArenaAmbientWind {
       depthWrite: false,
     })
 
+    this.dustTexture = createDustMoteTexture()
+    this.dustGeo = new THREE.BufferGeometry()
+    this.dustMat = new THREE.PointsMaterial({
+      size: 0.16,
+      map: this.dustTexture,
+      vertexColors: true,
+      transparent: true,
+      opacity: 0.34,
+      depthWrite: false,
+      sizeAttenuation: true,
+    })
+    this.dustPoints = new THREE.Points(this.dustGeo, this.dustMat)
+    this.dustPoints.name = 'AmbientDustMotes'
+    this.group.add(this.dustPoints)
+
     this.initLeaves()
     this.initRibbons()
+    this.initDustMotes()
     this.applyDensity()
   }
 
   private initLeaves(): void {
     for (let i = 0; i < MAX_LEAVES; i++) {
+      const geo = this.leafGeometries[i % this.leafGeometries.length]!
       const mat = this.leafMaterials[i % this.leafMaterials.length]!
-      const mesh = new THREE.Mesh(this.leafGeo, mat)
+      const mesh = new THREE.Mesh(geo, mat)
       mesh.name = `AmbientLeaf_${i}`
 
       const posX = this.bounds.minX + Math.random() * (this.bounds.maxX - this.bounds.minX)
@@ -203,7 +161,7 @@ export class ArenaAmbientWind {
       const posZ = this.bounds.minZ + Math.random() * (this.bounds.maxZ - this.bounds.minZ)
 
       mesh.position.set(posX, posY, posZ)
-      const scale = 0.9 + Math.random() * 0.5
+      const scale = 0.95 + Math.random() * 0.55
       mesh.scale.setScalar(scale)
       this.group.add(mesh)
 
@@ -255,6 +213,31 @@ export class ArenaAmbientWind {
     }
   }
 
+  private initDustMotes(): void {
+    const positions = new Float32Array(MAX_DUST_MOTES * 3)
+    const colors = new Float32Array(MAX_DUST_MOTES * 3)
+    const colorHelper = new THREE.Color()
+
+    for (let i = 0; i < MAX_DUST_MOTES; i++) {
+      const idx = i * 3
+      positions[idx] = this.bounds.minX + Math.random() * (this.bounds.maxX - this.bounds.minX)
+      positions[idx + 1] = DUST_MIN_Y + Math.random() * (DUST_MAX_Y - DUST_MIN_Y)
+      positions[idx + 2] = this.bounds.minZ + Math.random() * (this.bounds.maxZ - this.bounds.minZ)
+
+      colorHelper.setHex(DUST_COLORS[i % DUST_COLORS.length]!)
+      colors[idx] = colorHelper.r
+      colors[idx + 1] = colorHelper.g
+      colors[idx + 2] = colorHelper.b
+
+      this.dustSpeedMultipliers[i] = 0.75 + Math.random() * 0.7
+      this.dustPhases[i] = Math.random() * Math.PI * 2
+    }
+
+    this.dustGeo.setAttribute('position', new THREE.BufferAttribute(positions, 3))
+    this.dustGeo.setAttribute('color', new THREE.BufferAttribute(colors, 3))
+    this.dustGeo.setDrawRange(0, MAX_DUST_MOTES)
+  }
+
   /**
    * Adjusts particle pool visibility based on settings particleDensity.
    */
@@ -283,6 +266,9 @@ export class ArenaAmbientWind {
       ribbon.active = i < activeRibbonsCount
       ribbon.mesh.visible = ribbon.active
     }
+
+    this.activeDustCount = density === 'low' ? LOW_DENSITY_DUST_MOTES : MAX_DUST_MOTES
+    this.dustGeo.setDrawRange(0, this.activeDustCount)
   }
 
   /**
@@ -308,6 +294,7 @@ export class ArenaAmbientWind {
 
     this.updateLeaves(safeDt)
     this.updateRibbons(safeDt)
+    this.updateDustMotes(safeDt)
   }
 
   private updateLeaves(dt: number): void {
@@ -382,14 +369,54 @@ export class ArenaAmbientWind {
     }
   }
 
+  private updateDustMotes(dt: number): void {
+    const posAttr = this.dustGeo.getAttribute('position') as THREE.BufferAttribute
+    const positions = posAttr.array as Float32Array
+    const gustFactor = 1.15 + this.gustIntensity * 1.1
+
+    for (let i = 0; i < this.activeDustCount; i++) {
+      const idx = i * 3
+      const speedMult = this.dustSpeedMultipliers[i]!
+      const phase = this.dustPhases[i]! + dt * 1.6
+      this.dustPhases[i] = phase
+
+      let x = positions[idx]! + this.windDirection.x * gustFactor * speedMult * dt
+      let y = positions[idx + 1]! + Math.sin(phase) * 0.09 * dt
+      let z = positions[idx + 2]! + this.windDirection.z * gustFactor * speedMult * dt
+
+      if (x > this.bounds.maxX || z > this.bounds.maxZ) {
+        x = this.bounds.minX + Math.random() * 4.0
+        y = DUST_MIN_Y + Math.random() * (DUST_MAX_Y - DUST_MIN_Y)
+        z = this.bounds.minZ + Math.random() * (this.bounds.maxZ - this.bounds.minZ)
+      } else if (y < DUST_MIN_Y) {
+        y = DUST_MAX_Y
+      } else if (y > DUST_MAX_Y) {
+        y = DUST_MIN_Y
+      }
+
+      positions[idx] = x
+      positions[idx + 1] = y
+      positions[idx + 2] = z
+    }
+
+    posAttr.needsUpdate = true
+    this.dustMat.opacity = 0.28 + this.gustIntensity * 0.2
+  }
+
   public dispose(): void {
     this.scene.remove(this.group)
-    this.leafGeo.dispose()
+    for (const geo of this.leafGeometries) {
+      geo.dispose()
+    }
+    this.leafVeinTexture.dispose()
     this.ribbonGeo.dispose()
+    this.dustGeo.dispose()
+    this.dustTexture.dispose()
     for (const mat of this.leafMaterials) {
       mat.dispose()
     }
     this.ribbonMat.dispose()
+    this.dustMat.dispose()
     this.group.clear()
     this.leaves.length = 0
     this.ribbons.length = 0

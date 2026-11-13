@@ -2,6 +2,11 @@ import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { setActivePinia, createPinia } from 'pinia'
 import * as THREE from 'three'
 import { ArenaAmbientWind } from '../game/scenes/arena-ambient-wind'
+import {
+  createDustMoteTexture,
+  createLeafGeometry,
+  createLeafVeinTexture,
+} from '../game/scenes/arena-ambient-wind.geometry'
 import { useSettingsStore } from '../stores/settings-store'
 
 describe('ArenaAmbientWind — 3D Arena Ambient Wind System', () => {
@@ -142,5 +147,118 @@ describe('ArenaAmbientWind — 3D Arena Ambient Wind System', () => {
     expect(wind.group.children.length).toBe(0)
     expect(wind.leaves.length).toBe(0)
     expect(wind.ribbons.length).toBe(0)
+  })
+
+  it('builds sculpted tropical leaf geometries with UVs, vertex colors, and protruding petiole', () => {
+    const broad = createLeafGeometry('tropical-broad')
+    const slender = createLeafGeometry('tropical-slender')
+
+    for (const geo of [broad, slender]) {
+      const pos = geo.getAttribute('position') as THREE.BufferAttribute
+      const normal = geo.getAttribute('normal') as THREE.BufferAttribute
+      const uv = geo.getAttribute('uv') as THREE.BufferAttribute
+      const color = geo.getAttribute('color') as THREE.BufferAttribute
+
+      expect(pos).toBeDefined()
+      expect(normal).toBeDefined()
+      expect(uv).toBeDefined()
+      expect(color).toBeDefined()
+      expect(pos.count).toBeGreaterThan(40)
+
+      geo.computeBoundingBox()
+      const box = geo.boundingBox!
+      // Should have positive Y depth (V-fold + arch + 3D midrib ridge) and length > width
+      expect(box.max.y - box.min.y).toBeGreaterThan(0.03)
+      expect(box.max.z - box.min.z).toBeGreaterThan(box.max.x - box.min.x)
+
+      // Check vertex colors stay normalized in [0, 1] and vary between blade and midrib
+      let minG = 1
+      let maxG = 0
+      for (let i = 0; i < color.count; i++) {
+        const g = color.getY(i)
+        minG = Math.min(minG, g)
+        maxG = Math.max(maxG, g)
+        expect(g).toBeGreaterThan(0)
+        expect(g).toBeLessThanOrEqual(1)
+      }
+      expect(maxG - minG).toBeGreaterThan(0.05)
+
+      geo.dispose()
+    }
+
+    broad.computeBoundingBox()
+    slender.computeBoundingBox()
+    const broadWidth = broad.boundingBox!.max.x - broad.boundingBox!.min.x
+    const slenderWidth = slender.boundingBox!.max.x - slender.boundingBox!.min.x
+    expect(broadWidth).toBeGreaterThan(slenderWidth)
+  })
+
+  it('generates procedural vein DataTexture and assigns lit materials + variants across leaves', () => {
+    const veinTex = createLeafVeinTexture()
+    expect(veinTex).toBeInstanceOf(THREE.DataTexture)
+    expect(veinTex.image.width).toBe(128)
+    expect(veinTex.image.height).toBe(128)
+    expect(veinTex.version).toBeGreaterThan(0)
+    expect((veinTex.image.data as Uint8Array).length).toBe(128 * 128 * 4)
+    veinTex.dispose()
+
+    const scene = new THREE.Scene()
+    const wind = new ArenaAmbientWind(scene)
+
+    const uniqueGeometries = new Set(wind.leaves.map((l) => l.mesh.geometry))
+    expect(uniqueGeometries.size).toBe(2)
+
+    const firstMat = wind.leaves[0]!.mesh.material as THREE.MeshLambertMaterial
+    expect(firstMat).toBeInstanceOf(THREE.MeshLambertMaterial)
+    expect(firstMat.vertexColors).toBe(true)
+    expect(firstMat.map).toBeInstanceOf(THREE.DataTexture)
+
+    wind.dispose()
+  })
+
+  it('initializes ambient floating dust motes, scales drawRange by density, and wraps on update()', () => {
+    const dustTex = createDustMoteTexture()
+    expect(dustTex).toBeInstanceOf(THREE.DataTexture)
+    expect(dustTex.image.width).toBe(32)
+    expect(dustTex.image.height).toBe(32)
+    expect((dustTex.image.data as Uint8Array).length).toBe(32 * 32 * 4)
+    dustTex.dispose()
+
+    const scene = new THREE.Scene()
+    const wind = new ArenaAmbientWind(scene)
+
+    expect(wind.dustPoints).toBeInstanceOf(THREE.Points)
+    expect(wind.group.children).toContain(wind.dustPoints)
+
+    const posAttr = wind.dustPoints.geometry.getAttribute('position') as THREE.BufferAttribute
+    expect(posAttr.count).toBe(120)
+    expect(wind.dustPoints.geometry.drawRange.count).toBe(120)
+
+    for (let i = 0; i < posAttr.count; i++) {
+      expect(posAttr.getX(i)).toBeGreaterThanOrEqual(-24)
+      expect(posAttr.getX(i)).toBeLessThanOrEqual(24)
+      expect(posAttr.getY(i)).toBeGreaterThanOrEqual(0.15)
+      expect(posAttr.getY(i)).toBeLessThanOrEqual(3.8)
+      expect(posAttr.getZ(i)).toBeGreaterThanOrEqual(-38)
+      expect(posAttr.getZ(i)).toBeLessThanOrEqual(38)
+    }
+
+    wind.applyDensity('low')
+    expect(wind.dustPoints.geometry.drawRange.count).toBe(45)
+
+    wind.applyDensity('high')
+    expect(wind.dustPoints.geometry.drawRange.count).toBe(120)
+
+    const initialX = posAttr.getX(0)
+    // Force second mote past maxX to verify wrap-around
+    posAttr.setXYZ(1, 30, 1.5, 0)
+
+    wind.update(0.25)
+
+    expect(posAttr.getX(0)).not.toBe(initialX)
+    expect(posAttr.getX(1)).toBeGreaterThanOrEqual(-24)
+    expect(posAttr.getX(1)).toBeLessThan(-15)
+
+    wind.dispose()
   })
 })
