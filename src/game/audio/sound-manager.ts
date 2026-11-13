@@ -10,6 +10,7 @@ import {
 } from './skill-sfx'
 import { TensionLayer } from './tension-layer'
 import { uiSound } from './ui-sound'
+import { ArenaWindAudio } from './wind-audio'
 
 export class SoundManager {
   private ctx: AudioContext | null = null
@@ -20,6 +21,7 @@ export class SoundManager {
   private listenerPos: SpatialPoint | null = null
   private listenerYaw = 0
   private readonly tensionLayer = new TensionLayer()
+  private readonly arenaWind = new ArenaWindAudio()
 
   // Active interval/nodes for whimsical cartoon stun chimes
   private stunInterval: ReturnType<typeof setInterval> | null = null
@@ -83,6 +85,10 @@ export class SoundManager {
         b1 = 0.963 * b1 + white * 0.2965164
         b2 = 0.57 * b2 + white * 1.0526913
         output[i] = (b0 + b1 + b2 + white * 0.1848) * 0.08
+      }
+
+      if (this.masterGain && this.noiseBuffer) {
+        this.arenaWind.init(this.ctx, this.masterGain, this.noiseBuffer)
       }
     } catch {
       // AudioContext unavailable in headless/mock test runner
@@ -588,6 +594,20 @@ export class SoundManager {
     ingameBgm.stop()
   }
 
+  public startAmbientWind(): void {
+    if (!this.ensureReady() || !this.ctx || !this.masterGain || !this.noiseBuffer) return
+    this.arenaWind.init(this.ctx, this.masterGain, this.noiseBuffer)
+    this.arenaWind.start()
+  }
+
+  public stopAmbientWind(): void {
+    this.arenaWind.stop()
+  }
+
+  public updateAmbientWind(dt: number, gustIntensity?: number): void {
+    this.arenaWind.update(dt, gustIntensity)
+  }
+
   public updateTension(dt: number, threatLevel: number, isExhausted: boolean): void {
     if (!this.ctx || !this.masterGain || this.getEffectiveVolume() <= 0) return
     if (this.ctx.state === 'suspended') return
@@ -690,6 +710,8 @@ export class SoundManager {
     this.stopStun()
     this.resetTension()
     this.stopIngameBgm()
+    this.stopAmbientWind()
+    this.arenaWind.dispose()
     try {
       this.ctx?.close()
     } catch {

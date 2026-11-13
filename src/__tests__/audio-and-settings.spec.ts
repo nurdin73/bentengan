@@ -5,6 +5,7 @@ import { useSettingsStore, DEFAULT_SETTINGS } from '../stores/settings-store'
 import { SoundManager } from '../game/audio/sound-manager'
 import { uiSound } from '../game/audio/ui-sound'
 import { ingameBgm } from '../game/audio/ingame-bgm'
+import { ArenaWindAudio } from '../game/audio/wind-audio'
 import { computeSpatialMix } from '../game/audio/audio-spatial.utils'
 import { computeEnemyTerritoryThreat } from '../game/systems/threat-level.utils'
 import type { GameplayEntity } from '../types/game.types'
@@ -251,7 +252,21 @@ describe('Milestone 6 — Audio System & Game Settings', () => {
         sm.playBoundaryWarning()
         sm.startIngameBgm()
         sm.stopIngameBgm()
+        sm.startAmbientWind()
+        sm.updateAmbientWind(0.1, 0.6)
+        sm.stopAmbientWind()
         sm.dispose()
+      }).not.toThrow()
+    })
+
+    it('handles ArenaWindAudio procedural wind synthesizer lifecycle cleanly', () => {
+      const windAudio = new ArenaWindAudio()
+      expect(() => {
+        windAudio.start()
+        windAudio.update(0.1, 0.5)
+        windAudio.updateVolume(0.5)
+        windAudio.stop()
+        windAudio.dispose()
       }).not.toThrow()
     })
 

@@ -16,7 +16,7 @@ describe('GameEngine Atmosphere & Lighting Setup', () => {
     document.body.appendChild(container)
 
     originalRAF = window.requestAnimationFrame
-    window.requestAnimationFrame = vi.fn<((callback: FrameRequestCallback) => number)>(() => 0)
+    window.requestAnimationFrame = vi.fn<(callback: FrameRequestCallback) => number>(() => 0)
 
     originalGetContext = HTMLCanvasElement.prototype.getContext
     const baseGl: Record<string, unknown> = {
@@ -76,11 +76,11 @@ describe('GameEngine Atmosphere & Lighting Setup', () => {
 
   function createEngineInstance(): GameEngine {
     return new GameEngine(container, {
-      onPlayerStateChange: vi.fn(),
-      onRosterUpdate: vi.fn(),
-      onCapture: vi.fn(),
-      onRescue: vi.fn(),
-      onMatchEnd: vi.fn(),
+      onPlayerStateChange: vi.fn<() => void>(),
+      onRosterUpdate: vi.fn<() => void>(),
+      onCapture: vi.fn<() => void>(),
+      onRescue: vi.fn<() => void>(),
+      onMatchEnd: vi.fn<() => void>(),
     })
   }
 
@@ -105,17 +105,23 @@ describe('GameEngine Atmosphere & Lighting Setup', () => {
   it('configures hemisphere light, ambient fill, and directional sun light with shadows', () => {
     const engine = createEngineInstance()
 
-    const hemiLight = engine.scene.children.find((c) => c instanceof THREE.HemisphereLight) as THREE.HemisphereLight
+    const hemiLight = engine.scene.children.find(
+      (c) => c instanceof THREE.HemisphereLight,
+    ) as THREE.HemisphereLight
     expect(hemiLight).toBeDefined()
     expect(hemiLight.color.getHex()).toBe(0xbae6fd)
     expect(hemiLight.groundColor.getHex()).toBe(0x4d7c0f)
     expect(hemiLight.intensity).toBeCloseTo(0.65)
 
-    const ambientLight = engine.scene.children.find((c) => c instanceof THREE.AmbientLight) as THREE.AmbientLight
+    const ambientLight = engine.scene.children.find(
+      (c) => c instanceof THREE.AmbientLight,
+    ) as THREE.AmbientLight
     expect(ambientLight).toBeDefined()
     expect(ambientLight.intensity).toBeCloseTo(0.25)
 
-    const dirLight = engine.scene.children.find((c) => c instanceof THREE.DirectionalLight) as THREE.DirectionalLight
+    const dirLight = engine.scene.children.find(
+      (c) => c instanceof THREE.DirectionalLight,
+    ) as THREE.DirectionalLight
     expect(dirLight).toBeDefined()
     expect(dirLight.castShadow).toBe(true)
     expect(dirLight.intensity).toBeCloseTo(1.25)
@@ -124,5 +130,18 @@ describe('GameEngine Atmosphere & Lighting Setup', () => {
     expect(dirLight.position.z).toBe(18)
 
     engine.dispose()
+  })
+
+  it('initializes ArenaAmbientWind in scene and disposes on engine teardown', () => {
+    const engine = createEngineInstance()
+
+    expect(engine.ambientWind).toBeDefined()
+    expect(engine.ambientWind.group).toBeDefined()
+    expect(engine.scene.children).toContain(engine.ambientWind.group)
+    expect(engine.ambientWind.leaves.length).toBe(32)
+    expect(engine.ambientWind.ribbons.length).toBe(5)
+
+    engine.dispose()
+    expect(engine.scene.children).not.toContain(engine.ambientWind.group)
   })
 })

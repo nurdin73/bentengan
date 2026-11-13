@@ -1,6 +1,7 @@
 import * as THREE from 'three'
 import { PhysicsWorld } from '../physics/physics-world'
 import { ArenaGreybox } from '../scenes/arena-greybox'
+import { ArenaAmbientWind } from '../scenes/arena-ambient-wind'
 import { preloadArenaModel } from '../scenes/arena-model-loader'
 import { InputManager } from '../input/input-manager'
 import { ThirdPersonCameraController } from '../camera/third-person'
@@ -108,6 +109,7 @@ export class GameEngine {
   public roomPlayers: RoomPlayer[] = []
   public skillManager!: SkillManager
   public readonly vfx: VFXManager
+  public readonly ambientWind: ArenaAmbientWind
 
   // Network & Multiplayer State
   public isHost = false
@@ -174,8 +176,9 @@ export class GameEngine {
     // 3. Lighting Setup
     this.setupLighting()
 
-    // 4. VFX Manager Setup
+    // 4. VFX & Atmosphere Setup
     this.vfx = new VFXManager(this.scene)
+    this.ambientWind = new ArenaAmbientWind(this.scene)
 
     // 5. Input Manager
     this.input = new InputManager()
@@ -331,6 +334,7 @@ export class GameEngine {
       }
     }
     soundManager.startIngameBgm()
+    soundManager.startAmbientWind()
     this.loop(this.lastTime)
   }
 
@@ -585,6 +589,8 @@ export class GameEngine {
 
     // Update VFX Particles, Skill Effects & Sprint Dust
     this.vfx.update(frameTime)
+    this.ambientWind.update(frameTime)
+    soundManager.updateAmbientWind(frameTime, this.ambientWind.getGustIntensity())
 
     // Periodic Prisoner Jail Boundary Shimmer
     if (this.arena) {
@@ -1225,6 +1231,7 @@ export class GameEngine {
     }
 
     soundManager.stopIngameBgm()
+    soundManager.stopAmbientWind()
 
     if (winner === this.playerTeam) {
       soundManager.playVictory()
@@ -1270,6 +1277,7 @@ export class GameEngine {
 
     if (paused) {
       soundManager.stopIngameBgm()
+      soundManager.stopAmbientWind()
       this.pausedAt = performance.now()
       this.input.reset()
       if (document.pointerLockElement) {
@@ -1277,6 +1285,7 @@ export class GameEngine {
       }
     } else {
       soundManager.startIngameBgm()
+      soundManager.startAmbientWind()
       const pausedDuration = performance.now() - this.pausedAt
       if (this.isCountdownActive && this.countdownUntil > 0) {
         this.countdownUntil += pausedDuration
@@ -1521,6 +1530,9 @@ export class GameEngine {
 
     if (this.vfx) {
       this.vfx.dispose()
+    }
+    if (this.ambientWind) {
+      this.ambientWind.dispose()
     }
     soundManager.dispose()
 
