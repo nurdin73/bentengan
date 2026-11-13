@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import * as THREE from 'three'
 import {
   CharacterAvatar,
+  MAX_OUTFIT_ID,
   setCharacterModelTemplate,
 } from '../game/entities/character-avatar'
 import { PhysicsWorld } from '../game/physics/physics-world'
@@ -37,11 +38,11 @@ function buildMockCharacterGLTF(): THREE.Group {
   legRPivot.name = 'Pivot_Leg_R'
   root.add(legRPivot)
 
-  // Outfits 1 to 6 Top, Bottom, Hat
+  // Outfits 1 to 10 Top, Bottom, Hat
   const matPrimary = new THREE.MeshStandardMaterial({ name: 'Mat_Team_Primary' })
   const matSecondary = new THREE.MeshStandardMaterial({ name: 'Mat_Team_Secondary' })
 
-  for (let i = 1; i <= 6; i++) {
+  for (let i = 1; i <= MAX_OUTFIT_ID; i++) {
     const pad = i.toString().padStart(2, '0')
     const top = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.5, 0.3), matPrimary)
     top.name = `Top${pad}_Item`
@@ -56,10 +57,27 @@ function buildMockCharacterGLTF(): THREE.Group {
     headPivot.add(hat)
   }
 
-  // Base mesh
+  // Footwear variants
+  const sneakers = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.15, 0.28))
+  sneakers.name = 'Shoes01_Sneaker_Upper_L'
+  legLPivot.add(sneakers)
+
+  const sandals = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.14, 0.28))
+  sandals.name = 'Shoes02_Sandal_Sole_L'
+  legLPivot.add(sandals)
+
+  // Base & Female anatomy meshes
   const baseHead = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.5, 0.5))
   baseHead.name = 'Head_Base'
   headPivot.add(baseHead)
+
+  const eyelash = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.02, 0.02))
+  eyelash.name = 'FaceFem_Eyelash_L'
+  headPivot.add(eyelash)
+
+  const armBase = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.5, 0.2))
+  armBase.name = 'Arm_L_Base'
+  armLPivot.add(armBase)
 
   return root
 }
@@ -118,6 +136,35 @@ describe('CharacterAvatar Modular Soft-box Avatar System', () => {
     expect(top03Visible).toBe(true)
     expect(top02Visible).toBe(false)
     expect(top01Visible).toBe(false)
+  })
+
+  it('toggles female facial features, base arms, sandals, and 2-digit preset ID 10 properly', () => {
+    const avatar = new CharacterAvatar({ teamId: 'red', outfitId: 7 })
+
+    const getVis = (name: string) => avatar.rootGroup.getObjectByName(name)?.visible
+
+    // Preset 7 (Srikandi Nusantara): female + sandals + shared organic base arms
+    expect(getVis('Top07_Item')).toBe(true)
+    expect(getVis('FaceFem_Eyelash_L')).toBe(true)
+    expect(getVis('Arm_L_Base')).toBe(true)
+    expect(getVis('Shoes02_Sandal_Sole_L')).toBe(true)
+    expect(getVis('Shoes01_Sneaker_Upper_L')).toBe(false)
+
+    // Switch to Preset 10 (Hijab Striker): 2-digit prefix Top10 + sneakers
+    avatar.applyOutfit(10)
+    expect(getVis('Top10_Item')).toBe(true)
+    expect(getVis('Top07_Item')).toBe(false)
+    expect(getVis('FaceFem_Eyelash_L')).toBe(true)
+    expect(getVis('Arm_L_Base')).toBe(true)
+    expect(getVis('Shoes01_Sneaker_Upper_L')).toBe(true)
+    expect(getVis('Shoes02_Sandal_Sole_L')).toBe(false)
+
+    // Switch back to Preset 1 (male): base arms visible, female accents hidden
+    avatar.applyOutfit(1)
+    expect(getVis('Top01_Item')).toBe(true)
+    expect(getVis('Top10_Item')).toBe(false)
+    expect(getVis('FaceFem_Eyelash_L')).toBe(false)
+    expect(getVis('Arm_L_Base')).toBe(true)
   })
 
   it('switches dynamic team colors for Mat_Team_Primary and Mat_Team_Secondary', () => {

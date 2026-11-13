@@ -1,7 +1,10 @@
 import { z } from 'zod'
 import type { RoomPlayer } from '../../types/game.types'
+import { MAX_OUTFIT_ID, MIN_OUTFIT_ID } from '../entities/character-presets'
 
 export const TeamIdSchema = z.enum(['blue', 'red'])
+
+export const OutfitIdSchema = z.number().int().min(MIN_OUTFIT_ID).max(MAX_OUTFIT_ID)
 
 export const RoomPlayerSchema = z.object({
   id: z.string(),
@@ -10,7 +13,7 @@ export const RoomPlayerSchema = z.object({
   teamId: TeamIdSchema,
   isReady: z.boolean(),
   isHost: z.boolean(),
-  outfitId: z.number().int().min(1).max(6).optional(),
+  outfitId: OutfitIdSchema.optional(),
 })
 
 export const RoomStatusSchema = z.enum(['waiting', 'starting', 'playing', 'finished'])
@@ -31,7 +34,7 @@ export const JoinRequestMessageSchema = z.object({
   playerId: z.string(),
   username: z.string().min(1).max(20),
   teamId: TeamIdSchema,
-  outfitId: z.number().int().min(1).max(6).optional(),
+  outfitId: OutfitIdSchema.optional(),
 })
 
 // Host -> Client: Acknowledge join
@@ -66,7 +69,7 @@ export const SetReadyMessageSchema = z.object({
 export const SetOutfitMessageSchema = z.object({
   type: z.literal('SET_OUTFIT'),
   playerId: z.string(),
-  outfitId: z.number().int().min(1).max(6),
+  outfitId: OutfitIdSchema,
 })
 
 // Host -> All Clients: Start countdown / enter match

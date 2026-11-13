@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import type { Room, RoomPlayer, RoomStatus, TeamId } from '../types/game.types'
 import { isMatchStartable } from '../game/network/network-protocol'
 import { peerNetworkManager } from '../game/network/peer-network-manager'
+import { clampOutfitId } from '../game/entities/character-presets'
 import { useGameStore } from './game-store'
 
 function getOrGeneratePlayerId(): string {
@@ -22,7 +23,7 @@ function getOrLoadOutfitId(): number {
     const stored = localStorage.getItem('bentengan_player_outfit')
     if (!stored) return 1
     const val = parseInt(stored, 10)
-    return isNaN(val) ? 1 : Math.max(1, Math.min(6, val))
+    return isNaN(val) ? 1 : clampOutfitId(val)
   } catch {
     return 1
   }
@@ -241,7 +242,7 @@ export const useRoomStore = defineStore('room', {
     },
 
     setOutfit(outfitId: number) {
-      const validId = Math.max(1, Math.min(6, outfitId))
+      const validId = clampOutfitId(outfitId)
       this.myOutfitId = validId
 
       try {

@@ -14,89 +14,28 @@ import {
   applyVictoryTauntPose,
 } from './avatar-procedural-poses'
 
-export type { AvatarAnimationExtras }
+import {
+  clampOutfitId,
+  getOutfitPresetMeta,
+  MAX_OUTFIT_ID,
+  MIN_OUTFIT_ID,
+  OUTFIT_PRESETS,
+  type CharacterGender,
+  type OutfitPresetId,
+  type OutfitPresetMeta,
+} from './character-presets'
 
-export type OutfitPresetId = 1 | 2 | 3 | 4 | 5 | 6
-
-export interface OutfitPresetMeta {
-  id: OutfitPresetId
-  name: string
-  subtitle: string
-  description: string
-  hatName: string
-  topName: string
-  bottomName: string
-  shoesName: string
+export {
+  clampOutfitId,
+  getOutfitPresetMeta,
+  MAX_OUTFIT_ID,
+  MIN_OUTFIT_ID,
+  OUTFIT_PRESETS,
+  type AvatarAnimationExtras,
+  type CharacterGender,
+  type OutfitPresetId,
+  type OutfitPresetMeta,
 }
-
-export const OUTFIT_PRESETS: OutfitPresetMeta[] = [
-  {
-    id: 1,
-    name: 'Casual Striker',
-    subtitle: 'Street Casual',
-    description:
-      'Topi trucker dua warna, kaos santai boxy, celana jeans rolled-cuff, dan sepatu boot chunky.',
-    hatName: 'Trucker Cap',
-    topName: 'Boxy Tee',
-    bottomName: 'Rolled Jeans',
-    shoesName: 'Chunky Boots',
-  },
-  {
-    id: 2,
-    name: 'Jawara Nusantara',
-    subtitle: 'Pendekar Tradisional',
-    description:
-      'Udeng ikat kepala batik, baju pangsi pesilat, sabuk emas nusantara, dan celana komprang.',
-    hatName: 'Udeng Tradisional',
-    topName: 'Baju Pangsi & Sabuk',
-    bottomName: 'Celana Komprang',
-    shoesName: 'Sandal Jawara',
-  },
-  {
-    id: 3,
-    name: 'Street Sprinter',
-    subtitle: 'Urban Runner',
-    description:
-      'Topi terbalik dengan jambul rambut, hoodie santai saku kanguru, dan celana training garis samping.',
-    hatName: 'Backwards Cap & Tuft',
-    topName: 'Kangaroo Hoodie',
-    bottomName: 'Trackpants',
-    shoesName: 'Running Kicks',
-  },
-  {
-    id: 4,
-    name: 'Athletic Runner',
-    subtitle: 'Sporty Sprinter',
-    description:
-      'Rambut spike energik, sweatband dahi, tank top tanpa lengan, dan celana pendek atletik.',
-    hatName: 'Sweatband & Hair',
-    topName: 'Athletic Tank',
-    bottomName: 'Sport Shorts',
-    shoesName: 'Sport Shoes',
-  },
-  {
-    id: 5,
-    name: 'Bocil Pramuka',
-    subtitle: 'Seragam Sekolah',
-    description:
-      'Baret miring emblem emas garuda, kemeja kacu merah-putih, celana pendek seragam, dan kaus kaki tinggi.',
-    hatName: 'Baret Pramuka',
-    topName: 'Kemeja Kacu',
-    bottomName: 'Celana Seragam',
-    shoesName: 'High Socks & Shoes',
-  },
-  {
-    id: 6,
-    name: 'Urban Puffer',
-    subtitle: 'Musim Dingin Kota',
-    description:
-      'Kupluk pom-pom beanie tebal, rompi puffer ber-zipper modern, dan celana kargo saku samping.',
-    hatName: 'Pom-Pom Beanie',
-    topName: 'Puffer Vest',
-    bottomName: 'Cargo Pants',
-    shoesName: 'Winter Boots',
-  },
-]
 
 export interface CharacterAvatarOptions {
   teamId: TeamId
@@ -173,7 +112,7 @@ export class CharacterAvatar {
 
   constructor(options: CharacterAvatarOptions) {
     this.teamId = options.teamId
-    this.outfitId = Math.max(1, Math.min(6, options.outfitId ?? 1))
+    this.outfitId = clampOutfitId(options.outfitId)
     this.rootGroup = new THREE.Group()
     this.rootGroup.name = 'CharacterAvatar_Root'
 
@@ -304,34 +243,41 @@ export class CharacterAvatar {
   }
 
   public applyOutfit(outfitId: number): void {
-    this.outfitId = Math.max(1, Math.min(6, outfitId))
-    const targetStr = `0${this.outfitId}`
-    const isOutfit2 = this.outfitId === 2
+    this.outfitId = clampOutfitId(outfitId)
+    const targetStr = String(this.outfitId).padStart(2, '0')
+    const preset = getOutfitPresetMeta(this.outfitId)
+    const isFemale = preset.gender === 'female'
+    const usesSandals = preset.footwear === 'sandals'
 
     this.rootGroup.traverse((child) => {
       if (!(child instanceof THREE.Mesh)) return
 
       const name = child.name
 
-      // Base character anatomy meshes are always visible
+      // Female facial accents (eyelashes & cheek blush)
+      if (name.startsWith('FaceFem_')) {
+        child.visible = isFemale
+        return
+      }
+
+      // Base character anatomy meshes (head, neck, eyes, and organic hands/arms) are always visible
       if (
         name.endsWith('_Base') ||
         name.startsWith('Neck_') ||
         name.startsWith('Head_') ||
-        name.startsWith('Eye_') ||
-        name.startsWith('Arm_')
+        name.startsWith('Eye_')
       ) {
         child.visible = true
         return
       }
 
-      // Shoes slot: Outfit 2 uses Shoes02 (sandals), all other outfits use Shoes01 (sneakers/boots)
+      // Shoes slot: sandal presets (e.g. Jawara & Srikandi) use Shoes02, others use Shoes01
       if (name.startsWith('Shoes02')) {
-        child.visible = isOutfit2
+        child.visible = usesSandals
         return
       }
       if (name.startsWith('Shoes01')) {
-        child.visible = !isOutfit2
+        child.visible = !usesSandals
         return
       }
 

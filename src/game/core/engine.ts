@@ -8,7 +8,7 @@ import { ThirdPersonCameraController } from '../camera/third-person'
 import { PlayerController } from '../entities/player-controller'
 import { BotController } from '../entities/bot-controller'
 import { RemotePlayerController } from '../entities/remote-player-controller'
-import { preloadCharacterModel } from '../entities/character-avatar'
+import { MAX_OUTFIT_ID, preloadCharacterModel } from '../entities/character-avatar'
 import { GameplayRules } from '../systems/gameplay-rules'
 import { GAME_CONFIG } from './constants'
 import { peerNetworkManager } from '../network/peer-network-manager'
@@ -288,7 +288,7 @@ export class GameEngine {
         name: this.localPlayerUsername,
         teamId,
         initialPosition: localSpawnPos,
-        outfitId: myRoomPlayer?.outfitId ?? options.outfitId ?? (myIdx % 6) + 1,
+        outfitId: myRoomPlayer?.outfitId ?? options.outfitId ?? (myIdx % MAX_OUTFIT_ID) + 1,
       })
 
       // B. Spawn Remote Players (Opponents & Teammates)
@@ -307,7 +307,7 @@ export class GameEngine {
           name: p.username,
           teamId: p.teamId,
           initialPosition: pSpawnPos,
-          outfitId: p.outfitId ?? (pIdx % 6) + 1,
+          outfitId: p.outfitId ?? (pIdx % MAX_OUTFIT_ID) + 1,
         })
 
         // Orient remote player towards the opposing fortress
@@ -373,7 +373,7 @@ export class GameEngine {
       targetObjective: [enemyBasePos.x, enemyBasePos.y, enemyBasePos.z],
       enemyBasePosition: [enemyBasePos.x, enemyBasePos.y, enemyBasePos.z],
       allyJailPosition: [allyJailPos.x, 1, allyJailPos.z],
-      outfitId: 2,
+      outfitId: 7,
     })
     allyBot.status = 'jailed'
     this.bots.push(allyBot)
@@ -390,7 +390,7 @@ export class GameEngine {
       targetObjective: [playerBasePos.x, playerBasePos.y, playerBasePos.z],
       enemyBasePosition: [playerBasePos.x, playerBasePos.y, playerBasePos.z],
       allyJailPosition: [enemyJailPos.x, 1, enemyJailPos.z],
-      outfitId: 3,
+      outfitId: 8,
     })
     this.bots.push(enemyBot1)
 
@@ -741,7 +741,7 @@ export class GameEngine {
       0,
       sameTeamPlayers.findIndex((p) => p.id === player.id),
     )
-    const outfitId = player.outfitId ?? (pIdx % 6) + 1
+    const outfitId = player.outfitId ?? (pIdx % MAX_OUTFIT_ID) + 1
 
     const remote = new RemotePlayerController(this.scene, this.physics, {
       id: player.id,

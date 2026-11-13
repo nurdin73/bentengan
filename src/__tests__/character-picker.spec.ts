@@ -31,7 +31,7 @@ describe('CharacterPickerModal Component', () => {
     vi.restoreAllMocks()
   })
 
-  it('renders modal with all 6 outfit preset cards and active status', () => {
+  it('renders modal with all 10 outfit preset cards and active status', () => {
     const roomStore = useRoomStore()
     roomStore.myOutfitId = 2
 
@@ -43,7 +43,8 @@ describe('CharacterPickerModal Component', () => {
 
     expect(wrapper.find('[data-testid="character-picker-modal"]').exists()).toBe(true)
 
-    // Verify all 6 cards exist
+    // Verify all 10 cards exist
+    expect(OUTFIT_PRESETS.length).toBe(10)
     for (const preset of OUTFIT_PRESETS) {
       const card = wrapper.find(`[data-testid="outfit-card-${preset.id}"]`)
       expect(card.exists()).toBe(true)
@@ -53,6 +54,38 @@ describe('CharacterPickerModal Component', () => {
     // Outfit #2 is initially selected from store
     const card2 = wrapper.find('[data-testid="outfit-card-2"]')
     expect(card2.classes()).toContain('ring-2')
+  })
+
+  it('filters outfits by gender tabs (Semua, Putra, Putri) and equips female outfit #10', async () => {
+    const roomStore = useRoomStore()
+    roomStore.myOutfitId = 1
+    const setOutfitSpy = vi.spyOn(roomStore, 'setOutfit')
+
+    const wrapper = mount(CharacterPickerModal, {
+      props: {
+        team: 'blue',
+      },
+    })
+
+    expect(wrapper.findAll('[data-testid^="outfit-card-"]').length).toBe(10)
+
+    await wrapper.find('[data-testid="gender-filter-male"]').trigger('click')
+    expect(wrapper.findAll('[data-testid^="outfit-card-"]').length).toBe(6)
+
+    await wrapper.find('[data-testid="gender-filter-female"]').trigger('click')
+    const femaleCards = wrapper.findAll('[data-testid^="outfit-card-"]')
+    expect(femaleCards.length).toBe(4)
+    expect(wrapper.find('[data-testid="outfit-card-7"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="outfit-card-10"]').exists()).toBe(true)
+
+    await wrapper.find('[data-testid="outfit-card-10"]').trigger('click')
+    await wrapper.find('[data-testid="save-outfit-btn"]').trigger('click')
+
+    expect(setOutfitSpy).toHaveBeenCalledWith(10)
+    expect(wrapper.emitted('select')?.[0]).toEqual([10])
+
+    await wrapper.find('[data-testid="gender-filter-all"]').trigger('click')
+    expect(wrapper.findAll('[data-testid^="outfit-card-"]').length).toBe(10)
   })
 
   it('switches preview team and adapts color palettes', async () => {
@@ -157,7 +190,7 @@ describe('CharacterPickerMobileModal Component', () => {
     vi.restoreAllMocks()
   })
 
-  it('renders 2-column layout with all 6 costumes in grid and active status', () => {
+  it('renders 2-column layout with all 10 costumes in grid and active status', () => {
     const roomStore = useRoomStore()
     roomStore.myOutfitId = 1
 
@@ -168,9 +201,9 @@ describe('CharacterPickerMobileModal Component', () => {
     expect(wrapper.find('[data-testid="character-picker-modal"]').exists()).toBe(true)
     expect(wrapper.find('[data-testid="outfit-active-indicator"]').text()).toContain('Digunakan')
 
-    // Verify all 6 costume cards exist in the grid
+    // Verify all 10 costume cards exist in the grid
     const cards = wrapper.findAll('[data-testid^="outfit-card-"]')
-    expect(cards.length).toBe(6)
+    expect(cards.length).toBe(10)
 
     expect(wrapper.find('[data-testid="outfit-card-1"]').text()).toContain('SELECTED')
   })
@@ -251,7 +284,7 @@ describe('Room Store Outfit Management & Network Protocol', () => {
     const setOutfitMsg: SetOutfitMessage = {
       type: 'SET_OUTFIT',
       playerId: 'player-123',
-      outfitId: 5,
+      outfitId: 10,
     }
 
     const parseResult = NetworkMessageSchema.safeParse(setOutfitMsg)
@@ -260,7 +293,7 @@ describe('Room Store Outfit Management & Network Protocol', () => {
     const invalidMsg = {
       type: 'SET_OUTFIT',
       playerId: 'player-123',
-      outfitId: 99, // Out of bounds
+      outfitId: 11, // Out of bounds
     }
     const invalidResult = NetworkMessageSchema.safeParse(invalidMsg)
     expect(invalidResult.success).toBe(false)

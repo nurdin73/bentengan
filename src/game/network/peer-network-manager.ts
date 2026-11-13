@@ -306,7 +306,7 @@ export class PeerNetworkManager {
   }
 
   /**
-   * Player selects modular outfit (1..6).
+   * Player selects modular outfit (1..10).
    */
   public setOutfit(outfitId: number): void {
     if (!this.currentRoom) return
